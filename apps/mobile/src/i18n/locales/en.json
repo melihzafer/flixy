@@ -1,0 +1,9 @@
+{
+  "app": {
+    "name": "Flixy",
+    "tagline": "Swipe. Discover. Watch."
+  },
+  "smoke": {
+    "ready": "Bootstrap successful"
+  }
+}

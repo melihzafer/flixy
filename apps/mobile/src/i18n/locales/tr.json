@@ -1,0 +1,9 @@
+{
+  "app": {
+    "name": "Flixy",
+    "tagline": "Kaydır. Keşfet. İzle."
+  },
+  "smoke": {
+    "ready": "Önyükleme başarılı"
+  }
+}
