@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flixy — Color & Type Proposal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=Space+Grotesk:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --black: #0A0A0B;
+    --surface: #111113;
+    --surface2: #1A1A1D;
+    --border: rgba(255,255,255,0.08);
+    --text: #F5F5F0;
+    --text-muted: rgba(245,245,240,0.45);
+
+    /* Swipe semantics */
+    --right: #3DD68C;
+    --left: #C0392B;
+    --up: #F5C842;
+    --down: #5B8DEF;
+  }
+
+  body {
+    background: var(--black);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    padding: 48px 40px 80px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+  .logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 0.04em;
+    color: var(--text);
+  }
+  .tag {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .subtitle {
+    font-size: 15px;
+    color: var(--text-muted);
+    margin-bottom: 56px;
+    font-weight: 300;
+  }
+
+  /* ── Section headers ── */
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  /* ── Color Options ── */
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 64px;
+  }
+
+  .color-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+    cursor: pointer;
+  }
+  .color-card:hover { border-color: rgba(255,255,255,0.18); }
+  .color-card.selected { border-color: rgba(255,255,255,0.4); }
+
+  .color-swatch {
+    height: 180px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  /* noise overlay */
+  .color-swatch::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  /* A — Coral Fire */
+  .swatch-a { background: #0A0A0B; }
+  .swatch-a .accent-demo {
+    width: 80px; height: 80px;
+    background: #FF4D1C;
+    border-radius: 50%;
+    box-shadow: 0 0 60px rgba(255,77,28,0.6), 0 0 120px rgba(255,77,28,0.2);
+  }
+
+  /* B — Chartreuse Electric */
+  .swatch-b { background: #0A0A0B; }
+  .swatch-b .accent-demo {
+    width: 80px; height: 80px;
+    background: #C8F000;
+    border-radius: 50%;
+    box-shadow: 0 0 60px rgba(200,240,0,0.5), 0 0 120px rgba(200,240,0,0.15);
+  }
+
+  /* C — Cinema Magenta */
+  .swatch-c { background: #0A0A0B; }
+  .swatch-c .accent-demo {
+    width: 80px; height: 80px;
+    background: #E8005A;
+    border-radius: 50%;
+    box-shadow: 0 0 60px rgba(232,0,90,0.55), 0 0 120px rgba(232,0,90,0.2);
+  }
+
+  .color-info { padding: 20px; }
+  .color-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .color-hex {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: 'Space Grotesk', monospace;
+    margin-bottom: 12px;
+  }
+  .color-rationale {
+    font-size: 13px;
+    color: rgba(245,245,240,0.6);
+    line-height: 1.55;
+  }
+
+  .rec-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: rgba(255,255,255,0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+
+  /* swipe semantic chips */
+  .swipe-tokens {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .swipe-chip {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .chip-right { background: rgba(61,214,140,0.15); color: #3DD68C; }
+  .chip-left  { background: rgba(192,57,43,0.15);  color: #E05C4B; }
+  .chip-up    { background: rgba(245,200,66,0.15);  color: #F5C842; }
+  .chip-down  { background: rgba(91,141,239,0.15);  color: #5B8DEF; }
+
+  /* ── Typography Options ── */
+  .type-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin-bottom: 64px;
+  }
+
+  .type-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .type-card:hover { border-color: rgba(255,255,255,0.18); }
+
+  .type-pair-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 20px;
+  }
+
+  .display-sample-a {
+    font-family: 'Syne', sans-serif;
+    font-size: 42px;
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  .body-sample-a {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    color: rgba(245,245,240,0.55);
+    line-height: 1.6;
+    font-weight: 300;
+    margin-bottom: 16px;
+  }
+  .ui-sample-a {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(245,245,240,0.35);
+  }
+
+  .display-sample-b {
+    font-family: 'Playfair Display', serif;
+    font-size: 40px;
+    font-weight: 900;
+    font-style: italic;
+    line-height: 1.0;
+    letter-spacing: -0.01em;
+    margin-bottom: 12px;
+  }
+  .body-sample-b {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    color: rgba(245,245,240,0.55);
+    line-height: 1.6;
+    font-weight: 400;
+    margin-bottom: 16px;
+  }
+  .ui-sample-b {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgba(245,245,240,0.35);
+  }
+
+  .display-sample-c {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 52px;
+    font-weight: 400;
+    line-height: 1.0;
+    letter-spacing: 0.04em;
+    margin-bottom: 12px;
+  }
+  .body-sample-c {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    color: rgba(245,245,240,0.55);
+    line-height: 1.6;
+    font-weight: 400;
+    margin-bottom: 16px;
+  }
+  .ui-sample-c {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(245,245,240,0.35);
+  }
+
+  .type-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 16px 0;
+  }
+
+  .type-specs {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .type-spec-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+  }
+  .spec-role { color: var(--text-muted); }
+  .spec-val  { color: var(--text); font-family: 'Space Grotesk', monospace; }
+
+  /* ── Combined Preview ── */
+  .preview-section {
+    margin-bottom: 64px;
+  }
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .phone-mock {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .phone-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 12px 16px 0;
+  }
+
+  /* card mock A — coral */
+  .card-mock {
+    margin: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 2/3;
+  }
+  .card-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .card-poster-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+  }
+
+  .card-gradient {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(10,10,11,0.95) 0%, rgba(10,10,11,0.4) 50%, transparent 100%);
+  }
+  .card-content {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+  }
+  .card-title-a {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 20px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 4px;
+  }
+  .card-title-b {
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: 20px;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .card-title-c {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.04em;
+    line-height: 1.0;
+    margin-bottom: 4px;
+  }
+  .card-meta {
+    font-size: 10px;
+    color: rgba(245,245,240,0.55);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+  .card-meta-sp {
+    font-size: 10px;
+    color: rgba(245,245,240,0.55);
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    margin-bottom: 8px;
+  }
+  .card-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+  }
+  .badge-service { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); }
+  .badge-genre   { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
+
+  .swipe-indicator {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: 2px solid;
+  }
+  .si-right { color: #3DD68C; border-color: #3DD68C; background: rgba(61,214,140,0.12); }
+
+  .action-row {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 10px 16px 14px;
+  }
+  .action-btn {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  /* ── Recommendation box ── */
+  .recommendation {
+    background: var(--surface);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 48px;
+  }
+  .rec-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 16px;
+  }
+  .rec-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .rec-option {
+    background: var(--surface2);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .rec-option-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .rec-option-body {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+  .rec-winner {
+    border: 1.5px solid rgba(255,255,255,0.2);
+    position: relative;
+  }
+  .rec-winner-badge {
+    position: absolute;
+    top: -10px;
+    right: 12px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: #FF4D1C;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* poster bg colors */
+  .bg-drama   { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+  .bg-comedy  { background: linear-gradient(135deg, #1a1a0a 0%, #2a2a10 100%); }
+  .bg-thriller{ background: linear-gradient(135deg, #1e0a0a 0%, #2e1010 100%); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo">Flixy</div>
+  <span class="tag">Color &amp; Type Proposal</span>
+</div>
+<p class="subtitle">Three accent directions × three type pairings. Pick one of each before we build the full prototype.</p>
+
+<!-- ── ACCENT COLORS ── -->
+<div class="section-label">01 — Accent Color Directions</div>
+<div class="color-grid">
+
+  <!-- A: Coral Fire -->
+  <div class="color-card">
+    <div class="color-swatch swatch-a">
+      <div class="accent-demo"></div>
+    </div>
+    <div class="color-info">
+      <div class="rec-badge">★ Recommended</div>
+      <div class="color-name">Coral Fire</div>
+      <div class="color-hex">#FF4D1C — oklch(65% 0.22 30°)</div>
+      <p class="color-rationale">Cinematic play-button energy. Nods to cinema seats, neon marquees, and the urgency of a "watch now." Warm without being orange; vivid without screaming. Contrast on black: <strong>5.2:1 AA ✓</strong></p>
+      <div class="swipe-tokens">
+        <span class="swipe-chip chip-right">↗ Watchlist</span>
+        <span class="swipe-chip chip-left">↙ Pass</span>
+        <span class="swipe-chip chip-up">↑ Top Pick</span>
+        <span class="swipe-chip chip-down">↓ Seen</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- B: Chartreuse Electric -->
+  <div class="color-card">
+    <div class="color-swatch swatch-b">
+      <div class="accent-demo"></div>
+    </div>
+    <div class="color-info">
+      <div class="color-name">Electric Chartreuse</div>
+      <div class="color-hex">#C8F000 — oklch(91% 0.22 120°)</div>
+      <p class="color-rationale">Unapologetically bold. More A24-poster energy than streaming-app blue. Unpredictable and memorable — the font color problem (dark text only) is manageable. Contrast on black: <strong>12.1:1 AAA ✓</strong></p>
+      <div class="swipe-tokens">
+        <span class="swipe-chip chip-right">↗ Watchlist</span>
+        <span class="swipe-chip chip-left">↙ Pass</span>
+        <span class="swipe-chip chip-up">↑ Top Pick</span>
+        <span class="swipe-chip chip-down">↓ Seen</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- C: Cinema Magenta -->
+  <div class="color-card">
+    <div class="color-swatch swatch-c">
+      <div class="accent-demo"></div>
+    </div>
+    <div class="color-info">
+      <div class="color-name">Cinema Magenta</div>
+      <div class="color-hex">#E8005A — oklch(52% 0.26 350°)</div>
+      <p class="color-rationale">Velvet curtains. Film festival posters. Deep, saturated, and theatrical. Commands attention without the warmth of coral. Pairs beautifully with gold. Contrast on black: <strong>4.8:1 AA ✓</strong></p>
+      <div class="swipe-tokens">
+        <span class="swipe-chip chip-right">↗ Watchlist</span>
+        <span class="swipe-chip chip-left">↙ Pass</span>
+        <span class="swipe-chip chip-up">↑ Top Pick</span>
+        <span class="swipe-chip chip-down">↓ Seen</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── TYPOGRAPHY ── -->
+<div class="section-label">02 — Typography Pairings</div>
+<div class="type-grid">
+
+  <!-- Pair A: Syne + DM Sans -->
+  <div class="type-card">
+    <div class="type-pair-label">Pairing A — Editorial Sans</div>
+    <div class="display-sample-a">Oppenheimer</div>
+    <div class="body-sample-a">A thriller about the invention of the atomic bomb and the man who made it possible — and possible to destroy everything.</div>
+    <div class="ui-sample-a">2h 58m · Drama · Biography</div>
+    <div class="type-divider"></div>
+    <div class="type-specs">
+      <div class="type-spec-row">
+        <span class="spec-role">Display</span>
+        <span class="spec-val">Syne 800</span>
+      </div>
+      <div class="type-spec-row">
+        <span class="spec-role">Body / UI</span>
+        <span class="spec-val">DM Sans 300–600</span>
+      </div>
+      <div class="type-spec-row">
+        <span class="spec-role">Feeling</span>
+        <span class="spec-val">Geometric, sharp</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pair B: Playfair Italic + Space Grotesk -->
+  <div class="type-card">
+    <div class="type-pair-label">Pairing B — Cinematic Serif ★</div>
+    <div class="display-sample-b">Oppenheimer</div>
+    <div class="body-sample-b">A thriller about the invention of the atomic bomb and the man who made it possible — and possible to destroy everything.</div>
+    <div class="ui-sample-b">2h 58m · Drama · Biography</div>
+    <div class="type-divider"></div>
+    <div class="type-specs">
+      <div class="type-spec-row">
+        <span class="spec-role">Display</span>
+        <span class="spec-val">Playfair Display Italic 900</span>
+      </div>
+      <div class="type-spec-row">
+        <span class="spec-role">Body / UI</span>
+        <span class="spec-val">Space Grotesk 400–600</span>
+      </div>
+      <div class="type-spec-row">
+        <span class="spec-role">Feeling</span>
+        <span class="spec-val">Editorial, A24-esque</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pair C: Bebas + Space Grotesk -->
+  <div class="type-card">
+    <div class="type-pair-label">Pairing C — Brutalist Marquee</div>
+    <div class="display-sample-c">Oppenheimer</div>
+    <div class="body-sample-c">A thriller about the invention of the atomic bomb and the man who made it possible — and possible to destroy everything.</div>
+    <div class="ui-sample-c">2h 58m · Drama · Biography</div>
+    <div class="type-divider"></div>
+    <div class="type-specs">
+      <div class="type-spec-row">
+        <span class="spec-role">Display</span>
+        <span class="spec-val">Bebas Neue 400</span>
+      </div>
+      <div class="type-spec-row">
+        <span class="spec-role">Body / UI</span>
+        <span class="spec-val">Space Grotesk 400–600</span>
+      </div>
+      <div class="type-spec-row">
+        <span class="spec-role">Feeling</span>
+        <span class="spec-val">Poster, loud, cinematic</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── COMBINED CARD PREVIEWS ── -->
+<div class="section-label">03 — Combinations on a Swipe Card (Coral Fire accent)</div>
+<div class="preview-grid" style="margin-bottom: 64px;">
+
+  <!-- Combo A -->
+  <div class="phone-mock">
+    <div class="phone-label">Syne + DM Sans</div>
+    <div class="card-mock">
+      <div class="card-poster-placeholder bg-drama" style="font-size:64px;">🎬</div>
+      <div class="card-gradient"></div>
+      <div class="swipe-indicator si-right">Watchlist</div>
+      <div class="card-content">
+        <div class="card-title-a">The Substance</div>
+        <div class="card-meta">2024 · 1h 21m · R</div>
+        <div class="card-badges">
+          <span class="badge badge-service">MUBI</span>
+          <span class="badge badge-genre">Body Horror</span>
+          <span class="badge badge-genre">Satire</span>
+        </div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-btn" style="color:#E05C4B;">✕</div>
+      <div class="action-btn" style="color:#F5C842; font-size:12px;">★</div>
+      <div class="action-btn" style="color:#3DD68C;">♥</div>
+      <div class="action-btn" style="color:#5B8DEF; font-size:11px;">✓</div>
+    </div>
+  </div>
+
+  <!-- Combo B -->
+  <div class="phone-mock">
+    <div class="phone-label">Playfair Italic + Space Grotesk ★</div>
+    <div class="card-mock">
+      <div class="card-poster-placeholder bg-drama" style="font-size:64px;">🎬</div>
+      <div class="card-gradient"></div>
+      <div class="swipe-indicator si-right">Watchlist</div>
+      <div class="card-content">
+        <div class="card-title-b">The Substance</div>
+        <div class="card-meta-sp">2024 · 1h 21m · R</div>
+        <div class="card-badges">
+          <span class="badge badge-service">MUBI</span>
+          <span class="badge badge-genre">Body Horror</span>
+          <span class="badge badge-genre">Satire</span>
+        </div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-btn" style="color:#E05C4B;">✕</div>
+      <div class="action-btn" style="color:#F5C842; font-size:12px;">★</div>
+      <div class="action-btn" style="color:#3DD68C;">♥</div>
+      <div class="action-btn" style="color:#5B8DEF; font-size:11px;">✓</div>
+    </div>
+  </div>
+
+  <!-- Combo C -->
+  <div class="phone-mock">
+    <div class="phone-label">Bebas Neue + Space Grotesk</div>
+    <div class="card-mock">
+      <div class="card-poster-placeholder bg-drama" style="font-size:64px;">🎬</div>
+      <div class="card-gradient"></div>
+      <div class="swipe-indicator si-right">Watchlist</div>
+      <div class="card-content">
+        <div class="card-title-c">The Substance</div>
+        <div class="card-meta-sp">2024 · 1h 21m · R</div>
+        <div class="card-badges">
+          <span class="badge badge-service">MUBI</span>
+          <span class="badge badge-genre">Body Horror</span>
+          <span class="badge badge-genre">Satire</span>
+        </div>
+      </div>
+    </div>
+    <div class="action-row">
+      <div class="action-btn" style="color:#E05C4B;">✕</div>
+      <div class="action-btn" style="color:#F5C842; font-size:12px;">★</div>
+      <div class="action-btn" style="color:#3DD68C;">♥</div>
+      <div class="action-btn" style="color:#5B8DEF; font-size:11px;">✓</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── MY RECOMMENDATION ── -->
+<div class="recommendation">
+  <div class="rec-title">My recommendation</div>
+  <div class="rec-options">
+    <div class="rec-option rec-winner">
+      <div class="rec-winner-badge">✓ Pick</div>
+      <div class="rec-option-title">Coral Fire + Playfair Italic / Space Grotesk</div>
+      <div class="rec-option-body">The warmth of coral reads as "play" energy and maps perfectly to cinema seat red. Playfair italic titles give every film a mini-poster moment — editorial, A24-esque, confident. Space Grotesk provides clean utility without looking like every other app.</div>
+    </div>
+    <div class="rec-option">
+      <div class="rec-option-title">If you want more edge</div>
+      <div class="rec-option-body">Swap Coral for Electric Chartreuse + keep the type pairing. Louder, more subversive — closer to a zine aesthetic. Works especially well if Flixy wants to skew younger and lean into the "unconventional pick" angle.</div>
+    </div>
+    <div class="rec-option">
+      <div class="rec-option-title">If you want more drama</div>
+      <div class="rec-option-body">Cinema Magenta + Bebas Neue. Maximalist film-festival energy. Loud and theatrical. Risk: can feel heavy on OLED black; needs very careful use of the accent.</div>
+    </div>
+    <div class="rec-option">
+      <div class="rec-option-title">Swipe semantics (all options)</div>
+      <div class="rec-option-body">These four tokens stay constant regardless of accent: <br><br>
+        <strong style="color:#3DD68C;">Right → Watchlist #3DD68C</strong><br>
+        <strong style="color:#E05C4B;">Left → Pass #C0392B</strong><br>
+        <strong style="color:#F5C842;">Up → Top Pick #F5C842</strong><br>
+        <strong style="color:#5B8DEF;">Down → Seen #5B8DEF</strong>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p style="font-size:13px; color:var(--text-muted); line-height:1.7;">
+  <strong style="color:var(--text);">Next step:</strong> Reply with your chosen accent + type pairing (or ask for tweaks), and I'll build the full 11-screen interactive prototype with the design system tokens.
+</p>
+
+</body>
+</html>

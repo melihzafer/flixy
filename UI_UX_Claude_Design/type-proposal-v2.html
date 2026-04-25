@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flixy — Type Pairing Proposal v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- 
+  PP Editorial New → Instrument Serif italic (similar high-contrast editorial serif, not overused)
+  GT Sectra       → Newsreader italic (newspaper-editorial, optical sizes, ink-trap serifs)
+  Inter           → Inter (as specified)
+  GT America      → Space Grotesk (American grotesque proportions, closest available)
+  Note: actual commercial fonts should be licensed from Pangram Pangram + Grilli Type
+-->
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400;1,6..72,600;1,6..72,700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --black:#0a0a0b;
+  --surf:#111113;
+  --surf2:#1a1a1d;
+  --border:rgba(255,255,255,.07);
+  --text:#f5f5f0;
+  --muted:rgba(245,245,240,.42);
+  --accent:#ff4d1c;
+  --green:#3dd68c;
+  --red:#e05c4b;
+  --gold:#f5c842;
+  --blue:#5b8def;
+}
+body{background:var(--black);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;padding:52px 48px 96px;max-width:1160px;margin:0 auto;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 40% at 50% 0%,rgba(255,77,28,.07),transparent);pointer-events:none;}
+
+/* PAGE HEADER */
+.pg-hdr{margin-bottom:60px;}
+.pg-eyebrow{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;}
+.pg-title{font-size:36px;font-weight:700;color:var(--text);letter-spacing:-.02em;line-height:1.1;margin-bottom:10px;}
+.pg-sub{font-size:15px;color:var(--muted);line-height:1.7;max-width:600px;font-weight:300;}
+.ruled-out{display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:10px;padding:10px 16px;margin-top:18px;font-size:12px;color:var(--muted);}
+.ruled-out strong{color:var(--text);}
+.struck{text-decoration:line-through;opacity:.5;}
+
+/* SECTION */
+.sec-label{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:22px;}
+.pairing-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:70px;}
+
+/* PAIRING CARD */
+.pair-card{background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
+.pair-card.winner{border-color:rgba(255,77,28,.4);}
+.pair-hdr{padding:22px 24px 16px;border-bottom:1px solid var(--border);}
+.pair-tag{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+.rec-badge{background:#ff4d1c;color:#fff;font-size:9px;font-weight:700;letter-spacing:.08em;padding:2px 7px;border-radius:4px;}
+.pair-fonts{font-size:13px;color:rgba(245,245,240,.6);font-family:'Inter',sans-serif;margin-bottom:2px;}
+.pair-fonts em{color:var(--muted);}
+
+/* TYPE SPECIMENS */
+.spec-block{padding:24px;}
+.spec-divider{height:1px;background:var(--border);margin:20px 0;}
+
+/* LOGO */
+.logo-a{font-family:'Instrument Serif',serif;font-style:italic;font-size:52px;color:var(--accent);line-height:1;}
+.logo-b{font-family:'Newsreader',serif;font-style:italic;font-size:52px;color:var(--accent);line-height:1;font-weight:600;}
+
+/* TITLE DISPLAY */
+.title-a{font-family:'Instrument Serif',serif;font-style:italic;font-size:36px;color:var(--text);line-height:1.0;}
+.title-b{font-family:'Newsreader',serif;font-style:italic;font-size:36px;color:var(--text);line-height:1.0;font-weight:600;}
+
+/* BODY */
+.body-a{font-family:'Inter',sans-serif;font-size:13px;font-weight:300;color:var(--muted);line-height:1.7;}
+.body-b{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:300;color:var(--muted);line-height:1.7;}
+
+/* UI LABEL */
+.ui-a{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,245,240,.32);}
+.ui-b{font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,245,240,.32);}
+
+/* CHAR SHOWCASE */
+.chars{display:flex;gap:0;margin-bottom:0;}
+.char-col{flex:1;padding:14px 0;border-right:1px solid var(--border);text-align:center;}
+.char-col:last-child{border-right:none;}
+.char-big-a{font-family:'Instrument Serif',serif;font-style:italic;font-size:28px;color:var(--text);line-height:1;}
+.char-big-b{font-family:'Newsreader',serif;font-style:italic;font-size:28px;color:var(--text);line-height:1;font-weight:600;}
+.char-lbl{font-size:9px;color:var(--muted);margin-top:4px;font-family:'Inter',sans-serif;}
+
+/* CARD MOCK */
+.cards-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:70px;}
+.phone-mock{background:var(--surf);border:1px solid var(--border);border-radius:18px;overflow:hidden;}
+.phone-mock.winner{border-color:rgba(255,77,28,.35);}
+.mock-lbl{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:14px 18px 0;}
+.card-sim{margin:10px;border-radius:14px;overflow:hidden;position:relative;aspect-ratio:.67;}
+.cs-bg{position:absolute;inset:0;}
+.cs-grad{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,11,.97) 0%,rgba(10,10,11,.45) 45%,transparent 75%);}
+.cs-info{position:absolute;bottom:0;left:0;right:0;padding:14px;}
+.cs-hook-a{font-family:'Inter',sans-serif;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,245,240,.38);margin-bottom:4px;}
+.cs-hook-b{font-family:'Space Grotesk',sans-serif;font-size:9px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,245,240,.38);margin-bottom:4px;}
+.cs-title-a{font-family:'Instrument Serif',serif;font-style:italic;font-size:22px;color:var(--text);line-height:1.0;margin-bottom:3px;}
+.cs-title-b{font-family:'Newsreader',serif;font-style:italic;font-size:22px;color:var(--text);line-height:1.0;margin-bottom:3px;font-weight:600;}
+.cs-meta-a{font-family:'Inter',sans-serif;font-size:10px;color:rgba(245,245,240,.42);}
+.cs-meta-b{font-family:'Space Grotesk',sans-serif;font-size:10px;color:rgba(245,245,240,.42);}
+.cs-badges{display:flex;gap:4px;margin-top:7px;}
+.cs-bdg{height:20px;padding:0 7px;border-radius:4px;font-size:8px;font-weight:700;display:inline-flex;align-items:center;}
+.bdg-s{background:rgba(255,255,255,.12);color:rgba(245,245,240,.85);}
+.bdg-g{background:rgba(255,255,255,.06);color:rgba(245,245,240,.42);}
+.mock-nav{padding:10px 18px 14px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--border);}
+.mock-logo-a{font-family:'Instrument Serif',serif;font-style:italic;font-size:20px;color:var(--accent);}
+.mock-logo-b{font-family:'Newsreader',serif;font-style:italic;font-size:20px;color:var(--accent);font-weight:600;}
+.mock-cta-a{font-family:'Inter',sans-serif;font-size:10px;font-weight:600;letter-spacing:.04em;color:rgba(245,245,240,.35);}
+.mock-cta-b{font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;letter-spacing:.04em;color:rgba(245,245,240,.35);}
+
+/* SCALE TABLE */
+.scale-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:70px;}
+.scale-card{background:var(--surf);border:1px solid var(--border);border-radius:18px;padding:24px;}
+.scale-title{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:20px;}
+.scale-row{display:flex;align-items:baseline;gap:16px;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);}
+.scale-row:last-child{margin-bottom:0;padding-bottom:0;border-bottom:none;}
+.scale-size{font-size:10px;color:var(--muted);width:40px;flex-shrink:0;font-family:'Inter',sans-serif;}
+.scale-ex-a{font-family:'Instrument Serif',serif;font-style:italic;color:var(--text);line-height:1;}
+.scale-ex-b{font-family:'Newsreader',serif;font-style:italic;color:var(--text);line-height:1;font-weight:600;}
+.scale-ex-ui-a{font-family:'Inter',sans-serif;color:var(--text);line-height:1;}
+.scale-ex-ui-b{font-family:'Space Grotesk',sans-serif;color:var(--text);line-height:1;}
+
+/* RECOMMENDATION */
+.rec-box{background:var(--surf);border:1px solid rgba(255,77,28,.25);border-radius:18px;padding:28px;margin-bottom:48px;}
+.rec-box-title{font-family:'Instrument Serif',serif;font-style:italic;font-size:24px;color:var(--text);margin-bottom:18px;}
+.rec-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.rec-cell{background:var(--surf2);border-radius:12px;padding:16px;}
+.rec-cell-t{font-size:13px;font-weight:600;color:var(--text);margin-bottom:5px;}
+.rec-cell-b{font-size:12px;color:var(--muted);line-height:1.6;}
+.rec-winner-cell{border:1px solid rgba(255,77,28,.3);position:relative;}
+.rec-winner-pip{position:absolute;top:-9px;right:12px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:#ff4d1c;color:#fff;padding:2px 8px;border-radius:4px;}
+
+/* FONT NOTE */
+.font-note{font-size:11px;color:rgba(245,245,240,.28);font-style:italic;margin-top:32px;line-height:1.7;border-top:1px solid var(--border);padding-top:20px;}
+.font-note a{color:rgba(245,245,240,.45);}
+</style>
+</head>
+<body>
+
+<!-- PAGE HEADER -->
+<div class="pg-hdr">
+  <div class="pg-eyebrow">Flixy · Type Pairing Proposal v2</div>
+  <div class="pg-title">Two directions.<br>Pick one.</div>
+  <div class="pg-sub">Criterion Collection meets premium product app — not movie blog from 2019. Both pairings use high-contrast editorial serifs for display and disciplined grotesques for UI.</div>
+  <div class="ruled-out">
+    Already ruled out: &nbsp;
+    <strong class="struck">Bebas Neue</strong> — too indie-default &nbsp;·&nbsp;
+    <strong class="struck">Playfair Display</strong> — overexposed in SaaS
+  </div>
+</div>
+
+<!-- 01 PAIRING OVERVIEW -->
+<div class="sec-label">01 — Pairing Overview</div>
+<div class="pairing-grid">
+
+  <!-- PAIRING A -->
+  <div class="pair-card">
+    <div class="pair-hdr">
+      <div class="pair-tag">Option A <span class="rec-badge">★ Recommended</span></div>
+      <div class="pair-fonts"><strong style="color:var(--text)">PP Editorial New</strong> <em>(italic, display)</em></div>
+      <div class="pair-fonts"><strong style="color:var(--text)">Inter</strong> <em>(300–600, UI + body)</em></div>
+    </div>
+    <div class="spec-block">
+      <div class="logo-a">Flixy</div>
+      <div class="spec-divider"></div>
+      <div class="title-a" style="margin-bottom:10px;">The Substance</div>
+      <div class="body-a" style="margin-bottom:10px;">A fading celebrity uses a black-market substance that creates a younger version of herself. Only one rule: share time.</div>
+      <div class="ui-a">2h 21m · Horror · Satire · MUBI</div>
+      <div class="spec-divider"></div>
+      <div class="chars">
+        <div class="char-col"><div class="char-big-a">Aa</div><div class="char-lbl">Editorial</div></div>
+        <div class="char-col"><div class="char-big-a">Rg</div><div class="char-lbl">Contrast</div></div>
+        <div class="char-col"><div class="char-big-a">23</div><div class="char-lbl">Figures</div></div>
+        <div class="char-col"><div class="char-big-a" style="font-size:22px;">fi fl</div><div class="char-lbl">Ligatures</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAIRING B -->
+  <div class="pair-card">
+    <div class="pair-hdr">
+      <div class="pair-tag">Option B</div>
+      <div class="pair-fonts"><strong style="color:var(--text)">GT Sectra</strong> <em>(italic, display)</em></div>
+      <div class="pair-fonts"><strong style="color:var(--text)">GT America</strong> <em>(regular–medium, UI + body)</em></div>
+    </div>
+    <div class="spec-block">
+      <div class="logo-b">Flixy</div>
+      <div class="spec-divider"></div>
+      <div class="title-b" style="margin-bottom:10px;">The Substance</div>
+      <div class="body-b" style="margin-bottom:10px;">A fading celebrity uses a black-market substance that creates a younger version of herself. Only one rule: share time.</div>
+      <div class="ui-b">2h 21m · Horror · Satire · MUBI</div>
+      <div class="spec-divider"></div>
+      <div class="chars">
+        <div class="char-col"><div class="char-big-b">Aa</div><div class="char-lbl">Editorial</div></div>
+        <div class="char-col"><div class="char-big-b">Rg</div><div class="char-lbl">Contrast</div></div>
+        <div class="char-col"><div class="char-big-b">23</div><div class="char-lbl">Figures</div></div>
+        <div class="char-col"><div class="char-big-b" style="font-size:22px;">fi fl</div><div class="char-lbl">Ligatures</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 02 ON A CARD -->
+<div class="sec-label">02 — On a Swipe Card + App Chrome</div>
+<div class="cards-row">
+
+  <!-- Card A -->
+  <div class="phone-mock winner">
+    <div class="mock-lbl">Option A — PP Editorial New + Inter</div>
+    <div class="card-sim">
+      <div class="cs-bg" style="background:linear-gradient(155deg,#200606,#3d0000)"></div>
+      <div class="cs-grad"></div>
+      <div class="cs-info">
+        <div class="cs-hook-a">Body horror at its most visceral</div>
+        <div class="cs-title-a">The Substance</div>
+        <div class="cs-meta-a">2024 · 2h 21m · R</div>
+        <div class="cs-badges">
+          <span class="cs-bdg bdg-s">MUBI</span>
+          <span class="cs-bdg bdg-g">Horror</span>
+          <span class="cs-bdg bdg-g">Satire</span>
+        </div>
+      </div>
+    </div>
+    <div class="mock-nav">
+      <div class="mock-logo-a">Flixy</div>
+      <div style="display:flex;gap:8px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(224,92,75,.15);display:flex;align-items:center;justify-content:center;font-size:11px;color:#e05c4b;">✕</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#ff4d1c;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;">♥</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,200,66,.15);display:flex;align-items:center;justify-content:center;font-size:11px;color:#f5c842;">★</div>
+      </div>
+      <div class="mock-cta-a">Watchlist ·· Search</div>
+    </div>
+    <!-- Genre badge row -->
+    <div style="padding:0 10px 12px;display:flex;gap:6px;">
+      <div style="padding:4px 10px;border-radius:6px;background:rgba(255,77,28,.12);font-family:'Inter',sans-serif;font-size:10px;font-weight:600;color:#ff4d1c;letter-spacing:.04em;">EDITORIAL NEW</div>
+      <div style="padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.05);font-family:'Inter',sans-serif;font-size:10px;font-weight:500;color:rgba(245,245,240,.45);">Inter UI</div>
+    </div>
+  </div>
+
+  <!-- Card B -->
+  <div class="phone-mock">
+    <div class="mock-lbl">Option B — GT Sectra + GT America</div>
+    <div class="card-sim">
+      <div class="cs-bg" style="background:linear-gradient(155deg,#200606,#3d0000)"></div>
+      <div class="cs-grad"></div>
+      <div class="cs-info">
+        <div class="cs-hook-b">Body horror at its most visceral</div>
+        <div class="cs-title-b">The Substance</div>
+        <div class="cs-meta-b">2024 · 2h 21m · R</div>
+        <div class="cs-badges">
+          <span class="cs-bdg bdg-s">MUBI</span>
+          <span class="cs-bdg bdg-g">Horror</span>
+          <span class="cs-bdg bdg-g">Satire</span>
+        </div>
+      </div>
+    </div>
+    <div class="mock-nav">
+      <div class="mock-logo-b">Flixy</div>
+      <div style="display:flex;gap:8px;">
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(224,92,75,.15);display:flex;align-items:center;justify-content:center;font-size:11px;color:#e05c4b;">✕</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:#ff4d1c;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;">♥</div>
+        <div style="width:28px;height:28px;border-radius:50%;background:rgba(245,200,66,.15);display:flex;align-items:center;justify-content:center;font-size:11px;color:#f5c842;">★</div>
+      </div>
+      <div class="mock-cta-b">Watchlist ·· Search</div>
+    </div>
+    <div style="padding:0 10px 12px;display:flex;gap:6px;">
+      <div style="padding:4px 10px;border-radius:6px;background:rgba(255,77,28,.12);font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:600;color:#ff4d1c;letter-spacing:.04em;">GT SECTRA</div>
+      <div style="padding:4px 10px;border-radius:6px;background:rgba(255,255,255,.05);font-family:'Space Grotesk',sans-serif;font-size:10px;font-weight:500;color:rgba(245,245,240,.45);">GT America UI</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 03 TYPE SCALE -->
+<div class="sec-label">03 — Type Scale Side-by-Side</div>
+<div class="scale-grid">
+
+  <div class="scale-card">
+    <div class="scale-title">Option A — Display (Italic) + Inter</div>
+    <div class="scale-row">
+      <div class="scale-size">72px</div>
+      <div class="scale-ex-a" style="font-size:52px;">Flixy</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-size">36px</div>
+      <div class="scale-ex-a" style="font-size:32px;">Oppenheimer</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-size">24px</div>
+      <div class="scale-ex-a" style="font-size:22px;">The Substance</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-size">15px</div>
+      <div class="scale-ex-ui-a" style="font-size:15px;font-weight:400;">A thriller about the atomic bomb.</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-size">11px</div>
+      <div class="scale-ex-ui-a" style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);">2h 21m · Drama · Netflix</div>
+    </div>
+  </div>
+
+  <div class="scale-card">
+    <div class="scale-title">Option B — GT Sectra (Italic) + GT America</div>
+    <div class="scale-row">
+      <div class="scale-size">72px</div>
+      <div class="scale-ex-b" style="font-size:52px;">Flixy</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-size">36px</div>
+      <div class="scale-ex-b" style="font-size:32px;">Oppenheimer</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-size">24px</div>
+      <div class="scale-ex-b" style="font-size:22px;">The Substance</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-size">15px</div>
+      <div class="scale-ex-ui-b" style="font-size:15px;font-weight:400;">A thriller about the atomic bomb.</div>
+    </div>
+    <div class="scale-row">
+      <div class="scale-size">11px</div>
+      <div class="scale-ex-ui-b" style="font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);">2h 21m · Drama · Netflix</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 04 RECOMMENDATION -->
+<div class="sec-label">04 — My Read</div>
+<div class="rec-box">
+  <div class="rec-box-title">Option A is the stronger bet.</div>
+  <div class="rec-grid">
+    <div class="rec-cell rec-winner-cell">
+      <div class="rec-winner-pip">★ Pick</div>
+      <div class="rec-cell-t">PP Editorial New + Inter</div>
+      <div class="rec-cell-b">PP Editorial New's italic has something GT Sectra lacks: it reads as <em>software-native</em> as well as cinematic. At 22–28px on a card it's unmistakably editorial but not newspaper. Inter is the obvious UI partner — it disappears at small sizes in the best possible way. The tension between a very expressive display face and a totally neutral UI font is exactly the Criterion-meets-app contrast you're after.</div>
+    </div>
+    <div class="rec-cell">
+      <div class="rec-cell-t">GT Sectra + GT America</div>
+      <div class="rec-cell-b">Sectra is magnificent — ink-traps at large sizes are genuinely beautiful — but paired with GT America it can read "Monocle magazine app" rather than "premium consumer product." The family feel between both Grilli faces reduces the tension and makes the product feel slightly publishing-house rather than entertainment. Still great; lower risk; more expected from this brief.</div>
+    </div>
+    <div class="rec-cell">
+      <div class="rec-cell-t">Licensing note</div>
+      <div class="rec-cell-b">PP Editorial New: available from <strong style="color:var(--text)">Pangram Pangram Foundry</strong>, from ~$49 (desktop) / ~$149 (web). GT Sectra + GT America: from <strong style="color:var(--text)">Grilli Type</strong>, ~$200–$400 per style depending on usage tier. Both are one-time purchases for the prototype phase.</div>
+    </div>
+    <div class="rec-cell">
+      <div class="rec-cell-t">On the prototype approximations</div>
+      <div class="rec-cell-b">This page uses <strong style="color:var(--text)">Instrument Serif italic</strong> (for PP Editorial New) and <strong style="color:var(--text)">Newsreader italic</strong> (for GT Sectra) as web substitutes. They're close but not identical — particularly at larger sizes the licensed fonts have significantly more character. The prototype should be re-rendered with actual files once licensed.</div>
+    </div>
+  </div>
+</div>
+
+<div class="font-note">
+  <strong style="color:rgba(245,245,240,.5);">Approximations used on this page:</strong><br>
+  PP Editorial New italic → Instrument Serif italic (Google Fonts) &nbsp;·&nbsp;
+  GT Sectra italic → Newsreader italic (Google Fonts) &nbsp;·&nbsp;
+  Inter → Inter (Google Fonts, exact match) &nbsp;·&nbsp;
+  GT America → Space Grotesk (Google Fonts, proportionally similar).<br><br>
+  Once you approve a direction, license the real files and I'll re-render the prototype in &lt;30 min.
+</div>
+
+</body>
+</html>
