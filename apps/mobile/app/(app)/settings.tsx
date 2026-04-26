@@ -5,10 +5,12 @@ import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
 import { Button } from '../../src/components/Button';
 import { Screen } from '../../src/components/Screen';
+import { SectionLabel } from '../../src/components/SectionLabel';
 import { Text } from '../../src/components/Text';
 import { useSignOut } from '../../src/features/auth/hooks';
 import { useUpdatePreferences, useUserPreferences } from '../../src/features/onboarding/hooks';
 import { useProfile } from '../../src/features/profile/hooks';
+import { colors } from '../../src/theme/tokens';
 
 /**
  * Settings shell (FSD § 3.13.2). Most subsections are deep links to
@@ -75,7 +77,7 @@ export default function Settings() {
       <View style={{ marginTop: 16 }}>
         <Button
           label={t('auth.signOut')}
-          variant="secondary"
+          variant="destructive"
           loading={signOut.isPending}
           onPress={() => signOut.mutate()}
         />
@@ -86,10 +88,8 @@ export default function Settings() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <View style={{ gap: 4 }}>
-      <Text variant="caption" style={styles.sectionTitle}>
-        {title}
-      </Text>
+    <View style={{ gap: 8, marginTop: 8 }}>
+      <SectionLabel>{title}</SectionLabel>
       <View style={styles.card}>{children}</View>
     </View>
   );
@@ -115,7 +115,7 @@ function Row({
       ]}
     >
       <Text variant="body-m">{label}</Text>
-      <Text variant="body-s" style={{ color: '#A1A1AA' }}>
+      <Text variant="body-s" tone="muted">
         {value}
       </Text>
     </Wrap>
@@ -123,13 +123,13 @@ function Row({
 }
 
 const styles = StyleSheet.create({
-  sectionTitle: {
-    color: '#71717A',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 8,
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  card: { backgroundColor: '#15151B', borderRadius: 16, overflow: 'hidden' },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -137,6 +137,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#26262B',
+    borderBottomColor: 'rgba(255,255,255,0.14)',
   },
 });

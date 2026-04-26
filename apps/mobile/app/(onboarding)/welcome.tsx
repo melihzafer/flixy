@@ -10,7 +10,7 @@ export default function OnboardingWelcome() {
   const { t } = useTranslation();
   return (
     <Screen title={t('onboarding.welcomeTitle')} subtitle={t('onboarding.welcomeSubtitle')}>
-      <Text variant="body-m" style={{ color: '#A1A1AA' }}>
+      <Text variant="body-m" style={{ color: 'rgba(245,245,240,0.55)' }}>
         {t('onboarding.welcomeBody')}
       </Text>
       <View style={{ marginTop: 16 }}>

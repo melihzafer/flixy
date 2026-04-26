@@ -1,4 +1,3 @@
-import * as Notifications from 'expo-notifications';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +9,10 @@ import { Text } from '../../src/components/Text';
 import { useSession } from '../../src/features/auth/useSession';
 import { useUpdatePreferences } from '../../src/features/onboarding/hooks';
 import { logger } from '../../src/lib/logger';
-import { requestPushPermissionAndRegister } from '../../src/lib/notifications';
+import {
+  requestPermissionOnly,
+  requestPushPermissionAndRegister,
+} from '../../src/lib/notifications';
 
 export default function NotificationsStep() {
   const { t } = useTranslation();
@@ -36,8 +38,8 @@ export default function NotificationsStep() {
         const token = await requestPushPermissionAndRegister(userId);
         finish(!!token);
       } else {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finish(status === 'granted');
+        const granted = await requestPermissionOnly();
+        finish(granted);
       }
     } catch (e) {
       logger.warn('notifications.request failed', { message: (e as Error).message });
@@ -52,7 +54,7 @@ export default function NotificationsStep() {
       title={t('onboarding.notificationsTitle')}
       subtitle={t('onboarding.notificationsSubtitle')}
     >
-      <Text variant="body-m" style={{ color: '#A1A1AA' }}>
+      <Text variant="body-m" style={{ color: 'rgba(245,245,240,0.55)' }}>
         {t('onboarding.notificationsBody')}
       </Text>
       <View style={{ marginTop: 16, gap: 8 }}>

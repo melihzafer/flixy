@@ -22,7 +22,7 @@ void i18n.use(initReactI18next).init({
   lng: initialLanguage,
   fallbackLng: 'en',
   interpolation: { escapeValue: false },
-  compatibilityJSON: 'v4',
+  compatibilityJSON: 'v3',
 });
 
 export default i18n;

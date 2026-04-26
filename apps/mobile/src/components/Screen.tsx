@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { colors } from '../theme/tokens';
 import { Text } from './Text';
 
 type Props = {
@@ -12,37 +13,47 @@ type Props = {
 };
 
 /**
- * Common screen chrome: respects safe-area, dark background, optional title +
- * subtitle in display typography. Scrollable by default for forms / long pages.
+ * Common screen chrome: dark canvas, optional title in Newsreader italic
+ * display + Space Grotesk muted subtitle. Scrollable by default.
  */
 export function Screen({ title, subtitle, children, scroll = true }: Props) {
   const insets = useSafeAreaInsets();
-  const Container = scroll ? ScrollView : View;
+  const padding = {
+    paddingTop: insets.top + 24,
+    paddingBottom: insets.bottom + 24,
+    paddingHorizontal: 24,
+    gap: 16,
+  } as const;
 
-  return (
-    <Container
-      style={{ flex: 1, backgroundColor: '#0B0B0F' }}
-      contentContainerStyle={{
-        paddingTop: insets.top + 24,
-        paddingBottom: insets.bottom + 24,
-        paddingHorizontal: 24,
-        gap: 16,
-      }}
-      keyboardShouldPersistTaps={scroll ? 'handled' : undefined}
-    >
+  const inner = (
+    <>
       {title ? (
-        <View style={{ gap: 4, marginBottom: 8 }}>
+        <View style={{ gap: 6, marginBottom: 8 }}>
           <Text variant="display-m" accessibilityRole="header">
             {title}
           </Text>
           {subtitle ? (
-            <Text variant="body-m" style={{ color: '#A1A1AA' }}>
+            <Text variant="body-m" tone="muted">
               {subtitle}
             </Text>
           ) : null}
         </View>
       ) : null}
       {children}
-    </Container>
+    </>
   );
+
+  if (scroll) {
+    return (
+      <ScrollView
+        style={{ flex: 1, backgroundColor: colors.bg }}
+        contentContainerStyle={padding}
+        keyboardShouldPersistTaps="handled"
+      >
+        {inner}
+      </ScrollView>
+    );
+  }
+
+  return <View style={[{ flex: 1, backgroundColor: colors.bg }, padding]}>{inner}</View>;
 }

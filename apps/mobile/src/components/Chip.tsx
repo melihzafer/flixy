@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 
+import { colors, fonts } from '../theme/tokens';
 import { Text } from './Text';
 
 type Props = {
@@ -22,7 +23,14 @@ export function Chip({ label, selected, onPress, accessibilityLabel }: Props) {
         pressed && { opacity: 0.85 },
       ]}
     >
-      <Text variant="body-m" style={{ color: selected ? '#0B0B0F' : '#F5F5F7', fontWeight: '600' }}>
+      <Text
+        variant="body-s"
+        style={{
+          color: selected ? colors.accent : colors.text,
+          fontFamily: fonts.bodySemi,
+          letterSpacing: 0.2,
+        }}
+      >
         {label}
       </Text>
     </Pressable>
@@ -35,12 +43,12 @@ export function ChipGroup({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    borderWidth: 1,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
-  selected: { backgroundColor: '#F5F5F7', borderColor: '#F5F5F7' },
-  unselected: { backgroundColor: 'transparent', borderColor: '#3F3F46' },
+  selected: { backgroundColor: colors.accentDim, borderColor: colors.accent },
+  unselected: { backgroundColor: 'transparent', borderColor: colors.border2 },
   group: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

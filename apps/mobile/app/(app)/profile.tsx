@@ -1,15 +1,19 @@
 import * as ImagePicker from 'expo-image-picker';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, View } from 'react-native';
+import { Alert, Pressable, View } from 'react-native';
 
 import { Button } from '../../src/components/Button';
+import { Chip, ChipGroup } from '../../src/components/Chip';
 import { Input } from '../../src/components/Input';
 import { Screen } from '../../src/components/Screen';
+import { SectionLabel } from '../../src/components/SectionLabel';
 import { Text } from '../../src/components/Text';
 import { useSession } from '../../src/features/auth/useSession';
 import { uploadAvatar, useProfile, useUpdateProfile } from '../../src/features/profile/hooks';
 import { logger } from '../../src/lib/logger';
+import { colors, fonts } from '../../src/theme/tokens';
 
 const REGIONS = ['US', 'TR', 'BG', 'ES', 'DE', 'FR', 'BR'] as const;
 
@@ -32,7 +36,6 @@ export default function ProfileScreen() {
   const [region, setRegion] = useState<string>('US');
   const [uploading, setUploading] = useState(false);
 
-  // Hydrate local form state once profile loads.
   useEffect(() => {
     if (!profile) return;
     setHandle(profile.handle ?? '');
@@ -89,35 +92,37 @@ export default function ProfileScreen() {
   if (isLoading) {
     return (
       <Screen title={t('profile.title')}>
-        <Text variant="body-m" style={{ color: '#A1A1AA' }}>
-          {t('common.loading')}
-        </Text>
+        <Text tone="muted">{t('common.loading')}</Text>
       </Screen>
     );
   }
 
   return (
     <Screen title={t('profile.title')} subtitle={t('profile.subtitle')}>
-      <View style={{ alignItems: 'center', gap: 12 }}>
-        <View
+      <View style={{ alignItems: 'center', gap: 12, marginBottom: 8 }}>
+        <Pressable
+          onPress={onPickAvatar}
+          accessibilityLabel={t('profile.avatarLabel')}
           style={{
             width: 96,
             height: 96,
             borderRadius: 48,
-            backgroundColor: '#1F1F23',
+            backgroundColor: colors.surface2,
+            borderWidth: 2,
+            borderColor: colors.accent,
             alignItems: 'center',
             justifyContent: 'center',
           }}
-          accessibilityLabel={t('profile.avatarLabel')}
         >
-          <Text variant="display-m" style={{ color: '#71717A' }}>
+          <Text style={{ color: colors.accent, fontFamily: fonts.display, fontSize: 36 }}>
             {(profile?.display_name ?? profile?.handle ?? '?').slice(0, 1).toUpperCase()}
           </Text>
-        </View>
+        </Pressable>
         <Button
           label={t('profile.changeAvatar')}
-          variant="secondary"
+          variant="ghost"
           loading={uploading}
+          fullWidth={false}
           onPress={onPickAvatar}
         />
       </View>
@@ -137,23 +142,20 @@ export default function ProfileScreen() {
         placeholder={t('profile.displayNamePlaceholder')}
       />
 
-      <Text variant="caption" style={{ color: '#A1A1AA' }}>
-        {t('profile.region')}
-      </Text>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      <SectionLabel>{t('profile.region')}</SectionLabel>
+      <ChipGroup>
         {REGIONS.map((r) => (
-          <Button
-            key={r}
-            label={r}
-            variant={r === region ? 'primary' : 'secondary'}
-            fullWidth={false}
-            onPress={() => setRegion(r)}
-          />
+          <Chip key={r} label={r} selected={r === region} onPress={() => setRegion(r)} />
         ))}
-      </View>
+      </ChipGroup>
 
-      <View style={{ marginTop: 16 }}>
+      <View style={{ marginTop: 16, gap: 10 }}>
         <Button label={t('common.save')} loading={update.isPending} onPress={onSave} />
+        <Button
+          label={t('settings.title')}
+          variant="secondary"
+          onPress={() => router.push('/(app)/settings')}
+        />
       </View>
     </Screen>
   );

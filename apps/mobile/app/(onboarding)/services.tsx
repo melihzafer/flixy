@@ -35,7 +35,7 @@ export default function ServicesStep() {
     <Screen title={t('onboarding.servicesTitle')} subtitle={t('onboarding.servicesSubtitle')}>
       {isLoading ? (
         <View style={{ paddingVertical: 24 }}>
-          <ActivityIndicator color="#F5F5F7" />
+          <ActivityIndicator color="#F5F5F0" />
         </View>
       ) : (
         <ChipGroup>
@@ -50,7 +50,7 @@ export default function ServicesStep() {
         </ChipGroup>
       )}
 
-      <Text variant="body-s" style={{ color: '#A1A1AA', marginTop: 8 }}>
+      <Text variant="body-s" style={{ color: 'rgba(245,245,240,0.55)', marginTop: 8 }}>
         {t('onboarding.servicesHint', { min: ONBOARDING.MIN_SERVICES })}
       </Text>
 

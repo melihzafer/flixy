@@ -65,14 +65,14 @@ export default function SignIn() {
       />
 
       {signIn.isError ? (
-        <Text variant="body-s" style={{ color: '#F87171' }} accessibilityLiveRegion="polite">
+        <Text variant="body-s" style={{ color: '#E05C4B' }} accessibilityLiveRegion="polite">
           {t('auth.errors.invalidCredentials')}
         </Text>
       ) : null}
 
       <View style={{ alignItems: 'flex-end' }}>
         <Link href="/(auth)/reset-password">
-          <Text variant="body-s" style={{ color: '#A1A1AA' }}>
+          <Text variant="body-s" style={{ color: 'rgba(245,245,240,0.55)' }}>
             {t('auth.forgotPassword')}
           </Text>
         </Link>
@@ -85,11 +85,11 @@ export default function SignIn() {
       />
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8 }}>
-        <Text variant="body-m" style={{ color: '#A1A1AA' }}>
+        <Text variant="body-m" style={{ color: 'rgba(245,245,240,0.55)' }}>
           {t('auth.noAccount')}
         </Text>
         <Link href="/(auth)/sign-up">
-          <Text variant="body-m" style={{ color: '#F5F5F7', fontWeight: '600' }}>
+          <Text variant="body-m" style={{ color: '#F5F5F0', fontWeight: '600' }}>
             {t('auth.createAccount')}
           </Text>
         </Link>

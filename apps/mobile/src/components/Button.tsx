@@ -7,9 +7,10 @@ import {
   type View,
 } from 'react-native';
 
+import { colors, fonts } from '../theme/tokens';
 import { Text } from './Text';
 
-type Variant = 'primary' | 'secondary' | 'ghost';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'destructive';
 
 type Props = Omit<PressableProps, 'children'> & {
   label: string;
@@ -18,10 +19,11 @@ type Props = Omit<PressableProps, 'children'> & {
   fullWidth?: boolean;
 };
 
-const palette = {
-  primary: { bg: '#F5F5F7', fg: '#0B0B0F' },
-  secondary: { bg: '#1F1F23', fg: '#F5F5F7' },
-  ghost: { bg: 'transparent', fg: '#F5F5F7' },
+const palette: Record<Variant, { bg: string; fg: string; border?: string }> = {
+  primary: { bg: colors.accent, fg: colors.text },
+  secondary: { bg: 'transparent', fg: colors.text, border: colors.border2 },
+  ghost: { bg: 'transparent', fg: colors.text },
+  destructive: { bg: colors.leftBg, fg: colors.left, border: colors.left },
 };
 
 export const Button = forwardRef<View, Props>(function Button(
@@ -38,7 +40,12 @@ export const Button = forwardRef<View, Props>(function Button(
       disabled={isDisabled}
       style={(state) => [
         styles.base,
-        { backgroundColor: c.bg, opacity: isDisabled ? 0.5 : state.pressed ? 0.85 : 1 },
+        {
+          backgroundColor: c.bg,
+          borderWidth: c.border ? 1.5 : 0,
+          borderColor: c.border ?? 'transparent',
+          opacity: isDisabled ? 0.5 : state.pressed ? 0.85 : 1,
+        },
         fullWidth && styles.fullWidth,
         typeof style === 'function' ? style(state) : style,
       ]}
@@ -47,7 +54,7 @@ export const Button = forwardRef<View, Props>(function Button(
       {loading ? (
         <ActivityIndicator color={c.fg} />
       ) : (
-        <Text variant="body-l" style={{ color: c.fg, fontWeight: '600' }}>
+        <Text variant="body-l" style={{ color: c.fg, fontFamily: fonts.bodySemi }}>
           {label}
         </Text>
       )}

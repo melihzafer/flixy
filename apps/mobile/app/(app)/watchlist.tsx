@@ -1,9 +1,13 @@
 import { router } from 'expo-router';
+import { Play } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Image, Pressable, Text, View } from 'react-native';
+import { FlatList, Image, Pressable, View } from 'react-native';
 
+import { Chip, ChipGroup } from '../../src/components/Chip';
 import { Screen } from '../../src/components/Screen';
+import { ServiceBadge } from '../../src/components/ServiceBadge';
+import { Text } from '../../src/components/Text';
 import {
   type WatchlistFilter,
   useMarkWatched,
@@ -12,6 +16,7 @@ import {
   useUnmarkWatched,
   useWatchlist,
 } from '../../src/features/watchlist/hooks';
+import { colors, fonts } from '../../src/theme/tokens';
 
 const FILTERS: WatchlistFilter[] = ['all', 'top', 'watched'];
 
@@ -26,55 +31,50 @@ export default function WatchlistScreen() {
 
   return (
     <Screen title={t('watchlist.title', 'Watchlist')}>
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+      <ChipGroup>
         {FILTERS.map((f) => (
-          <Pressable
+          <Chip
             key={f}
+            label={t(`watchlist.filter.${f}`)}
+            selected={filter === f}
             onPress={() => setFilter(f)}
-            accessibilityRole="button"
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 8,
-              borderRadius: 999,
-              backgroundColor: filter === f ? '#fff' : '#15151B',
-            }}
-          >
-            <Text style={{ color: filter === f ? '#0B0B0F' : '#A1A1AA', fontWeight: '600' }}>
-              {t(`watchlist.filter.${f}`)}
-            </Text>
-          </Pressable>
+          />
         ))}
-      </View>
+      </ChipGroup>
 
       {isLoading ? (
-        <Text style={{ color: '#A1A1AA' }}>{t('common.loading')}</Text>
+        <Text tone="muted">{t('common.loading')}</Text>
       ) : isError ? (
         <Pressable onPress={() => refetch()}>
-          <Text style={{ color: 'white' }}>{t('common.retry')}</Text>
+          <Text tone="accent">{t('common.retry')}</Text>
         </Pressable>
       ) : entries.length === 0 ? (
-        <Text style={{ color: '#A1A1AA' }}>
+        <Text tone="muted">
           {t('watchlist.empty', 'Your watchlist is empty. Swipe right to add titles.')}
         </Text>
       ) : (
         <FlatList
           data={entries}
           keyExtractor={(e) => e.item.id}
-          contentContainerStyle={{ paddingBottom: 32, gap: 12 }}
+          contentContainerStyle={{ paddingBottom: 32, gap: 10 }}
           renderItem={({ item: entry }) => {
             if (!entry.title) return null;
             const title = entry.title;
             const isWatched = !!entry.item.watchedAt;
             const isTop = entry.item.priority === 'top';
+            const firstService = title.availability[0]?.serviceId;
             return (
               <View
                 testID="watchlist-row"
                 style={{
                   flexDirection: 'row',
+                  alignItems: 'center',
                   gap: 12,
-                  padding: 8,
+                  padding: 10,
                   borderRadius: 16,
-                  backgroundColor: '#15151B',
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
                 }}
               >
                 <Pressable
@@ -82,64 +82,102 @@ export default function WatchlistScreen() {
                     router.push({ pathname: '/(app)/title/[id]', params: { id: title.id } })
                   }
                   accessibilityLabel={title.title}
-                  style={{ flexDirection: 'row', flex: 1, gap: 12 }}
+                  style={{ flexDirection: 'row', flex: 1, gap: 12, alignItems: 'center' }}
                 >
                   {title.posterUrl ? (
                     <Image
                       source={{ uri: title.posterUrl }}
-                      style={{ width: 64, height: 96, borderRadius: 8 }}
+                      style={{ width: 48, height: 68, borderRadius: 6 }}
                     />
                   ) : (
                     <View
-                      style={{ width: 64, height: 96, borderRadius: 8, backgroundColor: '#222' }}
+                      style={{
+                        width: 48,
+                        height: 68,
+                        borderRadius: 6,
+                        backgroundColor: colors.surface3,
+                      }}
                     />
                   )}
-                  <View style={{ flex: 1, justifyContent: 'center' }}>
+                  <View style={{ flex: 1, gap: 4 }}>
                     <Text
-                      style={{ color: 'white', fontSize: 16, fontWeight: '600' }}
-                      numberOfLines={2}
+                      style={{
+                        color: colors.text,
+                        fontFamily: fonts.display,
+                        fontSize: 19,
+                        lineHeight: 22,
+                      }}
+                      numberOfLines={1}
                     >
                       {title.title}
                     </Text>
-                    <Text style={{ color: '#A1A1AA', marginTop: 4 }}>
+                    <Text variant="body-s" tone="muted" numberOfLines={1}>
                       {[title.releaseYear, title.kind === 'tv' ? 'Series' : 'Movie']
                         .filter(Boolean)
-                        .join(' \u2022 ')}
+                        .join(' \u00b7 ')}
                     </Text>
-                    {isTop ? (
-                      <Text style={{ color: '#ffd166', marginTop: 4, fontSize: 12 }}>
-                        {t('watchlist.topBadge', 'TOP')}
-                      </Text>
-                    ) : null}
+                    <View style={{ flexDirection: 'row', gap: 6, marginTop: 2 }}>
+                      {firstService ? <ServiceBadge serviceId={firstService} size="sm" /> : null}
+                      {isTop ? (
+                        <Text
+                          variant="overline"
+                          style={{
+                            color: colors.up,
+                            textTransform: 'uppercase',
+                            alignSelf: 'center',
+                          }}
+                        >
+                          {t('watchlist.topBadge', 'Top')}
+                        </Text>
+                      ) : null}
+                    </View>
                   </View>
                 </Pressable>
-                <View style={{ justifyContent: 'space-around', paddingRight: 4 }}>
-                  <ActionMini
-                    label={isTop ? t('watchlist.unpin', 'Unpin') : t('watchlist.pin', 'Top')}
+                <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                  <Pressable
                     onPress={() =>
-                      setPriority.mutate({
-                        id: entry.item.id,
-                        priority: isTop ? 'normal' : 'top',
-                      })
+                      router.push({ pathname: '/(app)/title/[id]', params: { id: title.id } })
                     }
-                  />
-                  <ActionMini
-                    label={
-                      isWatched
-                        ? t('watchlist.unwatch', 'Unwatch')
-                        : t('watchlist.markWatched', 'Watched')
-                    }
-                    onPress={() =>
-                      isWatched
-                        ? unmarkWatched.mutate(entry.item.id)
-                        : markWatched.mutate(entry.item.id)
-                    }
-                  />
-                  <ActionMini
-                    label={t('watchlist.remove', 'Remove')}
-                    onPress={() => remove.mutate(entry.item.id)}
-                    danger
-                  />
+                    accessibilityLabel={t('watchlist.play', 'Play')}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: colors.accent,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Play size={16} color={colors.text} fill={colors.text} />
+                  </Pressable>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    <ActionMini
+                      label={isTop ? t('watchlist.unpin', 'Unpin') : t('watchlist.pin', 'Top')}
+                      onPress={() =>
+                        setPriority.mutate({
+                          id: entry.item.id,
+                          priority: isTop ? 'normal' : 'top',
+                        })
+                      }
+                    />
+                    <ActionMini
+                      label={
+                        isWatched
+                          ? t('watchlist.unwatch', 'Unwatch')
+                          : t('watchlist.markWatched', 'Watched')
+                      }
+                      onPress={() =>
+                        isWatched
+                          ? unmarkWatched.mutate(entry.item.id)
+                          : markWatched.mutate(entry.item.id)
+                      }
+                    />
+                    <ActionMini
+                      label={t('watchlist.remove', 'Remove')}
+                      onPress={() => remove.mutate(entry.item.id)}
+                      danger
+                    />
+                  </View>
                 </View>
               </View>
             );
@@ -161,7 +199,13 @@ function ActionMini({
 }) {
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label}>
-      <Text style={{ color: danger ? '#ff5252' : '#A1A1AA', fontSize: 12, fontWeight: '600' }}>
+      <Text
+        variant="caption"
+        style={{
+          color: danger ? colors.left : colors.textMuted,
+          fontFamily: fonts.bodySemi,
+        }}
+      >
         {label}
       </Text>
     </Pressable>
