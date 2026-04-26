@@ -77,6 +77,20 @@
       "watched": "Гледани"
     }
   },
+  "detail": {
+    "notFound": "Не е намерено",
+    "movie": "Филм",
+    "series": "Сериал",
+    "trailer": "Трейлър",
+    "overview": "Описание",
+    "availability": "Къде да гледам",
+    "offer": {
+      "subscription": "Стрийминг",
+      "rent": "Наем",
+      "buy": "Купи",
+      "free": "Безплатно"
+    }
+  },
   "profile": {
     "title": "Профил",
     "subtitle": "Как изглеждаш във Flixy.",
