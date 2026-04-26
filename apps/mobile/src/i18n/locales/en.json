@@ -91,6 +91,31 @@
       "free": "Free"
     }
   },
+  "filters": {
+    "title": "Filters",
+    "open": "Filters",
+    "mood": "Mood",
+    "moodAny": "Any",
+    "kind": "Type",
+    "years": "Years",
+    "allYears": "All",
+    "lastYears": "Last 10y",
+    "classics": "Pre-2000",
+    "reset": "Reset",
+    "apply": "Apply",
+    "kinds": {
+      "movie": "Movies",
+      "tv": "Series"
+    },
+    "moods": {
+      "cozy": "Cozy",
+      "edge_of_seat": "Edge of seat",
+      "mind_bender": "Mind bender",
+      "feel_good": "Feel good",
+      "short_pick": "Short pick",
+      "classic": "Classic"
+    }
+  },
   "profile": {
     "title": "Profile",
     "subtitle": "How you appear in Flixy.",

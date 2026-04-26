@@ -91,6 +91,31 @@
       "free": "Ücretsiz"
     }
   },
+  "filters": {
+    "title": "Filtreler",
+    "open": "Filtreler",
+    "mood": "Ruh hali",
+    "moodAny": "Hepsi",
+    "kind": "Tür",
+    "years": "Yıllar",
+    "allYears": "Tümü",
+    "lastYears": "Son 10 yıl",
+    "classics": "2000 öncesi",
+    "reset": "Sıfırla",
+    "apply": "Uygula",
+    "kinds": {
+      "movie": "Filmler",
+      "tv": "Diziler"
+    },
+    "moods": {
+      "cozy": "Rahat",
+      "edge_of_seat": "Nefes kesici",
+      "mind_bender": "Zihin bükücü",
+      "feel_good": "İçimi ısıtsın",
+      "short_pick": "Kısa",
+      "classic": "Klasik"
+    }
+  },
   "profile": {
     "title": "Profil",
     "subtitle": "Flixy'de nasıl göründüğün.",
