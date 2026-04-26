@@ -45,7 +45,22 @@
     "getStarted": "Започни",
     "skip": "Пропусни",
     "save": "Запази",
-    "loading": "Зареждане…"
+    "loading": "Зареждане…",
+    "retry": "Опитай отново"
+  },
+  "deck": {
+    "title": "Открий",
+    "loadingTitle": "Подбираме за тази вечер",
+    "loadingHint": "Подреждаме тестето\u2026",
+    "errorTitle": "Нещо се обърка",
+    "emptyTitle": "Прегледа всички",
+    "emptyHint": "Разшири филтрите за още предложения.",
+    "syncing": "Синхронизиране на {{count}} плъзгания\u2026",
+    "actionPass": "Пас",
+    "actionAdd": "Добави",
+    "actionTop": "Топ",
+    "actionSeen": "Гледано",
+    "undo": "Отмени"
   },
   "profile": {
     "title": "Профил",

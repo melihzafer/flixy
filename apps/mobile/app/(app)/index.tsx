@@ -44,6 +44,7 @@ export default function Home() {
       ) : null}
 
       <View style={{ gap: 12, marginTop: 12 }}>
+        <Button label={t('deck.title')} onPress={() => router.push('/(app)/deck')} />
         <Button
           label={t('settings.profile')}
           variant="secondary"

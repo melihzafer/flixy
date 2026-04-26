@@ -45,7 +45,22 @@
     "getStarted": "Get started",
     "skip": "Skip",
     "save": "Save",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "retry": "Try again"
+  },
+  "deck": {
+    "title": "Discover",
+    "loadingTitle": "Finding tonight\u2019s picks",
+    "loadingHint": "Composing your deck\u2026",
+    "errorTitle": "Something went wrong",
+    "emptyTitle": "You\u2019ve seen them all",
+    "emptyHint": "Broaden your filters to see more picks.",
+    "syncing": "Syncing {{count}} swipe(s)\u2026",
+    "actionPass": "Pass",
+    "actionAdd": "Add",
+    "actionTop": "Top",
+    "actionSeen": "Seen",
+    "undo": "Undo"
   },
   "profile": {
     "title": "Profile",

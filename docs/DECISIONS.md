@@ -90,3 +90,10 @@ Append-only log of autopilot decisions made during the build. Each entry is one 
 **Decision:** On-device composer for MVP. The pure function lives in `@flixy/shared/composer.ts` so it can be tested in isolation and (later) reused server-side without rewriting. Fetches a candidate pool of ~80 popularity-sorted titles via the catalogue query, then scores them in JS.
 **Alternatives considered:** (a) Edge function deck endpoint — deferred; would gate the swipe loop on network. (b) Defer composer entirely and serve raw popularity — rejected, the layered scoring is what makes Flixy not a top-10 list.
 **Reversibility:** Easy. Swap `composeDeck` call in `useDeck` for an RPC; the function signature is the contract.
+
+## DEC-014: Swipe events go through an offline queue with optimistic watchlist
+**Date:** 2026-04-27
+**Context:** FSD 3.6.4 requires offline tolerance: swipes during connectivity loss must not be lost or block the UI. Direct insert-on-swipe blocks gesture commits behind the network and loses events on flaky links.
+**Decision:** Swipes are appended to a Zustand+AsyncStorage FIFO queue immediately, then drained to the `swipes` table with exponential backoff (max 30s). Positive swipes (right/up) optimistically upsert a `watchlist_items` row so the watchlist updates instantly; negative swipes only flow to `swipes` (taste signals downstream). Each swipe carries a client-generated UUID so retries are idempotent at the unique-index layer.
+**Alternatives considered:** (a) Plain mutation with TanStack Query offline persistence — rejected, the queue ordering and backoff semantics differ from query retry semantics; (b) Drop swipes when offline — rejected, breaks the trust contract with the user.
+**Reversibility:** Easy. Queue is internal to `features/swipe/queue.ts`; replacing it with a server RPC means swapping the drain call site.

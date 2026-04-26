@@ -45,7 +45,22 @@
     "getStarted": "Başla",
     "skip": "Atla",
     "save": "Kaydet",
-    "loading": "Yükleniyor…"
+    "loading": "Yükleniyor…",
+    "retry": "Tekrar dene"
+  },
+  "deck": {
+    "title": "Keşfet",
+    "loadingTitle": "Bu akşamlık seçimler hazırlanıyor",
+    "loadingHint": "Deste oluşturuluyor\u2026",
+    "errorTitle": "Bir şeyler ters gitti",
+    "emptyTitle": "Hepsini gördün",
+    "emptyHint": "Daha fazla öneri için filtreleri genişlet.",
+    "syncing": "{{count}} kaydırma eşitleniyor\u2026",
+    "actionPass": "Geç",
+    "actionAdd": "Ekle",
+    "actionTop": "Öncelikli",
+    "actionSeen": "Gördüm",
+    "undo": "Geri al"
   },
   "profile": {
     "title": "Profil",
