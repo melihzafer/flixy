@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams } from 'expo-router';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Image,
@@ -14,6 +15,7 @@ import {
 import { Screen } from '../../../src/components/Screen';
 import { useTitle } from '../../../src/features/catalogue/hooks';
 import { useRecordSwipe } from '../../../src/features/swipe/hooks';
+import { events } from '../../../src/features/telemetry/events';
 
 /**
  * Title detail view (FSD section 3.8). Hero artwork + meta + overview +
@@ -27,6 +29,10 @@ export default function TitleDetail() {
   const recordSwipe = useRecordSwipe();
   const { width } = useWindowDimensions();
   const heroH = Math.min(width * 1.0, 460);
+
+  useEffect(() => {
+    if (id) events.detailViewed(id);
+  }, [id]);
 
   if (isLoading) {
     return (
@@ -60,6 +66,7 @@ export default function TitleDetail() {
 
   const openTrailer = () => {
     if (!title.trailerKey) return;
+    events.trailerOpened(title.id);
     Linking.openURL(`https://www.youtube.com/watch?v=${title.trailerKey}`);
   };
 
@@ -131,7 +138,15 @@ export default function TitleDetail() {
             {title.availability.map((a) => (
               <Pressable
                 key={`${a.serviceId}-${a.region}-${a.offerType}`}
-                onPress={() => a.deepLink && Linking.openURL(a.deepLink)}
+                onPress={() => {
+                  if (!a.deepLink) return;
+                  events.availabilityOpened({
+                    titleId: title.id,
+                    serviceId: a.serviceId,
+                    offerType: a.offerType,
+                  });
+                  Linking.openURL(a.deepLink);
+                }}
                 disabled={!a.deepLink}
                 accessibilityRole="link"
                 style={{

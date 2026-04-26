@@ -9,6 +9,7 @@ import { logger } from '../../lib/logger';
 import { supabase } from '../../lib/supabase';
 import { useSession } from '../auth/useSession';
 import { useUserPreferences } from '../onboarding/hooks';
+import { events } from '../telemetry/events';
 import { useSwipeQueue } from './queue';
 
 /**
@@ -74,6 +75,12 @@ export function useRecordSwipe() {
       };
       void hapticFor(args.direction);
       await enqueue(event);
+      events.swipeCommitted({
+        titleId: args.titleId,
+        direction: args.direction,
+        deckPosition: args.deckPosition,
+        mood: null,
+      });
 
       // Optimistic projection into watchlist for positive swipes.
       if (args.direction === 'right' || args.direction === 'up') {
@@ -117,6 +124,7 @@ export function useUndoSwipe() {
         if (error) logger.warn('watchlist undo failed', { message: error.message });
       }
       await markUndone(event.eventId);
+      events.swipeUndone(event.titleId);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['watchlist'] });
