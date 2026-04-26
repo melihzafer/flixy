@@ -68,3 +68,11 @@ Append-only log of autopilot decisions made during the build. Each entry is one 
 **Alternatives considered:** Zustand draft + final commit. Rejected — adds a sync surface and breaks resume-on-kill.
 **Reversibility:** Easy.
 
+
+## DEC-011: Avatars in Supabase Storage with owner-prefixed paths
+**Date:** 2026-04-27
+**Context:** Avatar upload needs storage. Object-level RLS in Supabase Storage is path-based.
+**Decision:** Public-read `avatars` bucket; write/update/delete restricted to objects whose first path segment equals the authenticated user id (`<userId>/<filename>`). Public-read keeps friend/share rendering trivial; profile.avatar_url stores the public URL directly.
+**Alternatives considered:** Private bucket + signed URLs (rejected: extra round-trip every render, cache headaches). Profile photo as base64 in profiles table (rejected: bloats row, kills paginated reads).
+**Reversibility:** Easy — bucket/policies are migration-only.
+

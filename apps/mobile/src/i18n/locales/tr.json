@@ -43,7 +43,39 @@
     "continue": "Devam et",
     "done": "Tamam",
     "getStarted": "Başla",
-    "skip": "Atla"
+    "skip": "Atla",
+    "save": "Kaydet",
+    "loading": "Yükleniyor…"
+  },
+  "profile": {
+    "title": "Profil",
+    "subtitle": "Flixy'de nasıl göründüğün.",
+    "handle": "Kullanıcı adı",
+    "displayName": "Görünen ad",
+    "displayNamePlaceholder": "Adın",
+    "region": "Bölge",
+    "avatarLabel": "Profil fotoğrafı",
+    "changeAvatar": "Fotoğrafı değiştir",
+    "permissionDenied": "Fotoğraf izni verilmedi.",
+    "uploadFailed": "Bu görsel yüklenemedi. Daha küçük bir tane dene."
+  },
+  "settings": {
+    "title": "Ayarlar",
+    "account": "Hesap",
+    "profile": "Profil",
+    "region": "Bölge",
+    "language": "Dil",
+    "preferences": "Tercihler",
+    "services": "Yayın servisleri",
+    "servicesCount": "{{count}} seçili",
+    "genres": "Türler",
+    "genresCount": "{{count}} seçili",
+    "notifications": "Bildirimler",
+    "notificationsEnabled": "Anlık bildirimler",
+    "about": "Hakkında",
+    "version": "Uygulama sürümü",
+    "privacy": "Gizlilik politikası",
+    "terms": "Kullanım şartları"
   },
   "onboarding": {
     "welcomeTitle": "Flixy'ye hoş geldin",

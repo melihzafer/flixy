@@ -1,9 +1,10 @@
-import { LanguageCodeSchema, RegionCodeSchema, UserProfileSchema } from '../user';
+import { HandleSchema, LanguageCodeSchema, RegionCodeSchema, UserProfileSchema } from '../user';
 
 describe('UserProfile schema', () => {
   it('accepts a valid profile', () => {
     const result = UserProfileSchema.safeParse({
       id: '00000000-0000-4000-8000-000000000000',
+      handle: null,
       displayName: 'Melih',
       avatarUrl: null,
       region: 'TR',
@@ -24,5 +25,13 @@ describe('UserProfile schema', () => {
     expect(LanguageCodeSchema.safeParse('en').success).toBe(true);
     expect(LanguageCodeSchema.safeParse('tr').success).toBe(true);
     expect(LanguageCodeSchema.safeParse('jp').success).toBe(false);
+  });
+
+  it('enforces handle format', () => {
+    expect(HandleSchema.safeParse('me').success).toBe(false); // too short
+    expect(HandleSchema.safeParse('a'.repeat(21)).success).toBe(false); // too long
+    expect(HandleSchema.safeParse('Melih').success).toBe(false); // uppercase
+    expect(HandleSchema.safeParse('me_lih').success).toBe(true);
+    expect(HandleSchema.safeParse('me-lih').success).toBe(false); // dash
   });
 });

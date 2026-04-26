@@ -43,7 +43,39 @@
     "continue": "Continue",
     "done": "Done",
     "getStarted": "Get started",
-    "skip": "Skip"
+    "skip": "Skip",
+    "save": "Save",
+    "loading": "Loading…"
+  },
+  "profile": {
+    "title": "Profile",
+    "subtitle": "How you appear in Flixy.",
+    "handle": "Handle",
+    "displayName": "Display name",
+    "displayNamePlaceholder": "Your name",
+    "region": "Region",
+    "avatarLabel": "Profile photo",
+    "changeAvatar": "Change photo",
+    "permissionDenied": "Photo library permission denied.",
+    "uploadFailed": "Couldn't upload that image. Try a smaller one."
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "profile": "Profile",
+    "region": "Region",
+    "language": "Language",
+    "preferences": "Preferences",
+    "services": "Streaming services",
+    "servicesCount": "{{count}} selected",
+    "genres": "Genres",
+    "genresCount": "{{count}} selected",
+    "notifications": "Notifications",
+    "notificationsEnabled": "Push notifications",
+    "about": "About",
+    "version": "App version",
+    "privacy": "Privacy policy",
+    "terms": "Terms of service"
   },
   "onboarding": {
     "welcomeTitle": "Welcome to Flixy",

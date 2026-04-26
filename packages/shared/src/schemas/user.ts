@@ -7,8 +7,15 @@ export const RegionCodeSchema = z
 
 export const LanguageCodeSchema = z.enum(['en', 'tr', 'bg', 'es', 'de', 'fr', 'pt-BR']);
 
+export const HandleSchema = z
+  .string()
+  .min(3)
+  .max(20)
+  .regex(/^[a-z0-9_]+$/, 'Lowercase letters, numbers, and underscores only.');
+
 export const UserProfileSchema = z.object({
   id: z.string().uuid(),
+  handle: HandleSchema.nullable(),
   displayName: z.string().min(1).max(80).nullable(),
   avatarUrl: z.string().url().nullable(),
   region: RegionCodeSchema,

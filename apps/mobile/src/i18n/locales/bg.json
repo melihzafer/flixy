@@ -43,7 +43,39 @@
     "continue": "Продължи",
     "done": "Готово",
     "getStarted": "Започни",
-    "skip": "Пропусни"
+    "skip": "Пропусни",
+    "save": "Запази",
+    "loading": "Зареждане…"
+  },
+  "profile": {
+    "title": "Профил",
+    "subtitle": "Как изглеждаш във Flixy.",
+    "handle": "Потребителско име",
+    "displayName": "Име",
+    "displayNamePlaceholder": "Твоето име",
+    "region": "Регион",
+    "avatarLabel": "Профилна снимка",
+    "changeAvatar": "Смени снимката",
+    "permissionDenied": "Достъпът до снимките е отказан.",
+    "uploadFailed": "Не успяхме да качим. Опитай с по-малка снимка."
+  },
+  "settings": {
+    "title": "Настройки",
+    "account": "Акаунт",
+    "profile": "Профил",
+    "region": "Регион",
+    "language": "Език",
+    "preferences": "Предпочитания",
+    "services": "Стрийминг услуги",
+    "servicesCount": "{{count}} избрани",
+    "genres": "Жанрове",
+    "genresCount": "{{count}} избрани",
+    "notifications": "Известия",
+    "notificationsEnabled": "Push известия",
+    "about": "За приложението",
+    "version": "Версия",
+    "privacy": "Политика за поверителност",
+    "terms": "Условия за ползване"
   },
   "onboarding": {
     "welcomeTitle": "Добре дошъл във Flixy",
