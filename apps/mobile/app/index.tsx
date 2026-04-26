@@ -1,30 +1,33 @@
-import { useTranslation } from 'react-i18next';
-import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Redirect } from 'expo-router';
+import { ActivityIndicator, View } from 'react-native';
 
-import { Text } from '../src/components/Text';
+import { useSession } from '../src/features/auth/useSession';
 
+/**
+ * Auth gate: redirect to /(app) when authenticated (incl. anonymous), to
+ * /(auth)/welcome otherwise. While Supabase rehydrates the session from
+ * SecureStore we render a minimal spinner.
+ */
 export default function Index() {
-  const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
+  const { data, isLoading } = useSession();
 
-  return (
-    <View
-      className="flex-1 bg-bg px-6"
-      style={{ paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }}
-      accessibilityRole="header"
-    >
-      <View className="flex-1 justify-center">
-        <Text variant="display-l" accessibilityRole="text">
-          {t('app.name')}
-        </Text>
-        <Text variant="title-m" style={{ marginTop: 8, color: '#A1A1AA' }}>
-          {t('app.tagline')}
-        </Text>
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#0B0B0F',
+        }}
+      >
+        <ActivityIndicator color="#F5F5F7" />
       </View>
-      <Text variant="caption" style={{ color: '#71717A', textTransform: 'uppercase' }}>
-        {t('smoke.ready')}
-      </Text>
-    </View>
-  );
+    );
+  }
+
+  if (data?.session) {
+    return <Redirect href="/(app)" />;
+  }
+  return <Redirect href="/(auth)/welcome" />;
 }

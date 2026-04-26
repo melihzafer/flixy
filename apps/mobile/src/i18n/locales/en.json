@@ -5,5 +5,42 @@
   },
   "smoke": {
     "ready": "Bootstrap successful"
+  },
+  "auth": {
+    "welcomeTitle": "Find what to watch tonight",
+    "welcomeSubtitle": "Swipe through movies and shows curated for your taste.",
+    "continueAnonymously": "Start swiping",
+    "createAccount": "Create account",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "haveAccount": "Already have an account?",
+    "noAccount": "New to Flixy?",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "forgotPassword": "Forgot password?",
+    "resetPasswordTitle": "Reset your password",
+    "resetPasswordSubtitle": "We'll email you a link to choose a new one.",
+    "resetPasswordCta": "Send reset link",
+    "resetPasswordSent": "Check your inbox for the reset link.",
+    "signUpTitle": "Create your Flixy account",
+    "signUpSubtitle": "Save your watchlist and pick up on any device.",
+    "signInTitle": "Welcome back",
+    "signInSubtitle": "Sign in to sync your watchlist.",
+    "checkInbox": "Confirm your email to finish signing up.",
+    "upgradeTitle": "Save your taste",
+    "upgradeSubtitle": "Create an account so your swipes follow you to every device.",
+    "upgradeCta": "Create account",
+    "notNow": "Not now",
+    "errors": {
+      "generic": "Something went wrong. Please try again.",
+      "invalidCredentials": "Email or password is incorrect.",
+      "network": "No connection. Check your network and retry."
+    }
+  },
+  "common": {
+    "back": "Back",
+    "continue": "Continue",
+    "done": "Done"
   }
 }
