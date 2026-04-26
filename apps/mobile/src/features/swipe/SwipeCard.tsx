@@ -147,6 +147,7 @@ export function SwipeCard({
       <Animated.View
         accessibilityRole="adjustable"
         accessibilityLabel={`${title.title}. Swipe right to add, left to pass, up to top, down to mark seen.`}
+        testID="swipe-card"
         style={[
           {
             position: 'absolute',

@@ -1,0 +1,24 @@
+# Returning user — sign in, swipe, add to watchlist, verify.
+# Maps to FSD § 15 Returning User journey.
+appId: app.flixy
+---
+- launchApp:
+    clearState: false
+- assertVisible: "Flixy"
+- tapOn:
+    id: "deck-button"
+- assertVisible:
+    id: "swipe-card"
+    timeout: 8000
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: LEFT
+- back
+- tapOn:
+    id: "watchlist-button"
+- assertVisible:
+    id: "watchlist-row"
+    timeout: 5000
