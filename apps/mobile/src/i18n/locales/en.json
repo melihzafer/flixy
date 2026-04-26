@@ -32,6 +32,8 @@
     "upgradeSubtitle": "Create an account so your swipes follow you to every device.",
     "upgradeCta": "Create account",
     "notNow": "Not now",
+    "anonymous": "Anonymous session",
+    "noSession": "No session",
     "errors": {
       "generic": "Something went wrong. Please try again.",
       "invalidCredentials": "Email or password is incorrect.",

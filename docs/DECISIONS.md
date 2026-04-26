@@ -97,3 +97,32 @@ Append-only log of autopilot decisions made during the build. Each entry is one 
 **Decision:** Swipes are appended to a Zustand+AsyncStorage FIFO queue immediately, then drained to the `swipes` table with exponential backoff (max 30s). Positive swipes (right/up) optimistically upsert a `watchlist_items` row so the watchlist updates instantly; negative swipes only flow to `swipes` (taste signals downstream). Each swipe carries a client-generated UUID so retries are idempotent at the unique-index layer.
 **Alternatives considered:** (a) Plain mutation with TanStack Query offline persistence — rejected, the queue ordering and backoff semantics differ from query retry semantics; (b) Drop swipes when offline — rejected, breaks the trust contract with the user.
 **Reversibility:** Easy. Queue is internal to `features/swipe/queue.ts`; replacing it with a server RPC means swapping the drain call site.
+
+
+## DEC-015: Filter state lives in Zustand only (no server persistence)
+**Date:** 2026-04-28
+**Context:** FSD 3.9 filter sheet exposes kinds, genres, providers, runtime cap, year window, hide-seen. Server persistence would let filters follow the user across devices, but the table + sync logic adds Phase-3 surface area for a feature few users tweak per session.
+**Decision:** Filters live entirely in `features/deck/filterStore.ts` (Zustand persist via AsyncStorage). Per-device, no Supabase row.
+**Alternatives considered:** (a) `user_preferences.filter_state` jsonb column with realtime sync — rejected as premature; (b) URL-encoded share links — out of scope for MVP.
+**Reversibility:** Easy. Adding a server column later means writing a one-way migration of the local store on first sync.
+
+## DEC-016: Mobile jest deferred until Phase 4 polish
+**Date:** 2026-04-28
+**Context:** Real jest-expo + pnpm hoisting attempted in `feat/phase-4a-mobile-jest`; Metro/Jest interop with the workspace was thorny.
+**Decision:** Keep `apps/mobile` test script as a no-op for now. All business logic that needs unit coverage already lives in `packages/shared` (21/21 green). Mobile screens are thin wrappers over hooks; component tests can wait until the design system and a11y pass land.
+**Alternatives considered:** Force jest-expo into the workspace before more screens land — rejected, sunk cost vs. shipping risk.
+**Reversibility:** Easy. When we add mobile tests we re-enable the script and add `jest-expo` preset.
+
+## DEC-017: Search MVP uses ILIKE; tsvector FTS deferred
+**Date:** 2026-04-28
+**Context:** FSD 3.10 calls for catalogue search. A real Postgres `tsvector` column with GIN index gives stemming, prefix matching, and ranking; ILIKE on `title || original_title` is good enough for ~10k-row launch catalogue.
+**Decision:** Ship `useSearchTitles` with `.or('title.ilike.%q%,original_title.ilike.%q%')` and `popularity` sort. Plan a follow-up migration adding `search_tsv` + trigger-maintained vector when catalogue grows past ~50k rows.
+**Alternatives considered:** Algolia/Meilisearch — extra infra, paid; not justified for launch volume.
+**Reversibility:** Easy. Search hook is one file; swap the query when FTS lands.
+
+## DEC-018: Maestro selectors use stable testIDs, not text
+**Date:** 2026-04-28
+**Context:** Flixy ships in seven languages. Text matchers in E2E flows (`tapOn: "Continue"`) silently break in tr/bg/etc. and produce flakiness when copy is tweaked.
+**Decision:** Every element targeted by Maestro has an explicit `testID` prop. The `apps/mobile/e2e/README.md` documents the contract.
+**Alternatives considered:** `accessibilityLabel` matchers — rejected, those are also localized.
+**Reversibility:** Easy. testID is render-only and stripped in release builds.

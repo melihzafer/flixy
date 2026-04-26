@@ -9,24 +9,20 @@ import { useSignOut } from '../../src/features/auth/hooks';
 import { useSession } from '../../src/features/auth/useSession';
 import { useAnonSwipeStore } from '../../src/stores/anonSwipe';
 
-/**
- * Authenticated home placeholder. Real swipe deck lands in Phase 3.
- * Today this proves the auth round-trip and surfaces the upgrade prompt
- * when an anonymous user crosses the swipe threshold (FSD § 3.1.6).
- */
 export default function Home() {
   const { t } = useTranslation();
   const { data: session } = useSession();
   const signOut = useSignOut();
-  const { swipeCount, bumpSwipe, shouldPromptUpgrade, dismissPrompt, reset } = useAnonSwipeStore();
+  const { shouldPromptUpgrade, dismissPrompt, reset } = useAnonSwipeStore();
 
   const isAnon = session?.isAnonymous ?? false;
   const showPrompt = isAnon && shouldPromptUpgrade();
+  const sessionLabel = session?.user?.email ?? (isAnon ? t('auth.anonymous') : t('auth.noSession'));
 
   return (
     <Screen title={t('app.name')} subtitle={t('app.tagline')}>
       <Text variant="body-m" style={{ color: '#A1A1AA' }}>
-        {session?.user?.email ?? (isAnon ? 'Anonymous session' : 'No session')}
+        {sessionLabel}
       </Text>
 
       {showPrompt ? (
@@ -71,10 +67,6 @@ export default function Home() {
           variant="secondary"
           onPress={() => router.push('/(app)/settings')}
         />
-        <Text variant="caption" style={{ color: '#71717A' }}>
-          DEV · swipes simulated: {swipeCount}
-        </Text>
-        <Button label="Simulate swipe" variant="secondary" onPress={bumpSwipe} />
         <Button
           label={t('auth.signOut')}
           variant="ghost"
