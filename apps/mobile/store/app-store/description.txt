@@ -1,0 +1,21 @@
+Find what to watch tonight without endlessly scrolling.
+
+Flixy is a swipe-based discovery app for movies and TV. Each card is one title — swipe right to add to your watchlist, left to pass, up to top your list, down to mark as already seen. Behind the cards, Flixy learns your taste and surfaces titles you'll actually want to watch.
+
+WHY FLIXY
+- One decision per card. No grids, no rabbit holes.
+- Filters that respect you: kinds, genres, providers, runtime, year, hide-seen.
+- Mood presets for quick night-in picks.
+- Streaming availability for your country, with one tap to open the right app.
+- Works offline: your swipes never get lost.
+
+YOUR DATA, YOUR CALL
+- Start swiping anonymously, sign up only when you want to sync across devices.
+- Push notifications are opt-in.
+- Detailed privacy policy at flixy.app/privacy.html.
+
+LANGUAGES AT LAUNCH
+- English, Türkçe, Български. More on the way.
+
+QUESTIONS
+- hello@flixy.app
