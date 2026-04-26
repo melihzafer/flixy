@@ -126,3 +126,11 @@ Append-only log of autopilot decisions made during the build. Each entry is one 
 **Decision:** Every element targeted by Maestro has an explicit `testID` prop. The `apps/mobile/e2e/README.md` documents the contract.
 **Alternatives considered:** `accessibilityLabel` matchers — rejected, those are also localized.
 **Reversibility:** Easy. testID is render-only and stripped in release builds.
+
+
+## DEC-019: Landing page is static HTML, not Next.js
+**Date:** 2026-04-28
+**Context:** The build prompt calls for "app.flixy.com landing page (Next.js, hosted on Vercel) with App Store / Play Store badges and a privacy policy." A full Next.js install pulls react/react-dom/next into the workspace lockfile (~hundreds of MB) and lengthens CI for a page that today needs three URLs and zero interactivity.
+**Decision:** Ship `apps/web` as static HTML+CSS deployed to Vercel as a static site. Pages: `index.html`, `privacy.html`, `terms.html`, plus `vercel.json` for security headers and clean URLs. The package exposes no-op `typecheck` / `test` scripts so `pnpm -r` keeps working.
+**Alternatives considered:** (a) Next.js App Router with the same content — rejected as overkill for launch; (b) Astro — same overkill, plus another tooling onboarding; (c) host the privacy policy inside the app — rejected because the App Store requires a public URL.
+**Reversibility:** Easy. The day we need a dynamic feature (waitlist form, blog, locale routing) we run `pnpm create next-app` inside `apps/web` and migrate three HTML files. No data model exists to migrate.

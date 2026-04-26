@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Flixy — Swipe. Discover. Watch.</title>
+    <meta
+      name="description"
+      content="Flixy helps you find what to watch tonight. Swipe through movies and shows curated for your taste, then jump straight into your streaming app."
+    />
+    <meta property="og:title" content="Flixy — Swipe. Discover. Watch." />
+    <meta
+      property="og:description"
+      content="Find what to watch tonight. Swipe through movies and shows curated for your taste."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://flixy.app" />
+    <link rel="canonical" href="https://flixy.app" />
+    <link
+      rel="preconnect"
+      href="https://fonts.googleapis.com"
+      crossorigin="anonymous"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="hero">
+      <div class="container">
+        <p class="brand">Flixy</p>
+        <h1>Find what to watch tonight.</h1>
+        <p class="tagline">
+          Swipe through movies and shows curated for your taste. Jump straight
+          into your streaming app, every time.
+        </p>
+
+        <div class="badges">
+          <a
+            href="https://apps.apple.com/app/flixy"
+            class="badge"
+            aria-label="Download on the App Store"
+          >
+            <span class="badge-eyebrow">Download on the</span>
+            <span class="badge-store">App Store</span>
+          </a>
+          <a
+            href="https://play.google.com/store/apps/details?id=app.flixy"
+            class="badge"
+            aria-label="Get it on Google Play"
+          >
+            <span class="badge-eyebrow">Get it on</span>
+            <span class="badge-store">Google Play</span>
+          </a>
+        </div>
+
+        <p class="coming-soon">Launching soon. Apps go live with the public release.</p>
+      </div>
+    </main>
+
+    <footer>
+      <div class="container footer-row">
+        <p>&copy; <span id="year"></span> Flixy</p>
+        <nav>
+          <a href="/privacy.html">Privacy</a>
+          <a href="/terms.html">Terms</a>
+          <a href="mailto:hello@flixy.app">Contact</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
