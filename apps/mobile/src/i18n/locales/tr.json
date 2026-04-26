@@ -62,6 +62,21 @@
     "actionSeen": "Gördüm",
     "undo": "Geri al"
   },
+  "watchlist": {
+    "title": "İzleme listesi",
+    "empty": "Listeniz boş. Sağa kaydırarak başlık ekleyin.",
+    "topBadge": "ÖNCE",
+    "pin": "Önce",
+    "unpin": "Kaldır",
+    "markWatched": "İzlendi",
+    "unwatch": "Geri al",
+    "remove": "Sil",
+    "filter": {
+      "all": "Tümü",
+      "top": "Önce",
+      "watched": "İzlenen"
+    }
+  },
   "profile": {
     "title": "Profil",
     "subtitle": "Flixy'de nasıl göründüğün.",

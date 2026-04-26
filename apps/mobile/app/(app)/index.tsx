@@ -46,6 +46,11 @@ export default function Home() {
       <View style={{ gap: 12, marginTop: 12 }}>
         <Button label={t('deck.title')} onPress={() => router.push('/(app)/deck')} />
         <Button
+          label={t('watchlist.title')}
+          variant="secondary"
+          onPress={() => router.push('/(app)/watchlist')}
+        />
+        <Button
           label={t('settings.profile')}
           variant="secondary"
           onPress={() => router.push('/(app)/profile')}

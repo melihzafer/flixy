@@ -62,6 +62,21 @@
     "actionSeen": "Seen",
     "undo": "Undo"
   },
+  "watchlist": {
+    "title": "Watchlist",
+    "empty": "Your watchlist is empty. Swipe right to add titles.",
+    "topBadge": "TOP",
+    "pin": "Top",
+    "unpin": "Unpin",
+    "markWatched": "Watched",
+    "unwatch": "Unwatch",
+    "remove": "Remove",
+    "filter": {
+      "all": "All",
+      "top": "Top",
+      "watched": "Watched"
+    }
+  },
   "profile": {
     "title": "Profile",
     "subtitle": "How you appear in Flixy.",

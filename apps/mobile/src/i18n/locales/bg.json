@@ -62,6 +62,21 @@
     "actionSeen": "Гледано",
     "undo": "Отмени"
   },
+  "watchlist": {
+    "title": "Списък",
+    "empty": "Списъкът е празен. Плъзни надясно, за да добавиш.",
+    "topBadge": "ТОП",
+    "pin": "Топ",
+    "unpin": "Махни",
+    "markWatched": "Гледано",
+    "unwatch": "Не гледано",
+    "remove": "Премахни",
+    "filter": {
+      "all": "Всички",
+      "top": "Топ",
+      "watched": "Гледани"
+    }
+  },
   "profile": {
     "title": "Профил",
     "subtitle": "Как изглеждаш във Flixy.",
