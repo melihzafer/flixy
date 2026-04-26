@@ -6,6 +6,8 @@ import { Pressable, Text, View, useWindowDimensions } from 'react-native';
 import type { DeckCard, SwipeDirection, SwipeEvent } from '@flixy/shared';
 
 import { Screen } from '../../src/components/Screen';
+import { FilterSheet } from '../../src/features/deck/FilterSheet';
+import { useDeckFilters } from '../../src/features/deck/filterStore';
 import { useDeck } from '../../src/features/deck/hooks';
 import { SwipeCard } from '../../src/features/swipe/SwipeCard';
 import {
@@ -27,10 +29,18 @@ export default function DeckScreen() {
   const cardWidth = Math.min(width - 32, 380);
   const cardHeight = Math.min(height * 0.62, 580);
 
-  const { deck, isLoading, isError, refetch } = useDeck();
+  const { deck, isLoading, isError, refetch } = useDeck({
+    mood: useDeckFilters((s) => s.mood),
+    extraFilter: {
+      kinds: useDeckFilters((s) => s.kinds),
+      minYear: useDeckFilters((s) => s.minYear) ?? undefined,
+      maxYear: useDeckFilters((s) => s.maxYear) ?? undefined,
+    },
+  });
   const recordSwipe = useRecordSwipe();
   const undoSwipe = useUndoSwipe();
   const stats = useSwipeStats();
+  const [showFilters, setShowFilters] = useState(false);
 
   useSwipeQueueBoot();
   // NetInfo wiring lands in Phase 3.9 with notifications; for now treat as online.
@@ -110,6 +120,24 @@ export default function DeckScreen() {
 
   return (
     <Screen title={t('deck.title', 'Discover')}>
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
+        <Pressable
+          onPress={() => setShowFilters(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('filters.title', 'Filters')}
+          style={{
+            paddingHorizontal: 14,
+            paddingVertical: 8,
+            borderRadius: 999,
+            backgroundColor: '#15151B',
+          }}
+        >
+          <Text style={{ color: '#A1A1AA', fontWeight: '600' }}>
+            {t('filters.open', 'Filters')}
+          </Text>
+        </Pressable>
+      </View>
+
       {stats.queued > 0 ? (
         <Text style={{ color: '#71717A', textAlign: 'center', marginBottom: 8 }}>
           {t('deck.syncing', 'Syncing {{count}} swipe(s)\u2026', { count: stats.queued })}
@@ -178,6 +206,8 @@ export default function DeckScreen() {
       >
         <Text style={{ color: 'white' }}>{t('deck.undo', 'Undo')}</Text>
       </Pressable>
+
+      <FilterSheet visible={showFilters} onClose={() => setShowFilters(false)} />
     </Screen>
   );
 }

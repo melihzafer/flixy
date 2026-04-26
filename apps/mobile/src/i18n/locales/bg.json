@@ -91,6 +91,31 @@
       "free": "Безплатно"
     }
   },
+  "filters": {
+    "title": "Филтри",
+    "open": "Филтри",
+    "mood": "Настроение",
+    "moodAny": "Всички",
+    "kind": "Тип",
+    "years": "Години",
+    "allYears": "Всички",
+    "lastYears": "Последни 10 г.",
+    "classics": "Преди 2000",
+    "reset": "Изчисти",
+    "apply": "Приложи",
+    "kinds": {
+      "movie": "Филми",
+      "tv": "Сериали"
+    },
+    "moods": {
+      "cozy": "Уютно",
+      "edge_of_seat": "Напрегнато",
+      "mind_bender": "Мозъколомно",
+      "feel_good": "Позитивно",
+      "short_pick": "Кратко",
+      "classic": "Класика"
+    }
+  },
   "profile": {
     "title": "Профил",
     "subtitle": "Как изглеждаш във Flixy.",
