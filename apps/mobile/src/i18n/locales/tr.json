@@ -41,6 +41,49 @@
   "common": {
     "back": "Geri",
     "continue": "Devam et",
-    "done": "Tamam"
+    "done": "Tamam",
+    "getStarted": "Başla",
+    "skip": "Atla"
+  },
+  "onboarding": {
+    "welcomeTitle": "Flixy'ye hoş geldin",
+    "welcomeSubtitle": "Birkaç dokunuş ve kaydırmaya başlıyorsun.",
+    "welcomeBody": "Nerede izlediğini ve neyi sevdiğini söyle, gerisini biz hallederiz.",
+    "regionTitle": "Nerede izliyorsun?",
+    "regionSubtitle": "Bölge ve dil önerilerini ayarlar.",
+    "regionLabel": "Bölge",
+    "languageLabel": "Dil",
+    "servicesTitle": "Servislerini seç",
+    "servicesSubtitle": "Sadece izleyebileceğin başlıkları gösteririz.",
+    "servicesHint": "En az {{min}} seç.",
+    "genresTitle": "Neyi seviyorsun?",
+    "genresSubtitle": "3 ile 12 tür seç.",
+    "genresHint": "{{count}} seçili — {{min}} ile {{max}} arasında seç.",
+    "coldStartTitle": "Hızlı zevk testi",
+    "coldStartSubtitle": "Stilini öğrenmemiz için birkaç başlığı kaydır.",
+    "coldStartPlaceholder": "Soğuk başlangıç kaydırmaları kaydırma motoruyla geliyor. Şimdilik devam et.",
+    "notificationsTitle": "Haberdar ol",
+    "notificationsSubtitle": "Listendeki bir şey çıktığında haber ver.",
+    "notificationsBody": "Sadece servislerine yeni gelenler ve arkadaş etkinliği için. Ayarlardan istediğin zaman kapatabilirsin.",
+    "notificationsAllow": "Bildirimlere izin ver",
+    "notificationsSkip": "Belki sonra"
+  },
+  "genres": {
+    "drama": "Dram",
+    "comedy": "Komedi",
+    "action": "Aksiyon",
+    "thriller": "Gerilim",
+    "horror": "Korku",
+    "sci_fi": "Bilim Kurgu",
+    "fantasy": "Fantastik",
+    "romance": "Romantik",
+    "mystery": "Gizem",
+    "crime": "Suç",
+    "documentary": "Belgesel",
+    "animation": "Animasyon",
+    "family": "Aile",
+    "adventure": "Macera",
+    "history": "Tarih",
+    "music": "Müzik"
   }
 }

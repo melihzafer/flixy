@@ -1,0 +1,63 @@
+import * as Notifications from 'expo-notifications';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { View } from 'react-native';
+
+import { Button } from '../../src/components/Button';
+import { Screen } from '../../src/components/Screen';
+import { Text } from '../../src/components/Text';
+import { useUpdatePreferences } from '../../src/features/onboarding/hooks';
+import { logger } from '../../src/lib/logger';
+
+export default function NotificationsStep() {
+  const { t } = useTranslation();
+  const update = useUpdatePreferences();
+  const [busy, setBusy] = useState(false);
+
+  const finish = (enabled: boolean) => {
+    update.mutate(
+      {
+        notifications_enabled: enabled,
+        onboarding_completed_at: new Date().toISOString(),
+      },
+      { onSuccess: () => router.replace('/(app)') },
+    );
+  };
+
+  const onAllow = async () => {
+    setBusy(true);
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finish(status === 'granted');
+    } catch (e) {
+      logger.warn('notifications.request failed', { message: (e as Error).message });
+      finish(false);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Screen
+      title={t('onboarding.notificationsTitle')}
+      subtitle={t('onboarding.notificationsSubtitle')}
+    >
+      <Text variant="body-m" style={{ color: '#A1A1AA' }}>
+        {t('onboarding.notificationsBody')}
+      </Text>
+      <View style={{ marginTop: 16, gap: 8 }}>
+        <Button
+          label={t('onboarding.notificationsAllow')}
+          loading={busy || update.isPending}
+          onPress={onAllow}
+        />
+        <Button
+          label={t('onboarding.notificationsSkip')}
+          variant="secondary"
+          onPress={() => finish(false)}
+        />
+      </View>
+    </Screen>
+  );
+}
