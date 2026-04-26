@@ -5,3 +5,4 @@
 
 export * from './schemas/user';
 export * from './schemas/title';
+export * from './schemas/auth';

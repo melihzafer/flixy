@@ -32,3 +32,24 @@ Append-only log of autopilot decisions made during the build. Each entry is one 
 **Context:** Need to separate sensitive auth material from cached query data.
 **Decision:** Supabase session storage uses AsyncStorage today (Supabase JS default supports it cleanly). When BetterAuth client is wired in Phase 2, secrets/refresh tokens move to expo-secure-store. Public, non-sensitive cache stays on AsyncStorage.
 **Reversibility:** Easy.
+
+## DEC-006: Supabase auth storage moved to expo-secure-store in Phase 2A
+**Date:** 2026-04-27
+**Context:** DEC-005 deferred secure token storage to "when BetterAuth lands". BetterAuth wiring is non-trivial (peer-dep on zod v4, schema mapping for the existing `auth.users` table) and Phase 2A only needs email/password + anonymous flows that Supabase provides natively. Shipping plain AsyncStorage for tokens in the meantime would mean any later Phase 2 PR that introduces secure storage has to reason about migrating in-flight sessions.
+**Decision:** Implement a chunked `secureStoreAdapter` in `apps/mobile/src/lib/secureStore.ts` that satisfies the Supabase storage interface, and pass it directly to `createClient`. Tokens now land in Keychain / EncryptedSharedPreferences from day one. BetterAuth integration is descoped to Phase 2C/2D once email magic-link / social providers are required.
+**Alternatives considered:** Use AsyncStorage now and migrate later; ship BetterAuth straight away. The first is a known-bad future migration; the second blocks the auth screens on resolving the zod v4 peer warning and isn't required for MVP auth.
+**Reversibility:** Easy — adapter is a single file; users with existing AsyncStorage-stored sessions on dev builds simply re-authenticate on first launch after the change.
+
+## DEC-007: Anonymous-upgrade prompt threshold = 15 swipes, 24h dismissal cooldown
+**Date:** 2026-04-27
+**Context:** FSD § 3.1.6 calls for an "account upgrade prompt at swipe ~15" but doesn't specify dismissal behaviour. Hammering anon users with the same modal every session is hostile.
+**Decision:** Track lifetime anon swipe count + last dismissal timestamp in a Zustand store persisted via AsyncStorage. Prompt triggers at swipe 15. After dismissal, suppress for 24h.
+**Alternatives considered:** Once-and-done (too easy to lose the conversion), prompt every session (annoying), gate behind specific actions like "save to watchlist" (already a separate trigger in FSD).
+**Reversibility:** Easy — single constant + dismissal logic in `stores/anonSwipe.ts`.
+
+## DEC-008: expo-router auth gate via root index redirect, not middleware
+**Date:** 2026-04-27
+**Context:** expo-router doesn't expose middleware in v4; common pattern is either a `<Redirect>` from a guard screen or a context provider that conditionally renders.
+**Decision:** Single `app/index.tsx` reads `useSession()` and `<Redirect>`s to either `/(app)` or `/(auth)/welcome`. Each group has its own `_layout.tsx` for screen-level config. Session listener lives inside `useSession`, so the listener attaches once mounted on either group.
+**Alternatives considered:** AuthProvider in root layout swapping children, custom hook in every screen. Rejected — redirect from a single index is the simplest expo-router-native pattern and matches their docs.
+**Reversibility:** Easy.

@@ -5,5 +5,42 @@
   },
   "smoke": {
     "ready": "Önyükleme başarılı"
+  },
+  "auth": {
+    "welcomeTitle": "Bu akşam ne izleyeceğini bul",
+    "welcomeSubtitle": "Sana özel seçilmiş film ve dizileri kaydırarak keşfet.",
+    "continueAnonymously": "Kaydırmaya başla",
+    "createAccount": "Hesap oluştur",
+    "signIn": "Giriş yap",
+    "signOut": "Çıkış yap",
+    "haveAccount": "Zaten bir hesabın var mı?",
+    "noAccount": "Flixy'de yeni misin?",
+    "email": "E-posta",
+    "password": "Parola",
+    "confirmPassword": "Parolayı doğrula",
+    "forgotPassword": "Parolanı mı unuttun?",
+    "resetPasswordTitle": "Parolanı sıfırla",
+    "resetPasswordSubtitle": "Yeni bir parola seçmen için sana bir bağlantı göndereceğiz.",
+    "resetPasswordCta": "Sıfırlama bağlantısı gönder",
+    "resetPasswordSent": "Sıfırlama bağlantısı için gelen kutunu kontrol et.",
+    "signUpTitle": "Flixy hesabını oluştur",
+    "signUpSubtitle": "İzleme listeni kaydet, her cihazda kaldığın yerden devam et.",
+    "signInTitle": "Tekrar hoş geldin",
+    "signInSubtitle": "İzleme listeni senkronlamak için giriş yap.",
+    "checkInbox": "Kaydı tamamlamak için e-postanı onayla.",
+    "upgradeTitle": "Zevkini kaydet",
+    "upgradeSubtitle": "Hesap oluştur, kaydırmaların her cihazda seninle olsun.",
+    "upgradeCta": "Hesap oluştur",
+    "notNow": "Şimdi değil",
+    "errors": {
+      "generic": "Bir şeyler ters gitti. Lütfen tekrar dene.",
+      "invalidCredentials": "E-posta veya parola hatalı.",
+      "network": "Bağlantı yok. Ağını kontrol edip tekrar dene."
+    }
+  },
+  "common": {
+    "back": "Geri",
+    "continue": "Devam et",
+    "done": "Tamam"
   }
 }
