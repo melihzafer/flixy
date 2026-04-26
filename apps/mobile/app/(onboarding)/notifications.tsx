@@ -7,12 +7,15 @@ import { View } from 'react-native';
 import { Button } from '../../src/components/Button';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
+import { useSession } from '../../src/features/auth/useSession';
 import { useUpdatePreferences } from '../../src/features/onboarding/hooks';
 import { logger } from '../../src/lib/logger';
+import { requestPushPermissionAndRegister } from '../../src/lib/notifications';
 
 export default function NotificationsStep() {
   const { t } = useTranslation();
   const update = useUpdatePreferences();
+  const { data: session } = useSession();
   const [busy, setBusy] = useState(false);
 
   const finish = (enabled: boolean) => {
@@ -28,8 +31,14 @@ export default function NotificationsStep() {
   const onAllow = async () => {
     setBusy(true);
     try {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finish(status === 'granted');
+      const userId = session?.user?.id;
+      if (userId) {
+        const token = await requestPushPermissionAndRegister(userId);
+        finish(!!token);
+      } else {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finish(status === 'granted');
+      }
     } catch (e) {
       logger.warn('notifications.request failed', { message: (e as Error).message });
       finish(false);
