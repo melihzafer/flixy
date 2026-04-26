@@ -1,4 +1,4 @@
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 
@@ -8,14 +8,27 @@ import { logger } from '../../lib/logger';
  * Listens for incoming push notifications and routes the user to the title
  * detail screen if the payload carries a `titleId`. Covers both cold-start
  * (last-response) and warm taps (subscribe).
+ *
+ * Gated to skip in Expo Go (SDK 53+ removed remote-push support there and
+ * importing expo-notifications triggers an auto-registration side-effect that
+ * crashes). Use a development build to exercise the real path.
  */
 export function useNotificationDeepLinks() {
   useEffect(() => {
-    let mounted = true;
+    if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
+      logger.info('notif.skip_in_expo_go');
+      return;
+    }
 
-    Notifications.getLastNotificationResponseAsync().then((resp) => {
+    let mounted = true;
+    // Dynamic require avoids loading expo-notifications (and its
+    // auto-registration side-effects) when running inside Expo Go.
+    // biome-ignore lint/suspicious/noExplicitAny: dynamic require for Expo Go gating
+    const Notifications: any = require('expo-notifications');
+
+    Notifications.getLastNotificationResponseAsync().then((resp: unknown) => {
       if (!mounted || !resp) return;
-      handle(resp);
+      handle(resp as NotificationResponseLike);
     });
 
     const sub = Notifications.addNotificationResponseReceivedListener(handle);
@@ -26,8 +39,12 @@ export function useNotificationDeepLinks() {
   }, []);
 }
 
-function handle(resp: Notifications.NotificationResponse) {
-  const data = resp.notification.request.content.data as { titleId?: string } | undefined;
+type NotificationResponseLike = {
+  notification: { request: { content: { data?: { titleId?: string } } } };
+};
+
+function handle(resp: NotificationResponseLike) {
+  const data = resp.notification.request.content.data;
   if (!data?.titleId) return;
   try {
     router.push({ pathname: '/(app)/title/[id]', params: { id: data.titleId } });
