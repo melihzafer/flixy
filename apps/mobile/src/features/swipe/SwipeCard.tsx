@@ -1,7 +1,8 @@
 import { useCallback } from 'react';
-import { Image, Text, View } from 'react-native';
+import { Image, Text, View, type ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  type AnimatedStyle,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -231,19 +232,19 @@ function DecisionStamp({
   color,
   align,
 }: {
-  animatedStyle: ReturnType<typeof useAnimatedStyle>;
+  animatedStyle: AnimatedStyle<ViewStyle>;
   text: string;
   color: string;
   align: StampAlign;
 }) {
-  const positional =
+  const positional: import('react-native').ViewStyle =
     align === 'left'
       ? { top: 32, left: 24, transform: [{ rotate: '-12deg' }] }
       : align === 'right'
         ? { top: 32, right: 24, transform: [{ rotate: '12deg' }] }
         : align === 'center-top'
-          ? { top: 32, alignSelf: 'center' as const }
-          : { bottom: 100, alignSelf: 'center' as const };
+          ? { top: 32, alignSelf: 'center' }
+          : { bottom: 100, alignSelf: 'center' };
   return (
     <Animated.View
       pointerEvents="none"

@@ -674,7 +674,7 @@ This appendix records brand-level decisions that bind on Design and Engineering.
 
 This subsection records product-level technology decisions that bind on engineering. Detailed `NFR-TECH-*` requirements live in SRS § 7.5; module-level usage and rationale live throughout the FSD. The intent here is to capture *what* Flixy is built on at a level a non-engineering reader (investor, partner, future hire) can absorb.
 
-**Application platform.** Flixy is a cross-platform mobile application built with **React Native** (latest stable, New Architecture enabled) on **Expo SDK 52+**, written in **TypeScript** (strict mode). A single codebase ships to both iOS and Android. The web companion (marketing site, future) is a separate Next.js project on Vercel.
+**Application platform.** Flixy is a cross-platform mobile application built with **React Native** (latest stable, New Architecture enabled) on **Expo SDK 54+**, written in **TypeScript** (strict mode). A single codebase ships to both iOS and Android. The web companion (marketing site, future) is a separate Next.js project on Vercel.
 
 **Why React Native + Expo.** The product's defensible quality bar is the swipe loop — gesture-driven, 60fps, haptic-rich. React Native's `react-native-reanimated` v3 and `react-native-gesture-handler` execute gesture logic on the UI thread and have been proven at scale by Tinder, Bumble, and Hinge. Expo's managed workflow + EAS Build/Update/Submit pipeline let a small team release weekly without owning native build infrastructure. Flutter was considered and rejected: TypeScript reuse with the Supabase/BetterAuth/Vercel backend stack matters more for velocity than Dart's animation ergonomics.
 
