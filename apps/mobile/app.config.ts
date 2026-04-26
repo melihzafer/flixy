@@ -43,6 +43,7 @@ const config: ExpoConfig = {
     'expo-font',
     'expo-secure-store',
     'expo-localization',
+    '@sentry/react-native/expo',
     [
       'expo-notifications',
       {

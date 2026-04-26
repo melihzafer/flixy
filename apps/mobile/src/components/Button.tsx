@@ -36,11 +36,11 @@ export const Button = forwardRef<View, Props>(function Button(
       accessibilityRole="button"
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       disabled={isDisabled}
-      style={({ pressed }) => [
+      style={(state) => [
         styles.base,
-        { backgroundColor: c.bg, opacity: isDisabled ? 0.5 : pressed ? 0.85 : 1 },
+        { backgroundColor: c.bg, opacity: isDisabled ? 0.5 : state.pressed ? 0.85 : 1 },
         fullWidth && styles.fullWidth,
-        typeof style === 'function' ? style({ pressed }) : style,
+        typeof style === 'function' ? style(state) : style,
       ]}
       {...rest}
     >
