@@ -32,6 +32,8 @@
     "upgradeSubtitle": "Hesap oluştur, kaydırmaların her cihazda seninle olsun.",
     "upgradeCta": "Hesap oluştur",
     "notNow": "Şimdi değil",
+    "anonymous": "Anonim oturum",
+    "noSession": "Oturum yok",
     "errors": {
       "generic": "Bir şeyler ters gitti. Lütfen tekrar dene.",
       "invalidCredentials": "E-posta veya parola hatalı.",
