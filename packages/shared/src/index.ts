@@ -7,3 +7,6 @@ export * from './schemas/user';
 export * from './schemas/title';
 export * from './schemas/auth';
 export * from './schemas/onboarding';
+export * from './schemas/swipe';
+export * from './schemas/deck';
+export * from './composer';
