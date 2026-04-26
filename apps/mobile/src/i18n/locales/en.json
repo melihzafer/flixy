@@ -116,6 +116,13 @@
       "classic": "Classic"
     }
   },
+  "search": {
+    "title": "Search",
+    "placeholder": "Search titles…",
+    "hint": "Type at least 2 characters.",
+    "empty": "No results.",
+    "error": "Search failed. Try again."
+  },
   "profile": {
     "title": "Profile",
     "subtitle": "How you appear in Flixy.",

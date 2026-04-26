@@ -116,6 +116,13 @@
       "classic": "Klasik"
     }
   },
+  "search": {
+    "title": "Ara",
+    "placeholder": "Başlık ara…",
+    "hint": "En az 2 karakter yaz.",
+    "empty": "Sonuç yok.",
+    "error": "Arama başarısız. Tekrar dene."
+  },
   "profile": {
     "title": "Profil",
     "subtitle": "Flixy'de nasıl göründüğün.",
