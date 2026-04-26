@@ -25,7 +25,7 @@ export default function ColdStartStep() {
 
   return (
     <Screen title={t('onboarding.coldStartTitle')} subtitle={t('onboarding.coldStartSubtitle')}>
-      <Text variant="body-m" style={{ color: '#A1A1AA' }}>
+      <Text variant="body-m" style={{ color: 'rgba(245,245,240,0.55)' }}>
         {t('onboarding.coldStartPlaceholder')}
       </Text>
       <View style={{ marginTop: 16 }}>

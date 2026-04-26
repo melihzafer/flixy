@@ -1,49 +1,59 @@
 /** @type {import('tailwindcss').Config} */
+// Mirror src/theme/tokens.ts — keep the two in sync.
 module.exports = {
   content: ['./app/**/*.{ts,tsx}', './src/**/*.{ts,tsx}'],
   presets: [require('nativewind/preset')],
   theme: {
     extend: {
       colors: {
-        // Neutral placeholder palette — dark-first per FSD § 4.0.
-        // Will be replaced one-file when Claude Design ships final tokens.
         bg: {
-          DEFAULT: '#0B0B0F',
-          elevated: '#15151B',
-          subtle: '#1E1E25',
+          DEFAULT: '#0A0A0B',
+          surface: '#111113',
+          surface2: '#1A1A1D',
+          surface3: '#242428',
         },
-        fg: {
-          DEFAULT: '#F5F5F7',
-          muted: '#A1A1AA',
-          subtle: '#71717A',
+        border: {
+          DEFAULT: 'rgba(255,255,255,0.08)',
+          strong: 'rgba(255,255,255,0.14)',
+        },
+        text: {
+          DEFAULT: '#F5F5F0',
+          muted: 'rgba(245,245,240,0.55)',
+          dim: 'rgba(245,245,240,0.30)',
         },
         accent: {
-          DEFAULT: '#E11D48',
-          muted: '#9F1239',
+          DEFAULT: '#FF4D1C',
+          dim: 'rgba(255,77,28,0.18)',
         },
-        success: '#10B981',
-        warning: '#F59E0B',
-        danger: '#EF4444',
+        swipe: {
+          right: '#3DD68C',
+          left: '#E05C4B',
+          up: '#F5C842',
+          down: '#5B8DEF',
+        },
+        success: '#3DD68C',
+        warning: '#F5C842',
+        danger: '#E05C4B',
       },
       fontFamily: {
-        // Per FSD § 4.0.2; using Fraunces + Inter as Grilli Type fallback (SRS NFR-BRAND-004).
-        display: ['Fraunces_700Bold', 'serif'],
-        'display-italic': ['Fraunces_400Regular_Italic', 'serif'],
-        body: ['Inter_400Regular', 'sans-serif'],
-        'body-medium': ['Inter_500Medium', 'sans-serif'],
-        'body-semibold': ['Inter_600SemiBold', 'sans-serif'],
+        display: ['Newsreader_700Italic', 'serif'],
+        body: ['SpaceGrotesk_400Regular', 'sans-serif'],
+        'body-medium': ['SpaceGrotesk_500Medium', 'sans-serif'],
+        'body-semibold': ['SpaceGrotesk_600SemiBold', 'sans-serif'],
+        'body-bold': ['SpaceGrotesk_700Bold', 'sans-serif'],
       },
       fontSize: {
-        // Typography tokens from FSD § 4.0.2
-        'display-xl': ['56px', { lineHeight: '60px', letterSpacing: '-0.02em' }],
-        'display-l': ['44px', { lineHeight: '48px', letterSpacing: '-0.02em' }],
-        'display-m': ['32px', { lineHeight: '38px', letterSpacing: '-0.01em' }],
-        'title-l': ['24px', { lineHeight: '30px' }],
-        'title-m': ['20px', { lineHeight: '26px' }],
-        'body-l': ['17px', { lineHeight: '24px' }],
-        'body-m': ['15px', { lineHeight: '22px' }],
+        'display-xl': ['48px', { lineHeight: '52px', letterSpacing: '-0.02em' }],
+        'display-l': ['38px', { lineHeight: '42px', letterSpacing: '-0.02em' }],
+        'display-m': ['28px', { lineHeight: '32px', letterSpacing: '-0.01em' }],
+        'display-s': ['22px', { lineHeight: '26px', letterSpacing: '-0.01em' }],
+        'title-l': ['18px', { lineHeight: '24px' }],
+        'title-m': ['16px', { lineHeight: '22px' }],
+        'body-l': ['15px', { lineHeight: '22px' }],
+        'body-m': ['14px', { lineHeight: '20px' }],
         'body-s': ['13px', { lineHeight: '18px' }],
-        caption: ['11px', { lineHeight: '14px', letterSpacing: '0.04em' }],
+        caption: ['11px', { lineHeight: '14px', letterSpacing: '0.05em' }],
+        overline: ['10px', { lineHeight: '12px', letterSpacing: '0.12em' }],
       },
     },
   },

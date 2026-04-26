@@ -1,6 +1,7 @@
-import { forwardRef } from 'react';
+import { forwardRef, useState } from 'react';
 import { StyleSheet, TextInput, type TextInputProps, View } from 'react-native';
 
+import { colors, fonts } from '../theme/tokens';
 import { Text } from './Text';
 
 type Props = TextInputProps & {
@@ -9,21 +10,30 @@ type Props = TextInputProps & {
 };
 
 export const Input = forwardRef<TextInput, Props>(function Input(
-  { label, error, style, ...rest },
+  { label, error, style, onFocus, onBlur, ...rest },
   ref,
 ) {
+  const [focused, setFocused] = useState(false);
   return (
     <View style={styles.wrap}>
       {label ? (
-        <Text variant="caption" style={styles.label} accessibilityRole="text">
+        <Text variant="overline" tone="muted" style={styles.label} accessibilityRole="text">
           {label}
         </Text>
       ) : null}
       <TextInput
         ref={ref}
-        placeholderTextColor="#71717A"
-        style={[styles.input, !!error && styles.inputError, style]}
+        placeholderTextColor={colors.textDim}
+        style={[styles.input, focused && styles.inputFocused, !!error && styles.inputError, style]}
         accessibilityLabel={label}
+        onFocus={(e) => {
+          setFocused(true);
+          onFocus?.(e);
+        }}
+        onBlur={(e) => {
+          setFocused(false);
+          onBlur?.(e);
+        }}
         {...rest}
       />
       {error ? (
@@ -37,17 +47,19 @@ export const Input = forwardRef<TextInput, Props>(function Input(
 
 const styles = StyleSheet.create({
   wrap: { gap: 6 },
-  label: { color: '#A1A1AA', textTransform: 'uppercase', letterSpacing: 1 },
+  label: { textTransform: 'uppercase' },
   input: {
-    backgroundColor: '#16161A',
+    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#F5F5F7',
-    borderWidth: 1,
-    borderColor: '#26262B',
+    fontFamily: fonts.body,
+    color: colors.text,
+    borderWidth: 1.5,
+    borderColor: colors.border2,
   },
-  inputError: { borderColor: '#F87171' },
-  errorText: { color: '#F87171' },
+  inputFocused: { borderColor: 'rgba(255,77,28,0.5)' },
+  inputError: { borderColor: colors.left },
+  errorText: { color: colors.left },
 });

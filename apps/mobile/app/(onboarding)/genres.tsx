@@ -38,7 +38,7 @@ export default function GenresStep() {
     <Screen title={t('onboarding.genresTitle')} subtitle={t('onboarding.genresSubtitle')}>
       {isLoading ? (
         <View style={{ paddingVertical: 24 }}>
-          <ActivityIndicator color="#F5F5F7" />
+          <ActivityIndicator color="#F5F5F0" />
         </View>
       ) : (
         <ChipGroup>
@@ -53,7 +53,7 @@ export default function GenresStep() {
         </ChipGroup>
       )}
 
-      <Text variant="body-s" style={{ color: '#A1A1AA', marginTop: 8 }}>
+      <Text variant="body-s" style={{ color: 'rgba(245,245,240,0.55)', marginTop: 8 }}>
         {t('onboarding.genresHint', {
           min: ONBOARDING.MIN_GENRES,
           max: ONBOARDING.MAX_GENRES,

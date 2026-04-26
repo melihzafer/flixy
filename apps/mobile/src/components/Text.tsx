@@ -1,10 +1,19 @@
 import { Text as RNText, type TextProps } from 'react-native';
-import { type TypographyVariant, typography } from '../theme/tokens';
+import { type TypographyVariant, colors, typography } from '../theme/tokens';
 
 type Props = TextProps & {
   variant?: TypographyVariant;
+  /** Optional shorthand to switch to muted/dim text colors. */
+  tone?: 'default' | 'muted' | 'dim' | 'accent';
 };
 
-export function Text({ variant = 'body-m', style, ...rest }: Props) {
-  return <RNText {...rest} style={[typography[variant], { color: '#F5F5F7' }, style]} />;
+const toneColor = {
+  default: colors.text,
+  muted: colors.textMuted,
+  dim: colors.textDim,
+  accent: colors.accent,
+} as const;
+
+export function Text({ variant = 'body-m', tone = 'default', style, ...rest }: Props) {
+  return <RNText {...rest} style={[typography[variant], { color: toneColor[tone] }, style]} />;
 }

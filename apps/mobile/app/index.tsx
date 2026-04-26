@@ -11,10 +11,10 @@ function Spinner() {
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#0B0B0F',
+        backgroundColor: '#0A0A0B',
       }}
     >
-      <ActivityIndicator color="#F5F5F7" />
+      <ActivityIndicator color="#F5F5F0" />
     </View>
   );
 }

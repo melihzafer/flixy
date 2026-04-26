@@ -46,7 +46,7 @@ export default function RegionStep() {
 
   return (
     <Screen title={t('onboarding.regionTitle')} subtitle={t('onboarding.regionSubtitle')}>
-      <Text variant="caption" style={{ color: '#A1A1AA', marginTop: 8 }}>
+      <Text variant="caption" style={{ color: 'rgba(245,245,240,0.55)', marginTop: 8 }}>
         {t('onboarding.regionLabel')}
       </Text>
       <ChipGroup>
@@ -55,7 +55,7 @@ export default function RegionStep() {
         ))}
       </ChipGroup>
 
-      <Text variant="caption" style={{ color: '#A1A1AA', marginTop: 16 }}>
+      <Text variant="caption" style={{ color: 'rgba(245,245,240,0.55)', marginTop: 16 }}>
         {t('onboarding.languageLabel')}
       </Text>
       <ChipGroup>
@@ -70,7 +70,7 @@ export default function RegionStep() {
       </ChipGroup>
 
       {update.isError ? (
-        <Text variant="body-s" style={{ color: '#F87171' }}>
+        <Text variant="body-s" style={{ color: '#E05C4B' }}>
           {t('auth.errors.generic')}
         </Text>
       ) : null}

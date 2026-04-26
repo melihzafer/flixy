@@ -1,11 +1,14 @@
 import { router } from 'expo-router';
+import { Compass, Heart, RotateCcw, Star, X } from 'lucide-react-native';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Pressable, Text, View, useWindowDimensions } from 'react-native';
+import { ActivityIndicator, Pressable, View, useWindowDimensions } from 'react-native';
 
 import type { DeckCard, SwipeDirection, SwipeEvent } from '@flixy/shared';
 
+import { ActionButton } from '../../src/components/ActionButton';
 import { Screen } from '../../src/components/Screen';
+import { Text } from '../../src/components/Text';
 import { FilterSheet } from '../../src/features/deck/FilterSheet';
 import { useDeckFilters } from '../../src/features/deck/filterStore';
 import { useDeck } from '../../src/features/deck/hooks';
@@ -17,11 +20,11 @@ import {
   useSwipeStats,
   useUndoSwipe,
 } from '../../src/features/swipe/hooks';
+import { colors, fonts } from '../../src/theme/tokens';
 
 /**
- * Discover / Swipe deck screen (FSD section 4.4). The visible card is the
- * top of the deck; the next two are layered behind for the spec'd 2-3-card
- * stack effect.
+ * Discover / Swipe deck (FSD section 4.4). Top card is interactive; the next
+ * two are layered behind for the spec'd 2-3 card stack.
  */
 export default function DeckScreen() {
   const { t } = useTranslation();
@@ -43,7 +46,6 @@ export default function DeckScreen() {
   const [showFilters, setShowFilters] = useState(false);
 
   useSwipeQueueBoot();
-  // NetInfo wiring lands in Phase 3.9 with notifications; for now treat as online.
   useFlushOnReconnect(true);
 
   const [position, setPosition] = useState(0);
@@ -64,7 +66,7 @@ export default function DeckScreen() {
         });
         lastEventRef.current = ev;
       } catch {
-        // queue absorbs failures; advance regardless so UX stays fluid.
+        /* queue absorbs failures; advance regardless */
       }
       setPosition((p) => p + 1);
     },
@@ -81,10 +83,13 @@ export default function DeckScreen() {
 
   if (isLoading) {
     return (
-      <Screen title={t('deck.loadingTitle', 'Finding tonight\u2019s picks')}>
-        <Text style={{ color: '#A1A1AA' }}>
-          {t('deck.loadingHint', 'Composing your deck\u2026')}
-        </Text>
+      <Screen scroll={false}>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+          <ActivityIndicator color={colors.accent} />
+          <Text variant="body-m" tone="muted">
+            {t('deck.loadingHint', 'Composing your deck\u2026')}
+          </Text>
+        </View>
       </Screen>
     );
   }
@@ -94,9 +99,14 @@ export default function DeckScreen() {
       <Screen title={t('deck.errorTitle', 'Something went wrong')}>
         <Pressable
           onPress={() => refetch()}
-          style={{ padding: 12, backgroundColor: '#15151B', borderRadius: 12 }}
+          style={{
+            padding: 14,
+            backgroundColor: colors.surface2,
+            borderRadius: 14,
+            alignItems: 'center',
+          }}
         >
-          <Text style={{ color: 'white' }}>{t('common.retry')}</Text>
+          <Text>{t('common.retry')}</Text>
         </Pressable>
       </Screen>
     );
@@ -105,22 +115,36 @@ export default function DeckScreen() {
   if (visible.length === 0) {
     return (
       <Screen title={t('deck.emptyTitle', 'You\u2019ve seen them all')}>
-        <Text style={{ color: '#A1A1AA', marginBottom: 16 }}>
+        <Text tone="muted" style={{ marginBottom: 16 }}>
           {t('deck.emptyHint', 'Broaden your filters to see more picks.')}
         </Text>
         <Pressable
-          onPress={() => router.push('/(app)/settings')}
-          style={{ padding: 12, backgroundColor: '#15151B', borderRadius: 12 }}
+          onPress={() => setShowFilters(true)}
+          style={{
+            padding: 14,
+            backgroundColor: colors.accent,
+            borderRadius: 14,
+            alignItems: 'center',
+          }}
         >
-          <Text style={{ color: 'white' }}>{t('settings.title')}</Text>
+          <Text style={{ fontFamily: fonts.bodySemi }}>{t('filters.open', 'Filters')}</Text>
         </Pressable>
+        <FilterSheet visible={showFilters} onClose={() => setShowFilters(false)} />
       </Screen>
     );
   }
 
   return (
-    <Screen title={t('deck.title', 'Discover')}>
-      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 8 }}>
+    <Screen scroll={false}>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+        }}
+      >
+        <Text style={{ fontFamily: fonts.display, fontSize: 32, color: colors.text }}>Flixy</Text>
         <Pressable
           onPress={() => setShowFilters(true)}
           accessibilityRole="button"
@@ -129,17 +153,18 @@ export default function DeckScreen() {
             paddingHorizontal: 14,
             paddingVertical: 8,
             borderRadius: 999,
-            backgroundColor: '#15151B',
+            borderWidth: 1.5,
+            borderColor: colors.border2,
           }}
         >
-          <Text style={{ color: '#A1A1AA', fontWeight: '600' }}>
+          <Text variant="body-s" tone="muted" style={{ fontFamily: fonts.bodySemi }}>
             {t('filters.open', 'Filters')}
           </Text>
         </Pressable>
       </View>
 
       {stats.queued > 0 ? (
-        <Text style={{ color: '#71717A', textAlign: 'center', marginBottom: 8 }}>
+        <Text variant="caption" tone="dim" style={{ textAlign: 'center', marginBottom: 8 }}>
           {t('deck.syncing', 'Syncing {{count}} swipe(s)\u2026', { count: stats.queued })}
         </Text>
       ) : null}
@@ -171,70 +196,54 @@ export default function DeckScreen() {
           })}
       </View>
 
-      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginTop: 16 }}>
-        <ActionButton
-          label={t('deck.actionPass', 'Pass')}
-          onPress={() => handleCommit('left')}
-          color="#ff5252"
-        />
-        <ActionButton
-          label={t('deck.actionSeen', 'Seen')}
-          onPress={() => handleCommit('down')}
-          color="#4dabf7"
-        />
-        <ActionButton
-          label={t('deck.actionTop', 'Top')}
-          onPress={() => handleCommit('up')}
-          color="#ffd166"
-        />
-        <ActionButton
-          label={t('deck.actionAdd', 'Add')}
-          onPress={() => handleCommit('right')}
-          color="#3ddc84"
-        />
-      </View>
-
-      <Pressable
-        onPress={handleUndo}
-        disabled={position === 0}
+      <View
         style={{
-          marginTop: 12,
-          padding: 10,
-          alignSelf: 'center',
-          opacity: position === 0 ? 0.4 : 1,
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 18,
+          marginTop: 8,
         }}
       >
-        <Text style={{ color: 'white' }}>{t('deck.undo', 'Undo')}</Text>
-      </Pressable>
+        <ActionButton
+          accessibilityLabel={t('deck.actionPass', 'Pass')}
+          onPress={() => handleCommit('left')}
+          borderColor={colors.left}
+        >
+          <X size={22} color={colors.left} strokeWidth={2.5} />
+        </ActionButton>
+        <ActionButton
+          accessibilityLabel={t('deck.actionSeen', 'Seen')}
+          onPress={() => handleCommit('down')}
+          borderColor={colors.down}
+        >
+          <Compass size={22} color={colors.down} strokeWidth={2.5} />
+        </ActionButton>
+        <ActionButton
+          accessibilityLabel={t('deck.actionAdd', 'Add')}
+          onPress={() => handleCommit('right')}
+          variant="accent"
+          size="lg"
+        >
+          <Heart size={26} color={colors.text} strokeWidth={2.5} fill={colors.text} />
+        </ActionButton>
+        <ActionButton
+          accessibilityLabel={t('deck.actionTop', 'Top')}
+          onPress={() => handleCommit('up')}
+          borderColor={colors.up}
+        >
+          <Star size={22} color={colors.up} strokeWidth={2.5} fill={colors.up} />
+        </ActionButton>
+        <ActionButton
+          accessibilityLabel={t('deck.undo', 'Undo')}
+          onPress={handleUndo}
+          disabled={position === 0}
+        >
+          <RotateCcw size={20} color={colors.textMuted} strokeWidth={2.5} />
+        </ActionButton>
+      </View>
 
       <FilterSheet visible={showFilters} onClose={() => setShowFilters(false)} />
     </Screen>
-  );
-}
-
-function ActionButton({
-  label,
-  onPress,
-  color,
-}: {
-  label: string;
-  onPress: () => void;
-  color: string;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      style={{
-        paddingVertical: 12,
-        paddingHorizontal: 18,
-        borderRadius: 999,
-        borderWidth: 2,
-        borderColor: color,
-      }}
-    >
-      <Text style={{ color, fontWeight: '700' }}>{label}</Text>
-    </Pressable>
   );
 }

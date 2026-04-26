@@ -1,8 +1,8 @@
+import { LinearGradient } from 'expo-linear-gradient';
 import { useCallback } from 'react';
-import { Image, Text, View, type ViewStyle } from 'react-native';
+import { Image, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
-  type AnimatedStyle,
   interpolate,
   runOnJS,
   useAnimatedStyle,
@@ -13,15 +13,20 @@ import Animated, {
 
 import type { SwipeDirection, Title } from '@flixy/shared';
 
+import { ServiceBadge } from '../../components/ServiceBadge';
+import { SwipeStamp, stampColors } from '../../components/SwipeStamp';
+import { Text } from '../../components/Text';
+import { colors, fonts } from '../../theme/tokens';
+
 /**
- * SwipeCard — gesture + Reanimated v3 implementation per FSD section 4.4.2.
+ * SwipeCard - gesture + Reanimated v3 implementation per FSD section 4.4.2.
  *
  * Animations run on the UI thread (worklet-only); haptics + the JS-side
  * `onCommit` callback fire via `runOnJS`. This is the path to the 60fps budget
  * (NFR-PERF-002).
  */
 
-const HORIZONTAL_THRESHOLD_RATIO = 0.35; // 35% of card width
+const HORIZONTAL_THRESHOLD_RATIO = 0.35;
 const VERTICAL_THRESHOLD = 120;
 const VELOCITY_THRESHOLD = 1100;
 const SWIPE_OUT_DISTANCE_X = 600;
@@ -120,8 +125,6 @@ export function SwipeCard({
     };
   });
 
-  // Decision-stamp styles (FSD 4.4.1): high-opacity once past threshold.
-  // Four explicit hook calls (no factory) to satisfy rules-of-hooks.
   const stampWatchlist = useAnimatedStyle(() => ({
     opacity: interpolate(tx.value, [0, horizontalThreshold], [0, 1], 'clamp'),
   }));
@@ -141,7 +144,9 @@ export function SwipeCard({
     title.kind === 'tv' ? 'Series' : 'Movie',
   ]
     .filter(Boolean)
-    .join('  •  ');
+    .join('  \u00b7  ');
+
+  const services = Array.from(new Set(title.availability.map((a) => a.serviceId))).slice(0, 4);
 
   return (
     <GestureDetector gesture={composed}>
@@ -154,9 +159,9 @@ export function SwipeCard({
             position: 'absolute',
             width: cardWidth,
             height: cardHeight,
-            borderRadius: 24,
+            borderRadius: 20,
             overflow: 'hidden',
-            backgroundColor: '#111',
+            backgroundColor: colors.surface,
             zIndex,
           },
           cardStyle,
@@ -165,8 +170,19 @@ export function SwipeCard({
         {title.posterUrl ? (
           <Image source={{ uri: title.posterUrl }} style={{ width: '100%', height: '100%' }} />
         ) : (
-          <View style={{ flex: 1, backgroundColor: '#222' }} />
+          <View style={{ flex: 1, backgroundColor: colors.surface2 }} />
         )}
+
+        <LinearGradient
+          colors={[
+            'transparent',
+            'rgba(10,10,11,0.0)',
+            'rgba(10,10,11,0.85)',
+            'rgba(10,10,11,0.97)',
+          ]}
+          locations={[0, 0.45, 0.85, 1]}
+          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }}
+        />
 
         <View
           style={{
@@ -174,94 +190,54 @@ export function SwipeCard({
             bottom: 0,
             left: 0,
             right: 0,
-            padding: 20,
-            backgroundColor: 'rgba(0,0,0,0.55)',
+            padding: 22,
+            gap: 8,
           }}
         >
-          <Text style={{ color: 'white', fontSize: 28, fontWeight: '700' }} numberOfLines={2}>
+          {title.genres && title.genres.length > 0 ? (
+            <Text variant="overline" tone="accent" style={{ textTransform: 'uppercase' }}>
+              {title.genres[0]}
+            </Text>
+          ) : null}
+          <Text
+            style={{
+              color: colors.text,
+              fontFamily: fonts.display,
+              fontSize: 28,
+              lineHeight: 32,
+              letterSpacing: -0.4,
+            }}
+            numberOfLines={2}
+          >
             {title.title}
           </Text>
-          <Text style={{ color: 'rgba(255,255,255,0.85)', marginTop: 4 }}>{meta}</Text>
-          {title.availability.length > 0 ? (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, gap: 6 }}>
-              {Array.from(new Set(title.availability.map((a) => a.serviceId)))
-                .slice(0, 4)
-                .map((serviceId) => (
-                  <View
-                    key={serviceId}
-                    style={{
-                      paddingHorizontal: 8,
-                      paddingVertical: 3,
-                      borderRadius: 6,
-                      backgroundColor: 'rgba(255,255,255,0.18)',
-                    }}
-                  >
-                    <Text style={{ color: 'white', fontSize: 11, fontWeight: '600' }}>
-                      {serviceId.toUpperCase()}
-                    </Text>
-                  </View>
-                ))}
+          <Text variant="body-s" tone="muted">
+            {meta}
+          </Text>
+          {services.length > 0 ? (
+            <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
+              {services.map((s) => (
+                <ServiceBadge key={s} serviceId={s} size="sm" />
+              ))}
             </View>
           ) : null}
         </View>
 
-        <DecisionStamp
-          animatedStyle={stampWatchlist}
+        <SwipeStamp
           text="WATCHLIST"
-          color="#3ddc84"
+          color={stampColors.right}
           align="left"
+          animatedStyle={stampWatchlist}
         />
-        <DecisionStamp animatedStyle={stampPass} text="PASS" color="#ff5252" align="right" />
-        <DecisionStamp animatedStyle={stampTop} text="TOP" color="#ffd166" align="center-top" />
-        <DecisionStamp
-          animatedStyle={stampSeen}
+        <SwipeStamp text="PASS" color={stampColors.left} align="right" animatedStyle={stampPass} />
+        <SwipeStamp text="TOP" color={stampColors.up} align="center-top" animatedStyle={stampTop} />
+        <SwipeStamp
           text="SEEN"
-          color="#4dabf7"
+          color={stampColors.down}
           align="center-bottom"
+          animatedStyle={stampSeen}
         />
       </Animated.View>
     </GestureDetector>
-  );
-}
-
-type StampAlign = 'left' | 'right' | 'center-top' | 'center-bottom';
-
-function DecisionStamp({
-  animatedStyle,
-  text,
-  color,
-  align,
-}: {
-  animatedStyle: AnimatedStyle<ViewStyle>;
-  text: string;
-  color: string;
-  align: StampAlign;
-}) {
-  const positional: import('react-native').ViewStyle =
-    align === 'left'
-      ? { top: 32, left: 24, transform: [{ rotate: '-12deg' }] }
-      : align === 'right'
-        ? { top: 32, right: 24, transform: [{ rotate: '12deg' }] }
-        : align === 'center-top'
-          ? { top: 32, alignSelf: 'center' }
-          : { bottom: 100, alignSelf: 'center' };
-  return (
-    <Animated.View
-      pointerEvents="none"
-      style={[
-        {
-          position: 'absolute',
-          paddingHorizontal: 12,
-          paddingVertical: 6,
-          borderWidth: 4,
-          borderColor: color,
-          borderRadius: 8,
-        },
-        positional,
-        animatedStyle,
-      ]}
-    >
-      <Text style={{ color, fontSize: 32, fontWeight: '900', letterSpacing: 2 }}>{text}</Text>
-    </Animated.View>
   );
 }

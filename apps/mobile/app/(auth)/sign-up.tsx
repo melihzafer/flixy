@@ -74,7 +74,7 @@ export default function SignUp() {
       />
 
       {signUp.isError ? (
-        <Text variant="body-s" style={{ color: '#F87171' }}>
+        <Text variant="body-s" style={{ color: '#E05C4B' }}>
           {t('auth.errors.generic')}
         </Text>
       ) : null}
@@ -91,11 +91,11 @@ export default function SignUp() {
       />
 
       <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8 }}>
-        <Text variant="body-m" style={{ color: '#A1A1AA' }}>
+        <Text variant="body-m" style={{ color: 'rgba(245,245,240,0.55)' }}>
           {t('auth.haveAccount')}
         </Text>
         <Link href="/(auth)/sign-in">
-          <Text variant="body-m" style={{ color: '#F5F5F7', fontWeight: '600' }}>
+          <Text variant="body-m" style={{ color: '#F5F5F0', fontWeight: '600' }}>
             {t('auth.signIn')}
           </Text>
         </Link>

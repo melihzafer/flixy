@@ -14,7 +14,7 @@ const config: ExpoConfig = {
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
-    backgroundColor: '#0B0B0F',
+    backgroundColor: '#0A0A0B',
   },
   assetBundlePatterns: ['**/*'],
   ios: {
@@ -26,7 +26,7 @@ const config: ExpoConfig = {
     package: 'app.flixy.mobile',
     adaptiveIcon: {
       foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#0B0B0F',
+      backgroundColor: '#0A0A0B',
     },
     intentFilters: [
       {
@@ -48,7 +48,7 @@ const config: ExpoConfig = {
       'expo-notifications',
       {
         icon: './assets/notification-icon.png',
-        color: '#0B0B0F',
+        color: '#0A0A0B',
       },
     ],
   ],

@@ -19,10 +19,10 @@ export default function Welcome() {
     <Screen scroll={false}>
       <View style={{ flex: 1, justifyContent: 'center', gap: 12 }}>
         <Text variant="display-l">{t('app.name')}</Text>
-        <Text variant="title-l" style={{ color: '#F5F5F7', marginTop: 8 }}>
+        <Text variant="title-l" style={{ color: '#F5F5F0', marginTop: 8 }}>
           {t('auth.welcomeTitle')}
         </Text>
-        <Text variant="body-l" style={{ color: '#A1A1AA' }}>
+        <Text variant="body-l" style={{ color: 'rgba(245,245,240,0.55)' }}>
           {t('auth.welcomeSubtitle')}
         </Text>
       </View>
@@ -43,11 +43,11 @@ export default function Welcome() {
           onPress={() => router.push('/(auth)/sign-up')}
         />
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 8 }}>
-          <Text variant="body-m" style={{ color: '#A1A1AA' }}>
+          <Text variant="body-m" style={{ color: 'rgba(245,245,240,0.55)' }}>
             {t('auth.haveAccount')}
           </Text>
           <Link href="/(auth)/sign-in">
-            <Text variant="body-m" style={{ color: '#F5F5F7', fontWeight: '600' }}>
+            <Text variant="body-m" style={{ color: '#F5F5F0', fontWeight: '600' }}>
               {t('auth.signIn')}
             </Text>
           </Link>
