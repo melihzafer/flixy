@@ -83,3 +83,10 @@ Append-only log of autopilot decisions made during the build. Each entry is one 
 **Decision:** Mobile reads exclusively from Supabase tables `titles` and `title_availability` (public-read RLS, writes blocked). TMDB ingestion is documented as a Trigger.dev worker (lib/tmdb.ts is a typed stub, not imported by app code). For dev, we seed 20 representative titles + ~15 availability rows in migration 0004 so the deck can be exercised pre-ingest.
 **Alternatives considered:** (a) Direct TMDB calls from the client — rejected, key leak. (b) Supabase Edge Function proxy to TMDB — viable, deferred until ingestion lands; the read-from-mirror pattern is needed regardless for offline tolerance (FSD 3.6.4).
 **Reversibility:** Easy. Hooks already abstract behind `useTitle`/`useTitlesQuery`; swap data source without touching screens.
+
+## DEC-013: Deck composer runs on-device for MVP
+**Date:** 2026-04-26
+**Context:** FSD 3.5 specifies a 7-layer deck composer. The composer can live server-side (edge function ranking) or on-device. Server-side gives consistency across devices and access to richer signals; on-device is instant, offline-tolerant, and ships without an extra service.
+**Decision:** On-device composer for MVP. The pure function lives in `@flixy/shared/composer.ts` so it can be tested in isolation and (later) reused server-side without rewriting. Fetches a candidate pool of ~80 popularity-sorted titles via the catalogue query, then scores them in JS.
+**Alternatives considered:** (a) Edge function deck endpoint — deferred; would gate the swipe loop on network. (b) Defer composer entirely and serve raw popularity — rejected, the layered scoring is what makes Flixy not a top-10 list.
+**Reversibility:** Easy. Swap `composeDeck` call in `useDeck` for an RPC; the function signature is the contract.
