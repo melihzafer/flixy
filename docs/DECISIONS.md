@@ -53,3 +53,18 @@ Append-only log of autopilot decisions made during the build. Each entry is one 
 **Decision:** Single `app/index.tsx` reads `useSession()` and `<Redirect>`s to either `/(app)` or `/(auth)/welcome`. Each group has its own `_layout.tsx` for screen-level config. Session listener lives inside `useSession`, so the listener attaches once mounted on either group.
 **Alternatives considered:** AuthProvider in root layout swapping children, custom hook in every screen. Rejected — redirect from a single index is the simplest expo-router-native pattern and matches their docs.
 **Reversibility:** Easy.
+
+## DEC-009: Cold-start screen ships as placeholder in Phase 2B
+**Date:** 2026-04-27
+**Context:** FSD 3.2.5 requires a 10-card cold-start swipe round at the end of onboarding, but the swipe engine + recommendation deck are Phase 3 deliverables.
+**Decision:** Ship a placeholder cold-start screen that records `cold_start_completed_at` and continues to notifications. Full 10-card round replaces the placeholder body when the swipe engine lands.
+**Alternatives considered:** Skip cold-start entirely (rejected: leaves hole in onboarding state). Block Phase 2B (rejected: violates incremental shipping).
+**Reversibility:** Easy.
+
+## DEC-010: Onboarding state lives in user_preferences, not Zustand
+**Date:** 2026-04-27
+**Context:** Onboarding is multi-step. Tempting to keep intermediate selections in a Zustand store and persist only on the last screen.
+**Decision:** Persist after every step via `useUpdatePreferences`. The flow is resumable per FSD 3.2.4 — if the user kills the app on the genres screen, reopening should land them on genres with services already remembered.
+**Alternatives considered:** Zustand draft + final commit. Rejected — adds a sync surface and breaks resume-on-kill.
+**Reversibility:** Easy.
+

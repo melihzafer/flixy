@@ -41,6 +41,49 @@
   "common": {
     "back": "Back",
     "continue": "Continue",
-    "done": "Done"
+    "done": "Done",
+    "getStarted": "Get started",
+    "skip": "Skip"
+  },
+  "onboarding": {
+    "welcomeTitle": "Welcome to Flixy",
+    "welcomeSubtitle": "A few quick taps and you're swiping.",
+    "welcomeBody": "Tell us where you watch and what you like — we'll handle the rest.",
+    "regionTitle": "Where do you watch?",
+    "regionSubtitle": "Region and language tune your recommendations.",
+    "regionLabel": "Region",
+    "languageLabel": "Language",
+    "servicesTitle": "Pick your services",
+    "servicesSubtitle": "We'll only show titles you can stream.",
+    "servicesHint": "Pick at least {{min}}.",
+    "genresTitle": "What do you love?",
+    "genresSubtitle": "Choose 3 to 12 genres.",
+    "genresHint": "{{count}} selected — pick {{min}} to {{max}}.",
+    "coldStartTitle": "Quick taste check",
+    "coldStartSubtitle": "Swipe a few titles so we learn your style.",
+    "coldStartPlaceholder": "Cold-start swipes ship with the swipe engine. Tap continue for now.",
+    "notificationsTitle": "Stay in the loop",
+    "notificationsSubtitle": "Get a heads-up when something on your list lands.",
+    "notificationsBody": "Used only for new-on-your-services and friend activity. You can turn this off any time in Settings.",
+    "notificationsAllow": "Allow notifications",
+    "notificationsSkip": "Maybe later"
+  },
+  "genres": {
+    "drama": "Drama",
+    "comedy": "Comedy",
+    "action": "Action",
+    "thriller": "Thriller",
+    "horror": "Horror",
+    "sci_fi": "Sci-Fi",
+    "fantasy": "Fantasy",
+    "romance": "Romance",
+    "mystery": "Mystery",
+    "crime": "Crime",
+    "documentary": "Documentary",
+    "animation": "Animation",
+    "family": "Family",
+    "adventure": "Adventure",
+    "history": "History",
+    "music": "Music"
   }
 }

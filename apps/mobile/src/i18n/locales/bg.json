@@ -41,6 +41,49 @@
   "common": {
     "back": "Назад",
     "continue": "Продължи",
-    "done": "Готово"
+    "done": "Готово",
+    "getStarted": "Започни",
+    "skip": "Пропусни"
+  },
+  "onboarding": {
+    "welcomeTitle": "Добре дошъл във Flixy",
+    "welcomeSubtitle": "Няколко докосвания и започваш да плъзгаш.",
+    "welcomeBody": "Кажи ни къде гледаш и какво харесваш — ние се грижим за останалото.",
+    "regionTitle": "Къде гледаш?",
+    "regionSubtitle": "Регионът и езикът настройват препоръките.",
+    "regionLabel": "Регион",
+    "languageLabel": "Език",
+    "servicesTitle": "Избери услугите си",
+    "servicesSubtitle": "Показваме само заглавия, които можеш да гледаш.",
+    "servicesHint": "Избери поне {{min}}.",
+    "genresTitle": "Какво обичаш?",
+    "genresSubtitle": "Избери от 3 до 12 жанра.",
+    "genresHint": "{{count}} избрани — избери от {{min}} до {{max}}.",
+    "coldStartTitle": "Бърз тест на вкуса",
+    "coldStartSubtitle": "Плъзни няколко заглавия, за да научим стила ти.",
+    "coldStartPlaceholder": "Първоначалните плъзгания идват със суайп двигателя. Продължи засега.",
+    "notificationsTitle": "Бъди в течение",
+    "notificationsSubtitle": "Уведомление, когато нещо от списъка ти излезе.",
+    "notificationsBody": "Само за нови заглавия в услугите ти и активност на приятели. Можеш да ги изключиш по всяко време.",
+    "notificationsAllow": "Разреши известия",
+    "notificationsSkip": "Може би по-късно"
+  },
+  "genres": {
+    "drama": "Драма",
+    "comedy": "Комедия",
+    "action": "Екшън",
+    "thriller": "Трилър",
+    "horror": "Ужаси",
+    "sci_fi": "Научна фантастика",
+    "fantasy": "Фентъзи",
+    "romance": "Романтика",
+    "mystery": "Мистерия",
+    "crime": "Криминален",
+    "documentary": "Документален",
+    "animation": "Анимация",
+    "family": "Семеен",
+    "adventure": "Приключенски",
+    "history": "Исторически",
+    "music": "Музикален"
   }
 }
