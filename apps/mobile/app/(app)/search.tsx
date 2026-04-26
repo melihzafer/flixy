@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, FlatList, Image, Pressable, TextInput, View } from 'react-native';
 
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useSearchTitles } from '../../src/features/search/hooks';
+import { events } from '../../src/features/telemetry/events';
 
 /**
  * Search screen (FSD § 3.10). Debounced ILIKE query against titles. Tap a row
@@ -15,6 +16,12 @@ export default function SearchScreen() {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
   const { data, isFetching, isError } = useSearchTitles(q);
+
+  useEffect(() => {
+    if (q.trim().length >= 2 && data) {
+      events.searchSubmitted(q.trim(), data.length);
+    }
+  }, [q, data]);
 
   return (
     <Screen scroll={false} title={t('search.title')}>
@@ -59,9 +66,10 @@ export default function SearchScreen() {
           contentContainerStyle={{ paddingBottom: 24, gap: 8 }}
           renderItem={({ item }) => (
             <Pressable
-              onPress={() =>
-                router.push({ pathname: '/(app)/title/[id]', params: { id: item.id } })
-              }
+              onPress={() => {
+                events.searchResultOpened(item.id);
+                router.push({ pathname: '/(app)/title/[id]', params: { id: item.id } });
+              }}
               accessibilityRole="button"
               accessibilityLabel={item.title}
               style={({ pressed }) => ({

@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { type MoodPreset, MoodPresetSchema } from '@flixy/shared';
 
+import { events } from '../telemetry/events';
 import { useDeckFilters } from './filterStore';
 
 const MOODS: MoodPreset[] = MoodPresetSchema.options;
@@ -116,7 +117,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
             </Text>
           </Pressable>
           <Pressable
-            onPress={onClose}
+            onPress={() => {
+              events.filterApplied({ mood, kinds, minYear, maxYear });
+              onClose();
+            }}
             style={{
               flex: 2,
               padding: 14,
