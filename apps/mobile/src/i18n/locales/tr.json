@@ -77,6 +77,20 @@
       "watched": "İzlenen"
     }
   },
+  "detail": {
+    "notFound": "Bulunamadı",
+    "movie": "Film",
+    "series": "Dizi",
+    "trailer": "Fragman",
+    "overview": "Özet",
+    "availability": "Nereden izlenir",
+    "offer": {
+      "subscription": "Abonelik",
+      "rent": "Kirala",
+      "buy": "Satın al",
+      "free": "Ücretsiz"
+    }
+  },
   "profile": {
     "title": "Profil",
     "subtitle": "Flixy'de nasıl göründüğün.",

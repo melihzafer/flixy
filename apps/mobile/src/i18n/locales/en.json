@@ -77,6 +77,20 @@
       "watched": "Watched"
     }
   },
+  "detail": {
+    "notFound": "Not found",
+    "movie": "Movie",
+    "series": "Series",
+    "trailer": "Trailer",
+    "overview": "Overview",
+    "availability": "Where to watch",
+    "offer": {
+      "subscription": "Stream",
+      "rent": "Rent",
+      "buy": "Buy",
+      "free": "Free"
+    }
+  },
   "profile": {
     "title": "Profile",
     "subtitle": "How you appear in Flixy.",
