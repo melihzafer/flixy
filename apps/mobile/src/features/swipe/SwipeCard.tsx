@@ -180,6 +180,27 @@ export function SwipeCard({
             {title.title}
           </Text>
           <Text style={{ color: 'rgba(255,255,255,0.85)', marginTop: 4 }}>{meta}</Text>
+          {title.availability.length > 0 ? (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 8, gap: 6 }}>
+              {Array.from(new Set(title.availability.map((a) => a.serviceId)))
+                .slice(0, 4)
+                .map((serviceId) => (
+                  <View
+                    key={serviceId}
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                      backgroundColor: 'rgba(255,255,255,0.18)',
+                    }}
+                  >
+                    <Text style={{ color: 'white', fontSize: 11, fontWeight: '600' }}>
+                      {serviceId.toUpperCase()}
+                    </Text>
+                  </View>
+                ))}
+            </View>
+          ) : null}
         </View>
 
         <DecisionStamp
