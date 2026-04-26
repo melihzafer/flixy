@@ -76,3 +76,10 @@ Append-only log of autopilot decisions made during the build. Each entry is one 
 **Alternatives considered:** Private bucket + signed URLs (rejected: extra round-trip every render, cache headaches). Profile photo as base64 in profiles table (rejected: bloats row, kills paginated reads).
 **Reversibility:** Easy — bucket/policies are migration-only.
 
+
+## DEC-012: Catalogue ingestion is server-only; mobile reads via Supabase
+**Date:** 2026-04-26
+**Context:** FSD 3.4 specifies TMDB + Watchmode ingestion on a schedule. The mobile client needs catalogue access for the deck and detail view, but bundling the TMDB key on-device leaks it and bypasses our admin overrides (is_hidden, is_adult).
+**Decision:** Mobile reads exclusively from Supabase tables `titles` and `title_availability` (public-read RLS, writes blocked). TMDB ingestion is documented as a Trigger.dev worker (lib/tmdb.ts is a typed stub, not imported by app code). For dev, we seed 20 representative titles + ~15 availability rows in migration 0004 so the deck can be exercised pre-ingest.
+**Alternatives considered:** (a) Direct TMDB calls from the client — rejected, key leak. (b) Supabase Edge Function proxy to TMDB — viable, deferred until ingestion lands; the read-from-mirror pattern is needed regardless for offline tolerance (FSD 3.6.4).
+**Reversibility:** Easy. Hooks already abstract behind `useTitle`/`useTitlesQuery`; swap data source without touching screens.
