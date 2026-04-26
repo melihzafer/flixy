@@ -68,6 +68,7 @@ export default function WatchlistScreen() {
             const isTop = entry.item.priority === 'top';
             return (
               <View
+                testID="watchlist-row"
                 style={{
                   flexDirection: 'row',
                   gap: 12,

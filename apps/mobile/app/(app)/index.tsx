@@ -44,16 +44,22 @@ export default function Home() {
       ) : null}
 
       <View style={{ gap: 12, marginTop: 12 }}>
-        <Button label={t('deck.title')} onPress={() => router.push('/(app)/deck')} />
+        <Button
+          label={t('deck.title')}
+          onPress={() => router.push('/(app)/deck')}
+          testID="deck-button"
+        />
         <Button
           label={t('search.title')}
           variant="secondary"
           onPress={() => router.push('/(app)/search')}
+          testID="search-button"
         />
         <Button
           label={t('watchlist.title')}
           variant="secondary"
           onPress={() => router.push('/(app)/watchlist')}
+          testID="watchlist-button"
         />
         <Button
           label={t('settings.profile')}
