@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 
-import { LanguageCodeSchema, RegionCodeSchema } from '@flixy/shared';
+import { HandleSchema, LanguageCodeSchema, RegionCodeSchema } from '@flixy/shared';
 
 import { logger } from '../../lib/logger';
 import { supabase } from '../../lib/supabase';
@@ -12,6 +12,7 @@ import { useSession } from '../auth/useSession';
  */
 const ProfileRowSchema = z.object({
   id: z.string().uuid(),
+  handle: z.string().nullable(),
   display_name: z.string().nullable(),
   avatar_url: z.string().nullable(),
   region: RegionCodeSchema,
@@ -42,6 +43,7 @@ export function useProfile() {
 
 export const ProfileUpdateSchema = z
   .object({
+    handle: HandleSchema.nullable(),
     display_name: z.string().min(1).max(80).nullable(),
     avatar_url: z.string().url().nullable(),
     region: RegionCodeSchema,
@@ -73,4 +75,42 @@ export function useUpdateProfile() {
     },
     onError: (e) => logger.warn('profile.update failed', { message: (e as Error).message }),
   });
+}
+
+/**
+ * Check whether a handle is currently free. Returns true when nobody owns it
+ * (or only the current user does). Profanity filtering is deferred to a
+ * server-side moderation pass; this is just the uniqueness check.
+ */
+export async function isHandleAvailable(handle: string, currentUserId: string | null) {
+  const safe = HandleSchema.parse(handle);
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('handle', safe)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return true;
+  return data.id === currentUserId;
+}
+
+/**
+ * Upload avatar bytes to Storage. The path is owner-scoped (`<userId>/...`)
+ * to match the Storage RLS policy in migration 0003. Returns the public URL.
+ */
+export async function uploadAvatar(params: {
+  userId: string;
+  bytes: ArrayBuffer;
+  contentType: string;
+  ext: string;
+}) {
+  const { userId, bytes, contentType, ext } = params;
+  const path = `${userId}/${Date.now()}.${ext}`;
+  const { error } = await supabase.storage.from('avatars').upload(path, bytes, {
+    contentType,
+    upsert: true,
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  return data.publicUrl;
 }

@@ -44,6 +44,16 @@ export default function Home() {
       ) : null}
 
       <View style={{ gap: 12, marginTop: 12 }}>
+        <Button
+          label={t('settings.profile')}
+          variant="secondary"
+          onPress={() => router.push('/(app)/profile')}
+        />
+        <Button
+          label={t('settings.title')}
+          variant="secondary"
+          onPress={() => router.push('/(app)/settings')}
+        />
         <Text variant="caption" style={{ color: '#71717A' }}>
           DEV · swipes simulated: {swipeCount}
         </Text>
