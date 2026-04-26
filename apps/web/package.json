@@ -1,0 +1,10 @@
+{
+  "name": "@flixy/web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Static landing page for Flixy at flixy.app",
+  "scripts": {
+    "typecheck": "echo \"@flixy/web: static site, no typecheck needed\" && exit 0",
+    "test": "echo \"@flixy/web: no tests\" && exit 0"
+  }
+}
