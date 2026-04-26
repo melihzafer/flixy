@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase';
 import { useSession } from '../auth/useSession';
 import { type TitleQueryFilter, useTitlesQuery } from '../catalogue/hooks';
 import { useUserPreferences } from '../onboarding/hooks';
+import { useProfile } from '../profile/hooks';
 
 /**
  * Deck queries (FSD section 3.5). Wraps the catalogue query with the on-device
@@ -64,12 +65,13 @@ export type UseDeckOptions = {
 
 export function useDeck(options: UseDeckOptions = {}) {
   const { data: prefs } = useUserPreferences();
+  const { data: profile } = useProfile();
   const taste = useTasteSignal();
   const moodFilter = moodToFilter(options.mood ?? null);
 
   const filter: TitleQueryFilter = useMemo(
     () => ({
-      region: undefined, // resolved server-side via profile.region in 3.7; for MVP undefined returns all
+      region: profile?.region,
       serviceIds: prefs?.selected_services ?? undefined,
       genres: moodFilter.genres ?? prefs?.selected_genres ?? undefined,
       minYear: moodFilter.minYear,
@@ -78,6 +80,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       ...options.extraFilter,
     }),
     [
+      profile?.region,
       prefs?.selected_services,
       prefs?.selected_genres,
       moodFilter.genres,
