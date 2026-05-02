@@ -1,29 +1,28 @@
-# catalogue-ingest
+# Catalogue ingestion edge functions
 
-Supabase Edge Function that runs server-side TMDB catalogue ingestion on a
-cron schedule. Invoked by `pg_cron` via `pg_net.http_post` with a shared
-`CRON_SECRET` bearer token.
+Three Supabase Edge Functions run on a `pg_cron` schedule against staging
+Supabase:
 
-## Status
+| Function          | Purpose                                                                          | Schedule (UTC)        |
+| ----------------- | -------------------------------------------------------------------------------- | --------------------- |
+| `catalogue-ingest`| Pulls TMDB candidates + details, writes titles/videos/availability               | hourly :07 (trending), daily 03:00 (full) |
+| `omdb-enrich`     | Adds IMDb rating/votes/awards to titles whose external_ids include `imdb_id`     | daily 04:30           |
+| `trakt-sync`      | Pulls Trakt trending watcher counts; annotates titles by tmdb_id                 | hourly :13            |
 
-**Pass 1 (current)** — scaffolding only. Validates auth, parses request
-body, writes a placeholder row to `public.catalogue_ingest_runs`, and
-returns the planned scope. The actual TMDB ingestion logic is not yet
-ported from `@flixy/catalogue-ingest`.
-
-**Pass 2 (next)** — port the mapper, TMDB client, and Supabase writer
-from `packages/catalogue-ingest` so the function performs real
-ingestion. The Node CLI in that package stays as the canonical
-implementation for ad-hoc backfills.
+All three import the shared TS sources at `supabase/functions/_shared/catalogue/`,
+which are mirrored from `packages/catalogue-ingest/src/`. The Node CLI in
+that package stays as the canonical implementation for ad-hoc backfills.
 
 ## Required env vars (set in Supabase Dashboard → Edge Functions → Secrets)
 
-| Name                        | Auto-injected? | Notes                                                                 |
-| --------------------------- | -------------- | --------------------------------------------------------------------- |
-| `SUPABASE_URL`              | Yes            | Provided by the platform.                                             |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes            | Provided by the platform; used for catalogue writes.                  |
-| `CRON_SECRET`               | **No**         | Random 32+ byte token shared with `pg_cron` callers via Vault.        |
-| `TMDB_BEARER_TOKEN`         | **No**         | TMDB v4 read-access token. (Not used in pass 1 stub.)                 |
+| Name                        | Used by                            | Notes                                                                 |
+| --------------------------- | ---------------------------------- | --------------------------------------------------------------------- |
+| `SUPABASE_URL`              | all (auto-injected)                | Provided by the platform.                                             |
+| `SUPABASE_SERVICE_ROLE_KEY` | all (auto-injected)                | Provided by the platform; used for catalogue writes.                  |
+| `CRON_SECRET`               | all                                | Random 32+ byte token shared with `pg_cron` callers via Vault.        |
+| `TMDB_BEARER_TOKEN`         | catalogue-ingest                   | TMDB v4 read-access token.                                            |
+| `OMDB_API_KEY`              | omdb-enrich                        | OMDb free tier key (1000 req/day).                                    |
+| `TRAKT_CLIENT_ID`           | trakt-sync                         | Trakt API client id (no OAuth needed for trending endpoints).         |
 
 ## Required Vault secrets (Supabase Dashboard → Project Settings → Vault)
 
@@ -33,7 +32,9 @@ These are read by the cron migration `0009_catalogue_ingest_cron.sql` so
 | Vault secret name                  | Value                                                              |
 | ---------------------------------- | ------------------------------------------------------------------ |
 | `catalogue_ingest_function_url`    | `https://<project-ref>.functions.supabase.co/catalogue-ingest`     |
-| `catalogue_ingest_cron_secret`     | Same value as the `CRON_SECRET` edge function env var.             |
+| `omdb_enrich_function_url`         | `https://<project-ref>.functions.supabase.co/omdb-enrich`          |
+| `trakt_sync_function_url`          | `https://<project-ref>.functions.supabase.co/trakt-sync`           |
+| `catalogue_ingest_cron_secret`     | Same value as the `CRON_SECRET` edge function env var (shared).    |
 
 ## Deploy
 
@@ -48,18 +49,22 @@ export SUPABASE_DB_PASSWORD='...'   # only if running migrations from CLI
 pnpm exec supabase secrets set \
   CRON_SECRET="$(openssl rand -hex 32)" \
   TMDB_BEARER_TOKEN="$TMDB_READ_ACCESS_TOKEN" \
+  OMDB_API_KEY="$OMDB_API_KEY" \
+  TRAKT_CLIENT_ID="$TRAKT_CLIENT_ID" \
   --project-ref mgnbvhnhjresbnblytuk
 
-# 2. Deploy the function
-pnpm exec supabase functions deploy catalogue-ingest \
-  --project-ref mgnbvhnhjresbnblytuk \
-  --no-verify-jwt
+# 2. Deploy all three functions
+pnpm exec supabase functions deploy catalogue-ingest --project-ref mgnbvhnhjresbnblytuk --no-verify-jwt
+pnpm exec supabase functions deploy omdb-enrich       --project-ref mgnbvhnhjresbnblytuk --no-verify-jwt
+pnpm exec supabase functions deploy trakt-sync        --project-ref mgnbvhnhjresbnblytuk --no-verify-jwt
 
 # 3. Add Vault secrets via Dashboard (UI only; not in CLI)
 #    - catalogue_ingest_function_url
+#    - omdb_enrich_function_url
+#    - trakt_sync_function_url
 #    - catalogue_ingest_cron_secret  (same value as CRON_SECRET above)
 
-# 4. Apply the cron migration
+# 4. Apply the cron migrations (0009, 0010, 0011, 0012)
 pnpm exec supabase db push --linked
 ```
 
@@ -79,13 +84,17 @@ curl -i -X POST \
 
 Then verify a row landed in `public.catalogue_ingest_runs`.
 
-## Cron schedules (defined in migration 0009)
+## Cron schedules
 
-| Job name                   | Cron        | Mode     | Notes                                       |
-| -------------------------- | ----------- | -------- | ------------------------------------------- |
-| `catalogue_ingest_trending`| `7 * * * *` | trending | Hourly TMDB trending/day, all regions       |
-| `catalogue_ingest_full`    | `0 3 * * *` | full     | Daily 03:00 UTC popular/now_playing/on_air  |
+| Job name                    | Cron         | Function          | Notes                                       |
+| --------------------------- | ------------ | ----------------- | ------------------------------------------- |
+| `catalogue_ingest_trending` | `7 * * * *`  | catalogue-ingest  | Hourly TMDB trending/day, all regions       |
+| `catalogue_ingest_full`     | `0 3 * * *`  | catalogue-ingest  | Daily 03:00 UTC popular/now_playing/on_air  |
+| `omdb_enrich_daily`         | `30 4 * * *` | omdb-enrich       | Daily 04:30 UTC, 100-title batch            |
+| `trakt_sync_hourly`         | `13 * * * *` | trakt-sync        | Hourly trending watchers (movies + shows)   |
 
-Both currently send `dryRun: true` so the first deployment cannot write
-catalogue rows. Switch to `dryRun: false` (in migration 0009 or via a
-new migration) once pass 2 lands and you've verified a manual write run.
+The catalogue-ingest schedules in migration `0009` ship with `dryRun: true`
+for safety. Flip to `dryRun: false` after a manual smoke test confirms
+write mode looks healthy. The OMDb and Trakt schedules in migration `0012`
+ship with `dryRun: false` — they update existing rows only, so the blast
+radius is limited.

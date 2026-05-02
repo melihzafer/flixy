@@ -1,44 +1,35 @@
 // Supabase Edge Function: catalogue-ingest
 // Invoked on a cron by pg_cron + pg_net. Authenticates with a shared
-// CRON_SECRET bearer token, then runs a TMDB ingestion pass and writes a
-// summary row to public.catalogue_ingest_runs.
+// CRON_SECRET bearer token, runs a TMDB ingestion pass via the shared
+// mapper/writer in supabase/functions/_shared/catalogue, and records a
+// summary row in public.catalogue_ingest_runs.
 //
-// PASS 1 (this file): scaffolding only — auth, env, body parsing, run-row
-// logging, and the request/response shape. The actual TMDB ingest is a
-// stub that records a 'dry_run' row and returns the planned scope, so we
-// can verify the cron → function pipe end-to-end.
-//
-// PASS 2 (next): port @flixy/catalogue-ingest mapper/writer into this
-// function and replace the stub.
+// Modes:
+//   * trending — pulls TMDB trending/day per region (cheap, fresh)
+//   * full     — pulls popular + now_playing/on_the_air per region
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+import { runCatalogueIngestion } from '../_shared/catalogue/ingest.ts';
+import { TmdbClient } from '../_shared/catalogue/tmdbClient.ts';
+import type { CandidateSource, ContentType } from '../_shared/catalogue/types.ts';
+
 type IngestMode = 'trending' | 'full';
-type ContentKind = 'movie' | 'tv';
 
 type RequestBody = {
   mode?: IngestMode;
   regions?: string[];
-  kinds?: ContentKind[];
+  kinds?: ContentType[];
   limit?: number;
   dryRun?: boolean;
-};
-
-type ResponseBody = {
-  ok: boolean;
-  runId?: string;
-  mode: IngestMode;
-  regions: string[];
-  kinds: ContentKind[];
-  limit: number;
-  dryRun: boolean;
-  message: string;
+  language?: string;
 };
 
 const DEFAULT_REGIONS = ['US', 'TR', 'BG', 'ES', 'DE', 'FR', 'BR'];
-const DEFAULT_KINDS: ContentKind[] = ['movie', 'tv'];
+const DEFAULT_KINDS: ContentType[] = ['movie', 'tv'];
 const DEFAULT_LIMIT_TRENDING = 20;
 const DEFAULT_LIMIT_FULL = 40;
+const MAX_LIMIT = 100;
 
 function jsonResponse(status: number, body: unknown): Response {
   return new Response(JSON.stringify(body), {
@@ -53,7 +44,7 @@ function requireEnv(name: string): string {
   return value;
 }
 
-function isValidKind(value: unknown): value is ContentKind {
+function isValidKind(value: unknown): value is ContentType {
   return value === 'movie' || value === 'tv';
 }
 
@@ -63,8 +54,8 @@ Deno.serve(async (req: Request) => {
   }
 
   // Auth: shared bearer secret. The platform's anon/service JWT is *not*
-  // accepted here — pg_cron callers must use CRON_SECRET so a leaked
-  // anon key cannot trigger ingestion runs.
+  // accepted because we deploy with --no-verify-jwt; pg_cron callers
+  // present CRON_SECRET so a leaked anon key cannot trigger ingestion.
   const expected = Deno.env.get('CRON_SECRET');
   if (!expected) {
     return jsonResponse(500, { ok: false, error: 'cron_secret_unset' });
@@ -93,17 +84,20 @@ Deno.serve(async (req: Request) => {
       : DEFAULT_KINDS;
   const limit =
     typeof body.limit === 'number' && body.limit > 0
-      ? Math.min(Math.floor(body.limit), 100)
+      ? Math.min(Math.floor(body.limit), MAX_LIMIT)
       : mode === 'trending'
         ? DEFAULT_LIMIT_TRENDING
         : DEFAULT_LIMIT_FULL;
   const dryRun = body.dryRun !== false;
+  const language = body.language ?? 'en-US';
 
   let supabaseUrl: string;
   let serviceRoleKey: string;
+  let tmdbBearer: string;
   try {
     supabaseUrl = requireEnv('SUPABASE_URL');
     serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+    tmdbBearer = requireEnv('TMDB_BEARER_TOKEN');
   } catch (error) {
     return jsonResponse(500, {
       ok: false,
@@ -114,9 +108,16 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });
+  const tmdb = new TmdbClient({ bearerToken: tmdbBearer });
 
-  // PASS 1 stub: record a run row so we can verify cron → function → DB.
-  const { data, error } = await supabase
+  // trending mode: only pull TMDB trending/day. Cheaper, fresher.
+  // full mode: popular + now_playing/on_the_air. Skips trending so we don't
+  // double-count titles the hourly job already touched.
+  const sources: CandidateSource[] =
+    mode === 'trending' ? ['trending_day'] : ['popular', 'now_playing', 'on_the_air'];
+
+  // Open run row up front so we always have a trace, even if ingestion throws.
+  const { data: runRow, error: runError } = await supabase
     .from('catalogue_ingest_runs')
     .insert({
       mode: dryRun ? 'dry_run' : 'write',
@@ -127,27 +128,63 @@ Deno.serve(async (req: Request) => {
       title_count: 0,
       video_count: 0,
       availability_count: 0,
-      error_message: 'pass-1 stub: ingestion logic not yet ported to edge function',
     })
     .select('id')
     .single();
 
-  if (error) {
+  if (runError) {
     return jsonResponse(500, {
       ok: false,
-      error: `run_log_insert_failed: ${error.message}`,
+      error: `run_log_insert_failed: ${runError.message}`,
     });
   }
+  if (!runRow?.id) {
+    return jsonResponse(500, { ok: false, error: 'run_log_missing_id' });
+  }
+  const runId = runRow.id as string;
 
-  const responseBody: ResponseBody = {
-    ok: true,
-    runId: data?.id,
-    mode,
-    regions,
-    kinds,
-    limit,
-    dryRun,
-    message: 'pass-1 stub: scope acknowledged, ingest logic to follow',
-  };
-  return jsonResponse(200, responseBody);
+  try {
+    const result = await runCatalogueIngestion({
+      supabase,
+      tmdb,
+      regions,
+      kinds,
+      language,
+      limitPerRegionKind: limit,
+      dryRun,
+      sources,
+      useCache: true,
+      cacheTtlHours: 24,
+    });
+
+    await supabase
+      .from('catalogue_ingest_runs')
+      .update({
+        candidate_count: result.candidateCount,
+        title_count: result.titleCount,
+        video_count: result.videoCount,
+        availability_count: result.availabilityCount,
+      })
+      .eq('id', runId);
+
+    return jsonResponse(200, {
+      ok: true,
+      runId,
+      mode,
+      dryRun,
+      regions: result.regions,
+      kinds: result.kinds,
+      candidateCount: result.candidateCount,
+      titleCount: result.titleCount,
+      videoCount: result.videoCount,
+      availabilityCount: result.availabilityCount,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await supabase
+      .from('catalogue_ingest_runs')
+      .update({ error_message: message.slice(0, 500) })
+      .eq('id', runId);
+    return jsonResponse(500, { ok: false, runId, error: message });
+  }
 });

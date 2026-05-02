@@ -1,4 +1,4 @@
-import type { CandidateRef, CandidateSource, ContentType } from './types';
+import type { CandidateRef, CandidateSource, ContentType } from './types.ts';
 
 type TmdbListResponse = {
   results?: Array<{ id?: number }>;

@@ -1,21 +1,21 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { getCachedTmdbResponse, setCachedTmdbResponse } from './cache';
+import { getCachedTmdbResponse, setCachedTmdbResponse } from './cache.ts';
 import {
   type TmdbMovieDetail,
   type TmdbTvDetail,
   mapTmdbTitleDetail,
   mergeIngestPlans,
-} from './mapper';
-import { upsertIngestPlan } from './supabaseWriter';
-import type { TmdbClient } from './tmdbClient';
+} from './mapper.ts';
+import { upsertIngestPlan } from './supabaseWriter.ts';
+import type { TmdbClient } from './tmdbClient.ts';
 import {
   CONTENT_TYPES,
   type CandidateRef,
   type CandidateSource,
   type ContentType,
   type IngestWriteSummary,
-} from './types';
+} from './types.ts';
 
 export type RunCatalogueIngestionOptions = {
   supabase: SupabaseClient;
