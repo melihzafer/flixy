@@ -48,9 +48,12 @@ export class TraktClient {
     }
     const response = await this.fetchImpl(url.toString(), {
       headers: {
+        accept: 'application/json',
         'content-type': 'application/json',
         'trakt-api-version': this.apiVersion,
         'trakt-api-key': this.clientId,
+        // Trakt's Cloudflare layer rejects the default Node fetch UA.
+        'user-agent': 'flixy-catalogue-ingest/0.1 (+https://flixy.app)',
       },
     });
     if (!response.ok) {
