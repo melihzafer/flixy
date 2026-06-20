@@ -24,10 +24,16 @@ export const TitleSchema = z.object({
   trailerKey: z.string().nullable(),
   releaseYear: z.number().int().min(1880).max(2100).nullable(),
   runtimeMinutes: z.number().int().positive().nullable(),
+  contentRating: z.string().min(1).nullable().optional(),
   imdbRating: z.number().min(0).max(10).nullable(),
+  criticScore: z.number().int().min(0).max(100).nullable().optional(),
   popularity: z.number(),
   genres: z.array(z.string()),
   language: z.string().nullable(),
+  tagline: z.string().min(1).nullable().optional(),
+  directors: z.array(z.string().min(1)).optional(),
+  creators: z.array(z.string().min(1)).optional(),
+  cast: z.array(z.string().min(1)).optional(),
   availability: z.array(TitleAvailabilitySchema).default([]),
 });
 

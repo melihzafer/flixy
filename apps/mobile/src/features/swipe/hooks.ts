@@ -1,15 +1,17 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
 import type { SwipeDirection, SwipeEvent } from '@flixy/shared';
 
+import { localDb } from '../../lib/localDb';
 import { logger } from '../../lib/logger';
-import { supabase } from '../../lib/supabase';
 import { useSession } from '../auth/useSession';
 import { useUserPreferences } from '../onboarding/hooks';
+import { useProfile } from '../profile/hooks';
 import { events } from '../telemetry/events';
+import { watchlistStore } from '../watchlist/store';
 import { useSwipeQueue } from './queue';
 
 /**
@@ -22,6 +24,7 @@ export type RecordSwipeArgs = {
   titleId: string;
   direction: SwipeDirection;
   deckPosition: number;
+  genres?: string[];
 };
 
 export function useSwipeSession() {
@@ -51,6 +54,7 @@ function hapticFor(dir: SwipeDirection): Promise<void> {
 export function useRecordSwipe() {
   const { data: session } = useSession();
   const { data: prefs } = useUserPreferences();
+  const { data: profile } = useProfile();
   const sessionId = useSwipeSession();
   const enqueue = useSwipeQueue((s) => s.enqueue);
   const qc = useQueryClient();
@@ -67,14 +71,14 @@ export function useRecordSwipe() {
         occurredAt: new Date().toISOString(),
         sessionId,
         deckPosition: args.deckPosition,
-        region: 'US',
+        region: profile?.region || 'US',
         filtersSnapshot: {
           services: prefs?.selected_services ?? [],
           genres: prefs?.selected_genres ?? [],
         },
       };
       void hapticFor(args.direction);
-      await enqueue(event);
+      await enqueue({ ...event, genres: args.genres } as SwipeEvent);
       events.swipeCommitted({
         titleId: args.titleId,
         direction: args.direction,
@@ -83,19 +87,32 @@ export function useRecordSwipe() {
       });
 
       // Optimistic projection into watchlist for positive swipes.
-      if (args.direction === 'right' || args.direction === 'up') {
-        const priority = args.direction === 'up' ? 'top' : 'normal';
-        const { error } = await supabase.from('watchlist_items').upsert(
-          {
+      try {
+        if (args.direction === 'right' || args.direction === 'up') {
+          const priority = args.direction === 'up' ? 'top' : 'normal';
+          await watchlistStore.upsertWatchlistItem({
             user_id: userId,
             title_id: args.titleId,
             priority,
             position: 0,
             added_at: event.occurredAt,
-          },
-          { onConflict: 'user_id,title_id' },
-        );
-        if (error) logger.warn('watchlist optimistic upsert failed', { message: error.message });
+            watched_at: null,
+            removed_at: null,
+          });
+        }
+        if (args.direction === 'down') {
+          await watchlistStore.upsertWatchlistItem({
+            user_id: userId,
+            title_id: args.titleId,
+            priority: 'normal',
+            position: 0,
+            added_at: event.occurredAt,
+            watched_at: event.occurredAt,
+            removed_at: null,
+          });
+        }
+      } catch (error) {
+        logger.warn('watchlist optimistic upsert failed', { message: (error as Error).message });
       }
       return event;
     },
@@ -115,13 +132,19 @@ export function useUndoSwipe() {
       const userId = session?.user?.id;
       if (!userId) throw new Error('not authenticated');
       // Reverse the watchlist projection.
-      if (event.direction === 'right' || event.direction === 'up') {
-        const { error } = await supabase
-          .from('watchlist_items')
-          .update({ removed_at: new Date().toISOString() })
-          .eq('user_id', userId)
-          .eq('title_id', event.titleId);
-        if (error) logger.warn('watchlist undo failed', { message: error.message });
+      try {
+        if (event.direction === 'right' || event.direction === 'up') {
+          await watchlistStore.updateWatchlistItemByTitle(userId, event.titleId, {
+            removed_at: new Date().toISOString(),
+          });
+        }
+        if (event.direction === 'down') {
+          await watchlistStore.updateWatchlistItemByTitle(userId, event.titleId, {
+            watched_at: null,
+          });
+        }
+      } catch (error) {
+        logger.warn('watchlist undo failed', { message: (error as Error).message });
       }
       await markUndone(event.eventId);
       events.swipeUndone(event.titleId);
@@ -152,7 +175,30 @@ export function useSwipeQueueBoot() {
 export function useSwipeStats() {
   const pending = useSwipeQueue((s) => s.pending);
   const inFlight = useSwipeQueue((s) => s.inFlight);
-  return useMemo(() => ({ queued: pending.length, syncing: inFlight }), [pending.length, inFlight]);
+  const lastError = useSwipeQueue((s) => s.lastError);
+  return useMemo(
+    () => ({ queued: pending.length, syncing: inFlight, lastError }),
+    [pending.length, inFlight, lastError],
+  );
+}
+
+/**
+ * Total committed swipes for the current user (excludes undone swipes).
+ * Used for the Profile stats card so "Swipes" reflects real swipe history
+ * instead of being derived from the watchlist count.
+ */
+export function useSwipeCount() {
+  const { data: session } = useSession();
+  const userId = session?.user?.id ?? null;
+  return useQuery({
+    queryKey: ['swipes', userId ?? 'anon', 'count'],
+    enabled: !!userId,
+    queryFn: async () => {
+      if (!userId) return 0;
+      const swipes = await localDb.getSwipes(userId);
+      return swipes.filter((s) => !s.is_undone).length;
+    },
+  });
 }
 
 export function useFlushOnReconnect(isOnline: boolean) {

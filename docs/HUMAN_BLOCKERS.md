@@ -62,6 +62,21 @@ eas secret:create --scope project --name RESEND_API_KEY --value <key>
 **Blocks:** Catalogue ingestion at scale
 **Action:** Apply for higher-tier TMDB key + Watchmode plan; rotate via EAS secrets.
 
+### HB-007 — Google OAuth / Supabase Auth dashboard verification
+**Status:** Pending verification
+**Blocks:** Reliable Google sign-up/sign-in in preview and production builds
+**Action:**
+1. In Google Cloud, keep the OAuth client authorized redirect URI set to the Supabase callback endpoint: `https://<project-ref>.supabase.co/auth/v1/callback`.
+2. In Supabase Auth → Providers → Google, enable Google and configure the Google OAuth client credentials from the dashboard only; do not commit the values.
+3. In Supabase Auth → URL Configuration, allow the native app redirect URI `flixy:///` and the production app link `https://flixy.app`.
+4. Confirm the Expo native identifiers still match `app.config.ts`: iOS bundle ID `app.flixy.mobile`, Android package `app.flixy.mobile`, scheme `flixy`.
+5. Verify on a preview build that Google returns to Flixy once. If the account picker reappears repeatedly, check exact redirect URI spelling in Google Cloud and Supabase before retrying.
+
+### HB-008 — Rotate Cloudflare R2 credentials shared in chat
+**Status:** Pending
+**Blocks:** Safe production R2 export automation
+**Action:** Rotate the R2 access key and Cloudflare API token that were pasted into chat/session logs. Store the new values only in `.env.local`, CI secrets, or a password manager; never commit them.
+
 ## RESOLVED
 
 _(none yet)_

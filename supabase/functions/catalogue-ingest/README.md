@@ -5,7 +5,7 @@ Supabase:
 
 | Function          | Purpose                                                                          | Schedule (UTC)        |
 | ----------------- | -------------------------------------------------------------------------------- | --------------------- |
-| `catalogue-ingest`| Pulls TMDB candidates + details, writes titles/videos/availability               | hourly :07 (trending), daily 03:00 (full) |
+| `catalogue-ingest`| Pulls TMDB candidates + details, writes titles/videos/availability               | hourly :07 (trending), daily 03:00 (full), every 5 min (backfill steps) |
 | `omdb-enrich`     | Adds IMDb rating/votes/awards to titles whose external_ids include `imdb_id`     | daily 04:30           |
 | `trakt-sync`      | Pulls Trakt trending watcher counts; annotates titles by tmdb_id                 | hourly :13            |
 
@@ -35,6 +35,11 @@ These are read by the cron migration `0009_catalogue_ingest_cron.sql` so
 | `omdb_enrich_function_url`         | `https://<project-ref>.functions.supabase.co/omdb-enrich`          |
 | `trakt_sync_function_url`          | `https://<project-ref>.functions.supabase.co/trakt-sync`           |
 | `catalogue_ingest_cron_secret`     | Same value as the `CRON_SECRET` edge function env var (shared).    |
+
+If `catalogue_ingest_function_url` or `catalogue_ingest_cron_secret` is missing,
+`public.catalogue_ingest_invoke(...)` returns `NULL` and pg_cron effectively
+skips ingestion. Verify it returns a non-null request id after any environment
+or database restore.
 
 ## Deploy
 
@@ -98,3 +103,50 @@ for safety. Flip to `dryRun: false` after a manual smoke test confirms
 write mode looks healthy. The OMDb and Trakt schedules in migration `0012`
 ship with `dryRun: false` — they update existing rows only, so the blast
 radius is limited.
+
+## Global backfill
+
+Migrations `0013_catalogue_backfill_runtime.sql` and
+`0014_catalogue_backfill_candidates.sql` add persistent backfill jobs, cursors,
+batch audit rows, and ordered TMDB export candidate snapshots. They also add two
+scheduled backfill jobs:
+
+| Job name | Cron | Payload |
+| -------- | ---- | ------- |
+| `catalogue_backfill_movie_step` | `*/5 * * * *` | `{"mode":"backfill_step","kind":"movie","dryRun":false,"limit":250}` |
+| `catalogue_backfill_tv_step` | `2-59/5 * * * *` | `{"mode":"backfill_step","kind":"tv","dryRun":false,"limit":250}` |
+
+Each step auto-starts a resumable job if none exists for that kind. It reads the
+TMDB daily ID export once when the job is created, persists the candidates in
+`catalogue_backfill_candidates`, processes one bounded batch, writes batch audit
+rows, and advances `catalogue_backfill_cursors.next_offset`. Adult and
+unreleased records are stored; app-side policy decides which records are
+surfaced.
+
+Manual smoke test:
+
+```sh
+curl -i -X POST \
+  -H "Authorization: Bearer $CRON_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"backfill_step","kind":"movie","dryRun":true,"limit":10,"maxCandidates":100}' \
+  https://mgnbvhnhjresbnblytuk.functions.supabase.co/catalogue-ingest
+```
+
+Resume a specific job:
+
+```sh
+curl -i -X POST \
+  -H "Authorization: Bearer $CRON_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{"mode":"backfill_step","jobId":"<job-uuid>","dryRun":false,"limit":250}' \
+  https://mgnbvhnhjresbnblytuk.functions.supabase.co/catalogue-ingest
+```
+
+Status query:
+
+```sql
+select id, kind, status, processed_count, total_candidates, error_count, last_error
+from public.catalogue_backfill_jobs
+order by created_at desc;
+```

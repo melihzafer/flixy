@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { LanguageCodeSchema, RegionCodeSchema } from './user';
+import { LanguageCodeSchema, RegionCodeSchema, UserIdSchema } from './user';
 
 /**
  * Auth credential and session schemas.
@@ -32,9 +32,16 @@ export const SignInInputSchema = z.object({
   password: z.string().min(1, 'Please enter your password.'),
 });
 
-export const ResetPasswordInputSchema = z.object({
-  email: EmailSchema,
-});
+export const ResetPasswordInputSchema = z
+  .object({
+    email: EmailSchema,
+    password: PasswordSchema,
+    confirmPassword: z.string().min(1),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: 'Passwords do not match.',
+    path: ['confirmPassword'],
+  });
 
 export const UpdatePasswordInputSchema = z
   .object({
@@ -56,7 +63,7 @@ export type UpdatePasswordInput = z.infer<typeof UpdatePasswordInputSchema>;
  * expo-secure-store; access tokens flow through Supabase's auth client.
  */
 export const SessionUserSchema = z.object({
-  id: z.string().uuid(),
+  id: UserIdSchema,
   email: z.string().email().nullable(),
   isAnonymous: z.boolean(),
 });

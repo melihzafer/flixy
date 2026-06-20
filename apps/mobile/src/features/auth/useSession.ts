@@ -1,8 +1,11 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session, User } from '@supabase/supabase-js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect } from 'react';
 
-import { supabase } from '../../lib/supabase';
+import { logger } from '../../lib/logger';
+import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { isReadOnlyRefreshTokenError } from './authErrors';
 
 export type AuthSession = {
   session: Session | null;
@@ -11,48 +14,114 @@ export type AuthSession = {
 };
 
 const SESSION_KEY = ['auth', 'session'] as const;
+const SESSION_STORAGE_KEY = 'flixy.local_session.v2';
 
-function readAnonymousFlag(user: User | null): boolean {
+const EMPTY_SESSION: AuthSession = {
+  session: null,
+  user: null,
+  isAnonymous: false,
+};
+
+let currentSession: AuthSession = EMPTY_SESSION;
+
+const listeners = new Set<(session: AuthSession) => void>();
+
+export function subscribeToSession(callback: (session: AuthSession) => void) {
+  listeners.add(callback);
+  callback(currentSession);
+  return () => {
+    listeners.delete(callback);
+  };
+}
+
+function notifyListeners() {
+  for (const listener of listeners) {
+    listener(currentSession);
+  }
+}
+
+function isAnonymousUser(user: User | null) {
   if (!user) return false;
-  const meta = user.app_metadata as Record<string, unknown> | undefined;
-  if (typeof user.is_anonymous === 'boolean') return user.is_anonymous;
-  return Boolean(meta?.is_anonymous);
+  return Boolean(
+    (user as User & { is_anonymous?: boolean }).is_anonymous ?? user.app_metadata?.is_anonymous,
+  );
 }
 
-async function fetchSession(): Promise<AuthSession> {
-  const { data, error } = await supabase.auth.getSession();
-  if (error) throw error;
-  const session = data.session ?? null;
+function sessionFromSupabase(session: Session | null): AuthSession {
   const user = session?.user ?? null;
-  return { session, user, isAnonymous: readAnonymousFlag(user) };
+  return {
+    session,
+    user,
+    isAnonymous: isAnonymousUser(user),
+  };
 }
 
-/**
- * Reactive subscription to Supabase auth state.
- * Server state lives in TanStack Query; an onAuthStateChange listener pushes
- * updates straight into the cache so all consumers re-render together.
- */
+async function getSupabaseSession(): Promise<AuthSession> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error) {
+    if (isReadOnlyRefreshTokenError(error)) {
+      logger.warn('auth.session refresh failed; clearing stale session', {
+        message: error.message,
+      });
+      await supabase.auth.signOut();
+      currentSession = EMPTY_SESSION;
+      return currentSession;
+    }
+    throw error;
+  }
+  currentSession = sessionFromSupabase(data.session);
+  return currentSession;
+}
+
+export async function getLocalSession(): Promise<AuthSession> {
+  try {
+    const raw = await AsyncStorage.getItem(SESSION_STORAGE_KEY);
+    if (raw) {
+      currentSession = JSON.parse(raw);
+    }
+  } catch (e) {
+    logger.warn('auth.local_session load failed', { message: (e as Error).message });
+  }
+  return currentSession;
+}
+
+export function getSessionSnapshot(): Promise<AuthSession> {
+  return isSupabaseConfigured ? getSupabaseSession() : getLocalSession();
+}
+
+export async function setLocalSession(session: AuthSession) {
+  currentSession = session;
+  notifyListeners();
+  try {
+    await AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  } catch (e) {
+    logger.warn('auth.local_session save failed', { message: (e as Error).message });
+  }
+}
+
 export function useSession() {
   const qc = useQueryClient();
 
   const query = useQuery({
     queryKey: SESSION_KEY,
-    queryFn: fetchSession,
+    queryFn: getSessionSnapshot,
     staleTime: Number.POSITIVE_INFINITY,
   });
 
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
-      const user = session?.user ?? null;
-      qc.setQueryData<AuthSession>(SESSION_KEY, {
-        session,
-        user,
-        isAnonymous: readAnonymousFlag(user),
+    if (isSupabaseConfigured) {
+      const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+        const next = sessionFromSupabase(session);
+        currentSession = next;
+        notifyListeners();
+        qc.setQueryData<AuthSession>(SESSION_KEY, next);
       });
+      return () => data.subscription.unsubscribe();
+    }
+
+    return subscribeToSession((session) => {
+      qc.setQueryData<AuthSession>(SESSION_KEY, session);
     });
-    return () => {
-      data.subscription.unsubscribe();
-    };
   }, [qc]);
 
   return query;

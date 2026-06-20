@@ -1,6 +1,7 @@
 import Constants, { ExecutionEnvironment } from 'expo-constants';
-import { router } from 'expo-router';
+import { type Href, router } from 'expo-router';
 import { useEffect } from 'react';
+import { Platform } from 'react-native';
 
 import { logger } from '../../lib/logger';
 
@@ -15,8 +16,11 @@ import { logger } from '../../lib/logger';
  */
 export function useNotificationDeepLinks() {
   useEffect(() => {
-    if (Constants.executionEnvironment === ExecutionEnvironment.StoreClient) {
-      logger.info('notif.skip_in_expo_go');
+    if (
+      Platform.OS === 'web' ||
+      Constants.executionEnvironment === ExecutionEnvironment.StoreClient
+    ) {
+      logger.info('notif.skip_unsupported_env');
       return;
     }
 
@@ -40,14 +44,18 @@ export function useNotificationDeepLinks() {
 }
 
 type NotificationResponseLike = {
-  notification: { request: { content: { data?: { titleId?: string } } } };
+  notification: { request: { content: { data?: { titleId?: string; url?: string } } } };
 };
 
 function handle(resp: NotificationResponseLike) {
   const data = resp.notification.request.content.data;
-  if (!data?.titleId) return;
+  if (!data) return;
   try {
-    router.push({ pathname: '/(app)/title/[id]', params: { id: data.titleId } });
+    if (data.titleId) {
+      router.push({ pathname: '/(app)/title/[id]', params: { id: data.titleId } });
+    } else if (data.url) {
+      router.push(data.url as Href);
+    }
   } catch (err) {
     logger.warn('notif.deep_link_failed', { err: String(err) });
   }

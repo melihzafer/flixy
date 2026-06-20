@@ -1,4 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
 /**
  * Storage adapter for Supabase auth that mirrors the AsyncStorage interface
@@ -19,7 +20,36 @@ async function setRaw(key: string, value: string) {
   });
 }
 
-export const secureStoreAdapter = {
+const memoryStore = new Map<string, string>();
+
+const webAdapter = {
+  async getItem(key: string): Promise<string | null> {
+    try {
+      if (typeof localStorage !== 'undefined') return localStorage.getItem(key);
+    } catch {}
+    return memoryStore.get(key) ?? null;
+  },
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, value);
+        return;
+      }
+    } catch {}
+    memoryStore.set(key, value);
+  },
+  async removeItem(key: string): Promise<void> {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(key);
+        return;
+      }
+    } catch {}
+    memoryStore.delete(key);
+  },
+};
+
+const nativeAdapter = {
   async getItem(key: string): Promise<string | null> {
     const meta = await SecureStore.getItemAsync(`${key}${CHUNK_INDEX_SUFFIX}`);
     if (!meta) {
@@ -64,3 +94,5 @@ export const secureStoreAdapter = {
     await SecureStore.deleteItemAsync(key);
   },
 };
+
+export const secureStoreAdapter = Platform.OS === 'web' ? webAdapter : nativeAdapter;

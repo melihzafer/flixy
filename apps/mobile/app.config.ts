@@ -32,7 +32,10 @@ const config: ExpoConfig = {
       {
         action: 'VIEW',
         autoVerify: true,
-        data: [{ scheme: 'https', host: 'flixy.app' }],
+        data: [
+          { scheme: 'https', host: 'flixy.app' },
+          { scheme: 'flixy', host: '*' },
+        ],
         category: ['BROWSABLE', 'DEFAULT'],
       },
     ],
@@ -43,7 +46,15 @@ const config: ExpoConfig = {
     'expo-font',
     'expo-secure-store',
     'expo-localization',
-    '@sentry/react-native/expo',
+    'expo-web-browser',
+    [
+      '@sentry/react-native/expo',
+      {
+        organization: process.env.SENTRY_ORG ?? 'o4511025219239936',
+        project: process.env.SENTRY_PROJECT ?? 'flixy-mobile',
+        url: 'https://de.sentry.io/',
+      },
+    ],
     [
       'expo-notifications',
       {
@@ -57,9 +68,15 @@ const config: ExpoConfig = {
     eas: { projectId: process.env.EXPO_PROJECT_ID ?? '' },
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+    supabaseOAuthRedirectUri: process.env.EXPO_PUBLIC_SUPABASE_OAUTH_REDIRECT_URI,
     sentryDsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
     posthogKey: process.env.EXPO_PUBLIC_POSTHOG_API_KEY,
     posthogHost: process.env.EXPO_PUBLIC_POSTHOG_HOST,
+    tmdbApiKey: process.env.TMDB_API_KEY,
+    tmdbReadAccessToken: process.env.TMDB_READ_ACCESS_TOKEN,
+    googleOAuthClientId: process.env.EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID,
+    googleOAuthRedirectUri:
+      process.env.EXPO_PUBLIC_GOOGLE_OAUTH_REDIRECT_URI ?? 'flixy://oauth/google',
   },
 };
 

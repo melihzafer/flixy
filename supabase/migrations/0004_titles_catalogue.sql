@@ -4,7 +4,7 @@
 -- for MVP we ship a small dev seed so the swipe deck is functional pre-ingest.
 
 create table if not exists public.titles (
-  id              uuid primary key default uuid_generate_v4(),
+  id              uuid primary key default gen_random_uuid(),
   tmdb_id         integer not null,
   content_type    text not null check (content_type in ('movie','tv')),
   title           text not null,

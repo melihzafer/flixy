@@ -8,13 +8,17 @@ export type CandidateSource =
   | 'popular'
   | 'trending_day'
   | 'now_playing'
-  | 'on_the_air';
+  | 'on_the_air'
+  | 'tmdb_export'
+  | 'tmdb_changes';
 
 export type CandidateRef = {
   kind: ContentType;
   tmdbId: number;
   region: string;
   source: CandidateSource;
+  popularity?: number;
+  adult?: boolean;
 };
 
 export type ExternalIds = Record<string, string | null>;
@@ -93,4 +97,55 @@ export type IngestWriteSummary = {
   availabilityCount: number;
   availabilityRefreshCount: number;
   titleIds: Record<string, string>;
+};
+
+export type BackfillJobStatus = 'pending' | 'running' | 'paused' | 'completed' | 'failed';
+
+export type BackfillJobSource = 'tmdb_export' | 'tmdb_changes';
+
+export type CatalogueBackfillJob = {
+  id: string;
+  kind: ContentType;
+  source: BackfillJobSource;
+  snapshot_date: string;
+  status: BackfillJobStatus;
+  regions: string[];
+  language: string;
+  include_adult: boolean;
+  include_unreleased: boolean;
+  batch_size: number;
+  total_candidates: number;
+  processed_count: number;
+  title_count: number;
+  video_count: number;
+  availability_count: number;
+  error_count: number;
+  skipped_count: number;
+  last_error: string | null;
+};
+
+export type CatalogueBackfillCursor = {
+  job_id: string;
+  next_offset: number;
+  batch_size: number;
+  last_processed_tmdb_id: number | null;
+  consecutive_failures: number;
+};
+
+export type CatalogueBackfillStepResult = {
+  jobId: string;
+  kind: ContentType;
+  dryRun: boolean;
+  status: BackfillJobStatus;
+  offsetStart: number;
+  offsetEnd: number;
+  totalCandidates: number;
+  processedCount: number;
+  succeededIds: number[];
+  failedIds: number[];
+  titleCount: number;
+  videoCount: number;
+  availabilityCount: number;
+  nextOffset: number;
+  completed: boolean;
 };

@@ -40,7 +40,7 @@ create policy "swipes: owner update undo only"
 -- Stored explicitly because users can reorder + mark-as-watched + remove.
 -- ============================================================================
 create table if not exists public.watchlist_items (
-  id          uuid primary key default uuid_generate_v4(),
+  id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
   title_id    uuid not null references public.titles(id) on delete cascade,
   priority    text not null check (priority in ('top','normal')),

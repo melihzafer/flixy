@@ -1,142 +1,471 @@
-import { useTranslation } from 'react-i18next';
+import { Laugh, Search, Sofa } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
-import { type MoodPreset, MoodPresetSchema } from '@flixy/shared';
-
-import { Button } from '../../components/Button';
-import { Chip, ChipGroup } from '../../components/Chip';
-import { SectionLabel } from '../../components/SectionLabel';
 import { Text } from '../../components/Text';
+import { useDeckFilters } from '../../features/deck/filterStore';
+import { events } from '../../features/telemetry/events';
+import { FALLBACK_GENRES_PARSED, FALLBACK_STREAMING_SERVICES } from '../../lib/fallbackCatalogue';
 import { colors, fonts } from '../../theme/tokens';
-import { events } from '../telemetry/events';
-import { useDeckFilters } from './filterStore';
+import { useUserPreferences } from '../onboarding/hooks';
+import { useProfile } from '../profile/hooks';
 
-const MOODS: MoodPreset[] = MoodPresetSchema.options;
+const MOODS = [
+  { id: 'feel_good', label: 'Quick laugh', Icon: Laugh },
+  { id: 'edge_of_seat', label: 'Edge of seat', Icon: Search },
+  { id: 'cozy', label: 'Comfort watch', Icon: Sofa },
+] as const;
+
+const TYPES = ['Movies', 'Series'] as const;
+const YEAR_RANGES = [
+  { label: 'Any year', min: null, max: null },
+  { label: '2020s', min: 2020, max: null },
+  { label: '2010s', min: 2010, max: 2019 },
+  { label: 'Classics', min: null, max: 1999 },
+] as const;
 
 export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  const { t } = useTranslation();
-  const { mood, kinds, minYear, maxYear, setMood, toggleKind, setYears, reset } = useDeckFilters();
+  const {
+    mood,
+    kinds,
+    minYear,
+    maxYear,
+    serviceIds,
+    genres,
+    setMood,
+    toggleKind,
+    setYears,
+    setServices,
+    setGenres,
+    reset,
+  } = useDeckFilters();
+
+  const { data: prefs } = useUserPreferences();
+  const { data: profile } = useProfile();
+  const region = profile?.region ?? 'US';
+
+  const [selMood, setSelMood] = useState<string | null>(mood);
+  const [types, setTypes] = useState<Set<string>>(
+    new Set(
+      TYPES.filter((t) => {
+        if (t === 'Movies') return kinds.includes('movie');
+        if (t === 'Series') return kinds.includes('tv');
+        return false;
+      }),
+    ),
+  );
+  const [yearRange, setYearRange] = useState<string>(() => `${minYear ?? ''}:${maxYear ?? ''}`);
+  const [selServices, setSelServices] = useState<Set<string>>(new Set());
+  const [selGenres, setSelGenres] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!visible) return;
+    setSelMood(mood);
+    setTypes(
+      new Set(
+        TYPES.filter((t) => {
+          if (t === 'Movies') return kinds.includes('movie');
+          if (t === 'Series') return kinds.includes('tv');
+          return false;
+        }),
+      ),
+    );
+    setYearRange(`${minYear ?? ''}:${maxYear ?? ''}`);
+    setSelServices(new Set(serviceIds ?? prefs?.selected_services ?? []));
+    setSelGenres(new Set(genres ?? prefs?.selected_genres ?? []));
+  }, [kinds, maxYear, minYear, mood, serviceIds, genres, prefs, visible]);
+
+  const toggleType = (t: string) => {
+    const next = new Set(types);
+    if (next.has(t)) next.delete(t);
+    else next.add(t);
+    setTypes(next);
+  };
+
+  const toggleService = (id: string) => {
+    const next = new Set(selServices);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelServices(next);
+  };
+
+  const toggleGenre = (id: string) => {
+    const next = new Set(selGenres);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelGenres(next);
+  };
+
+  const apply = () => {
+    const nextMood =
+      selMood === 'feel_good' || selMood === 'edge_of_seat' || selMood === 'cozy' ? selMood : null;
+    setMood(nextMood);
+
+    const wantsMovies = types.has('Movies');
+    const wantsSeries = types.has('Series');
+    if (wantsMovies && !kinds.includes('movie')) toggleKind('movie');
+    if (!wantsMovies && kinds.includes('movie')) toggleKind('movie');
+    if (wantsSeries && !kinds.includes('tv')) toggleKind('tv');
+    if (!wantsSeries && kinds.includes('tv')) toggleKind('tv');
+
+    const selectedYear = YEAR_RANGES.find(
+      (range) => `${range.min ?? ''}:${range.max ?? ''}` === yearRange,
+    );
+    setYears(selectedYear?.min ?? null, selectedYear?.max ?? null);
+    setServices(Array.from(selServices));
+    setGenres(Array.from(selGenres));
+
+    events.filterApplied({
+      mood: nextMood,
+      kinds: [...(wantsMovies ? ['movie'] : []), ...(wantsSeries ? ['tv'] : [])],
+      minYear: selectedYear?.min ?? null,
+      maxYear: selectedYear?.max ?? null,
+    });
+
+    onClose();
+  };
+
+  const resetFilters = () => {
+    reset();
+    setSelMood(null);
+    setTypes(new Set(TYPES));
+    setYearRange(':');
+    setSelServices(new Set(prefs?.selected_services ?? []));
+    setSelGenres(new Set(prefs?.selected_genres ?? []));
+    events.filterApplied({ mood: null, kinds: ['movie', 'tv'], minYear: null, maxYear: null });
+    onClose();
+  };
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable
-        onPress={onClose}
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }}
-        accessibilityLabel={t('common.back')}
-      />
+      <Pressable onPress={onClose} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)' }} />
       <View
         style={{
           position: 'absolute',
           left: 0,
           right: 0,
           bottom: 0,
-          backgroundColor: colors.surface,
-          borderTopLeftRadius: 28,
-          borderTopRightRadius: 28,
-          padding: 24,
-          paddingTop: 16,
-          maxHeight: '80%',
-          borderTopWidth: 1,
-          borderColor: colors.border,
+          backgroundColor: '#101010',
+          borderWidth: 1,
+          borderColor: 'rgba(255,77,28,0.12)',
+          borderTopLeftRadius: 22,
+          borderTopRightRadius: 22,
+          paddingHorizontal: 16,
+          paddingBottom: 34,
+          maxHeight: '85%',
         }}
       >
+        {/* Handle */}
         <View
           style={{
             alignSelf: 'center',
-            width: 40,
+            width: 34,
             height: 4,
             borderRadius: 2,
-            backgroundColor: colors.border2,
-            marginBottom: 20,
+            backgroundColor: 'rgba(255,255,255,0.18)',
+            marginTop: 10,
+            marginBottom: 0,
           }}
         />
-        <Text
-          style={{
-            color: colors.text,
-            fontFamily: fonts.display,
-            fontSize: 28,
-            marginBottom: 20,
-          }}
-        >
-          {t('filters.title', 'Filters')}
-        </Text>
 
         <ScrollView
-          contentContainerStyle={{ gap: 22, paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 20 }}
         >
-          <View style={{ gap: 10 }}>
-            <SectionLabel>{t('filters.mood', 'Mood')}</SectionLabel>
-            <ChipGroup>
-              <Chip
-                label={t('filters.moodAny', 'Any')}
-                selected={!mood}
-                onPress={() => setMood(null)}
-              />
-              {MOODS.map((m) => (
-                <Chip
-                  key={m}
-                  label={t(`filters.moods.${m}`, m)}
-                  selected={mood === m}
-                  onPress={() => setMood(m)}
-                />
-              ))}
-            </ChipGroup>
+          <Text
+            style={{
+              fontFamily: fonts.display,
+              fontSize: 21,
+              color: colors.text,
+              paddingTop: 18,
+              paddingBottom: 14,
+            }}
+          >
+            What are you in the mood for?
+          </Text>
+
+          <SectionLabel>Mood presets</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginBottom: 18,
+            }}
+          >
+            {MOODS.map((m) => {
+              const isOn = selMood === m.id;
+              const Icon = m.Icon;
+              return (
+                <Pressable
+                  key={m.id}
+                  testID={`filter-mood-${m.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => setSelMood(isOn ? null : m.id)}
+                  style={{
+                    width: '48%',
+                    height: 44,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 7,
+                    paddingHorizontal: 11,
+                  }}
+                >
+                  <Icon
+                    size={16}
+                    strokeWidth={2.2}
+                    color={isOn ? colors.accent : 'rgba(245,245,240,0.45)'}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {m.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
-          <View style={{ gap: 10 }}>
-            <SectionLabel>{t('filters.kind', 'Type')}</SectionLabel>
-            <ChipGroup>
-              <Chip
-                label={t('filters.kinds.movie', 'Movies')}
-                selected={kinds.includes('movie')}
-                onPress={() => toggleKind('movie')}
-              />
-              <Chip
-                label={t('filters.kinds.tv', 'Series')}
-                selected={kinds.includes('tv')}
-                onPress={() => toggleKind('tv')}
-              />
-            </ChipGroup>
+          <SectionLabel>Content type</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {TYPES.map((t) => {
+              const isOn = types.has(t);
+              return (
+                <Pressable
+                  key={t}
+                  testID={`filter-type-${t.toLowerCase()}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => toggleType(t)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 13,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {t}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
 
-          <View style={{ gap: 10 }}>
-            <SectionLabel>{t('filters.years', 'Years')}</SectionLabel>
-            <ChipGroup>
-              <Chip
-                label={t('filters.allYears', 'All')}
-                selected={minYear == null && maxYear == null}
-                onPress={() => setYears(null, null)}
-              />
-              <Chip
-                label={t('filters.lastYears', 'Last 10y')}
-                selected={minYear === new Date().getFullYear() - 10}
-                onPress={() => setYears(new Date().getFullYear() - 10, null)}
-              />
-              <Chip
-                label={t('filters.classics', 'Pre-2000')}
-                selected={maxYear === 1999}
-                onPress={() => setYears(null, 1999)}
-              />
-            </ChipGroup>
+          <SectionLabel>Streaming Services</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {FALLBACK_STREAMING_SERVICES.filter((s) => s.regions.includes(region)).map((s) => {
+              const isOn = selServices.has(s.id);
+              return (
+                <Pressable
+                  key={s.id}
+                  testID={`filter-service-${s.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => toggleService(s.id)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 12,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {s.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-        </ScrollView>
 
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
-          <View style={{ flex: 1 }}>
-            <Button label={t('filters.reset', 'Reset')} variant="ghost" onPress={reset} />
+          <SectionLabel>Preferred Genres</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {FALLBACK_GENRES_PARSED.map((g) => {
+              const isOn = selGenres.has(g.id);
+              const label = g.id.replace(/_/g, ' ');
+              return (
+                <Pressable
+                  key={g.id}
+                  testID={`filter-genre-${g.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => toggleGenre(g.id)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 12,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
-          <View style={{ flex: 2 }}>
-            <Button
-              label={t('filters.apply', 'Apply')}
-              onPress={() => {
-                events.filterApplied({ mood, kinds, minYear, maxYear });
-                onClose();
+
+          <SectionLabel>Release window</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {YEAR_RANGES.map((range) => {
+              const id = `${range.min ?? ''}:${range.max ?? ''}`;
+              const isOn = yearRange === id;
+              return (
+                <Pressable
+                  key={range.label}
+                  testID={`filter-year-${range.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => setYearRange(id)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 13,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {range.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Pressable
+            onPress={apply}
+            testID="filter-apply-button"
+            accessibilityRole="button"
+            disabled={types.size === 0}
+            style={{
+              width: '100%',
+              height: 50,
+              backgroundColor: colors.accent,
+              borderRadius: 13,
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: types.size === 0 ? 0.35 : 1,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: fonts.bodySemi,
+                fontSize: 15,
+                color: colors.onAccent,
               }}
-            />
-          </View>
-        </View>
+            >
+              Apply filters
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={resetFilters}
+            testID="filter-reset-button"
+            accessibilityRole="button"
+            style={{
+              width: '100%',
+              height: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginTop: 8,
+            }}
+          >
+            <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, color: colors.textMuted }}>
+              Reset filters
+            </Text>
+          </Pressable>
+        </ScrollView>
       </View>
     </Modal>
+  );
+}
+
+function SectionLabel({ children }: { children: string }) {
+  return (
+    <Text
+      style={{
+        fontSize: 10,
+        fontFamily: fonts.bodySemi,
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        color: 'rgba(245,245,240,0.3)',
+        marginBottom: 10,
+      }}
+    >
+      {children}
+    </Text>
   );
 }

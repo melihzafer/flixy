@@ -1,0 +1,117 @@
+{
+  "app": {
+    "name": "Flixy",
+    "tagline": "Glisse. Découvre. Regarde."
+  },
+  "auth": {
+    "welcomeTitle": "Trouve quoi regarder ce soir",
+    "welcomeSubtitle": "Glisse parmi les films et séries pensés pour tes goûts.",
+    "tagline": "Arrête de chercher. Commence à regarder.",
+    "continueWithGoogle": "Continuer avec Google",
+    "signUpFree": "Inscription gratuite",
+    "noAccountQ": "Pas encore de compte ?",
+    "browseAnonymously": "Juste parcourir pour l'instant",
+    "createAccount": "Créer un compte",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "haveAccount": "Tu as déjà un compte ?",
+    "email": "E-mail",
+    "emailPlaceholder": "toi@exemple.com",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Ton mot de passe",
+    "showPassword": "Afficher",
+    "hidePassword": "Masquer",
+    "confirmPassword": "Confirmer le mot de passe",
+    "forgotPassword": "Mot de passe oublié ?",
+    "newPassword": "Nouveau mot de passe",
+    "confirmNewPassword": "Confirme le nouveau mot de passe",
+    "resetPasswordTitle": "Réinitialise ton mot de passe",
+    "resetPasswordSubtitle": "Choisis un nouveau mot de passe pour cet appareil. Aucun e-mail requis : tes données restent sur ce téléphone.",
+    "resetPasswordCta": "Définir un nouveau mot de passe",
+    "resetPasswordSuccess": "Mot de passe mis à jour. Tu peux te connecter maintenant.",
+    "signUpTitle": "Crée ton compte Flixy",
+    "signUpSubtitle": "Sauvegarde ta watchlist et reprends sur n'importe quel appareil.",
+    "signInTitle": "Bon retour",
+    "signInSubtitle": "Connecte-toi pour synchroniser ta watchlist.",
+    "errors": {
+      "generic": "Une erreur est survenue. Réessaie.",
+      "invalidCredentials": "E-mail ou mot de passe incorrect.",
+      "network": "Pas de connexion. Vérifie ton réseau et réessaie.",
+      "oauth": "La connexion Google n'a pas pu aboutir. Réessaie."
+    }
+  },
+  "common": {
+    "back": "Retour",
+    "continue": "Continuer",
+    "done": "Terminé",
+    "getStarted": "Commencer",
+    "skip": "Passer",
+    "save": "Enregistrer",
+    "loading": "Chargement…",
+    "retry": "Réessayer"
+  },
+  "deck": {
+    "title": "Découvrir",
+    "loadingTitle": "On cherche les choix de ce soir",
+    "loadingHint": "On prépare ton deck…",
+    "syncing": "Synchronisation de {{count}} swipe(s)…",
+    "readyStatus": "{{count}} choix prêts"
+  },
+  "watchlist": {
+    "title": "Watchlist",
+    "empty": "Ta watchlist t'attend. Glisse à droite sur les films que tu veux voir.",
+    "emptyTitle": "Ta watchlist t'attend",
+    "emptyAll": "Glisse à droite sur les films que tu veux voir. Ils apparaîtront ici.",
+    "emptyCtaLabel": "Aller dans Découvrir pour ajouter des titres"
+  },
+  "search": {
+    "title": "Recherche",
+    "placeholder": "Rechercher des titres…",
+    "placeholderLong": "Titres, genres, réalisateurs…",
+    "trendingNow": "Tendance actuelle",
+    "noResultsFor": "Aucun résultat pour « {{query}} »"
+  },
+  "profile": {
+    "title": "Profil",
+    "changeAvatar": "Changer la photo"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "account": "Compte",
+    "region": "Région",
+    "language": "Langue",
+    "preferences": "Préférences",
+    "services": "Services de streaming",
+    "genres": "Genres",
+    "notifications": "Notifications",
+    "notificationsEnabled": "Notifications push",
+    "about": "À propos",
+    "version": "Version de l'app",
+    "privacy": "Confidentialité",
+    "terms": "Conditions d'utilisation"
+  },
+  "onboarding": {
+    "welcomeTitle": "Bienvenue chez Flixy",
+    "welcomeSubtitle": "Quelques tapotements rapides et tu swipes.",
+    "notificationsTitle": "Reste informé",
+    "notificationsSubtitle": "Sois prévenu quand un titre de ta liste devient disponible."
+  },
+  "genres": {
+    "drama": "Drame",
+    "comedy": "Comédie",
+    "action": "Action",
+    "thriller": "Thriller",
+    "horror": "Horreur",
+    "sci_fi": "Science-fiction",
+    "fantasy": "Fantastique",
+    "romance": "Romance",
+    "mystery": "Mystère",
+    "crime": "Policier",
+    "documentary": "Documentaire",
+    "animation": "Animation",
+    "family": "Famille",
+    "adventure": "Aventure",
+    "history": "Histoire",
+    "music": "Musique"
+  }
+}

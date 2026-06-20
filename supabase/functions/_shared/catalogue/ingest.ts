@@ -29,6 +29,8 @@ export type RunCatalogueIngestionOptions = {
   cacheTtlHours?: number;
   useCache?: boolean;
   sources?: CandidateSource[];
+  batchId?: string;
+  ingestionSource?: 'backfill' | 'changes' | 'trending';
 };
 
 export type CatalogueIngestionResult = IngestWriteSummary & {
@@ -156,6 +158,8 @@ export async function runCatalogueIngestion(
     plan,
     candidateCount: candidates.size,
     dryRun: options.dryRun,
+    batchId: options.batchId,
+    ingestionSource: options.ingestionSource,
   });
 
   return {

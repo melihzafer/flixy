@@ -1,7 +1,7 @@
 import type { DeckCard, MoodPreset, RuleTrace } from './schemas/deck';
 import { MOOD_PRESETS } from './schemas/deck';
 import type { TasteSignal } from './schemas/swipe';
-import type { Title } from './schemas/title';
+import { type Title, TitleAvailabilitySchema, TitleSchema } from './schemas/title';
 
 /**
  * 7-layer deck composer (FSD section 3.5.3). Pure function: takes a candidate
@@ -14,7 +14,7 @@ import type { Title } from './schemas/title';
  */
 
 export type ComposeOptions = {
-  candidates: Title[];
+  candidates?: readonly Title[] | null;
   taste: TasteSignal;
   ownedServiceIds: string[];
   passedRecently: Set<string>;
@@ -22,11 +22,18 @@ export type ComposeOptions = {
   excludeIds: Set<string>;
   targetSize?: number;
   now?: Date;
+  recommendationScores?: Record<string, number>;
 };
 
 export type ComposeResult = {
   cards: DeckCard[];
   isNarrow: boolean;
+  diagnostics: {
+    candidateCount: number;
+    eligibleCount: number;
+    finalCardsCount: number;
+    excludedCount: number;
+  };
 };
 
 const COLD_START_THRESHOLD = 50;
@@ -34,22 +41,94 @@ const MAX_CONSECUTIVE_SAME_GENRE = 3;
 const EXPLORATION_RATIO = 0.15;
 const DEFAULT_TARGET_SIZE = 50;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function stringSet(value: unknown): Set<string> {
+  if (!(value instanceof Set)) return new Set();
+  return new Set([...value].filter((item): item is string => typeof item === 'string'));
+}
+
+function numberRecord(value: unknown): Record<string, number> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, number] =>
+        typeof entry[1] === 'number' && Number.isFinite(entry[1]),
+    ),
+  );
+}
+
+function safeTasteSignal(value: unknown): TasteSignal {
+  if (!isRecord(value)) {
+    return { positiveGenres: {}, negativeGenres: {}, totalSwipes: 0 };
+  }
+  return {
+    positiveGenres: numberRecord(value.positiveGenres),
+    negativeGenres: numberRecord(value.negativeGenres),
+    totalSwipes:
+      typeof value.totalSwipes === 'number' && Number.isFinite(value.totalSwipes)
+        ? value.totalSwipes
+        : 0,
+  };
+}
+
+function availabilityArray(value: unknown): Title['availability'] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => TitleAvailabilitySchema.safeParse(item))
+    .filter(
+      (result): result is { success: true; data: Title['availability'][number] } => result.success,
+    )
+    .map((result) => result.data);
+}
+
+function safeTitle(value: unknown): Title | null {
+  if (!isRecord(value)) return null;
+  const parsed = TitleSchema.safeParse({
+    ...value,
+    genres: stringArray(value.genres),
+    availability: availabilityArray(value.availability),
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+function candidateArray(value: unknown): Title[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(safeTitle).filter((title): title is Title => title !== null);
+}
+
 function popularityScore(t: Title): number {
   // Normalize popularity into roughly 0..1. The catalogue stores raw values
   // up to ~1000; clamp anything higher.
   return Math.min(1, t.popularity / 1000);
 }
 
-function personalizationScore(t: Title, taste: TasteSignal): number {
-  if (taste.totalSwipes === 0) return 0;
-  let pos = 0;
-  let neg = 0;
-  for (const g of t.genres) {
-    pos += taste.positiveGenres[g] ?? 0;
-    neg += taste.negativeGenres[g] ?? 0;
+function personalizationScore(t: Title, taste: TasteSignal, recommendationScore?: number): number {
+  let baseScore = 0;
+  if (taste.totalSwipes > 0) {
+    let pos = 0;
+    let neg = 0;
+    for (const g of t.genres) {
+      pos += taste.positiveGenres[g] ?? 0;
+      neg += taste.negativeGenres[g] ?? 0;
+    }
+    // Normalize by total swipes so early swipes don't overpower.
+    baseScore = (pos - neg) / Math.max(1, taste.totalSwipes);
   }
-  // Normalize by total swipes so early swipes don't overpower.
-  return (pos - neg) / Math.max(1, taste.totalSwipes);
+
+  if (recommendationScore != null) {
+    // Combine base genre preference (0.4) and specific item recommendation (0.6)
+    return 0.4 * baseScore + 0.6 * recommendationScore;
+  }
+  return baseScore;
 }
 
 function availabilityScore(t: Title, ownedServices: string[]): number {
@@ -82,16 +161,15 @@ function primaryGenre(t: Title): string {
 }
 
 export function composeDeck(opts: ComposeOptions): ComposeResult {
-  const {
-    candidates,
-    taste,
-    ownedServiceIds,
-    passedRecently,
-    shownLast7d,
-    excludeIds,
-    targetSize = DEFAULT_TARGET_SIZE,
-    now = new Date(),
-  } = opts;
+  const candidates = candidateArray(opts.candidates);
+  const taste = safeTasteSignal(opts.taste);
+  const ownedServiceIds = stringArray(opts.ownedServiceIds);
+  const passedRecently = stringSet(opts.passedRecently);
+  const shownLast7d = stringSet(opts.shownLast7d);
+  const excludeIds = stringSet(opts.excludeIds);
+  const targetSize = opts.targetSize ?? DEFAULT_TARGET_SIZE;
+  const now = opts.now ?? new Date();
+  const recommendationScores = opts.recommendationScores ?? {};
 
   // Hard exclude (Layer 1 residue): seen, watchlist, recent passes' hard list.
   const eligible = candidates.filter((t) => !excludeIds.has(t.id));
@@ -105,7 +183,7 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   const wCooldown = 1.0;
 
   const scored: Array<{ title: Title; trace: RuleTrace }> = eligible.map((t) => {
-    const personalization = personalizationScore(t, taste);
+    const personalization = personalizationScore(t, taste, recommendationScores[t.id]);
     const popularity = popularityScore(t);
     const availability = availabilityScore(t, ownedServiceIds);
     const freshness = freshnessScore(t, now);
@@ -176,6 +254,12 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   return {
     cards: ordered.slice(0, targetSize),
     isNarrow: ordered.length < targetSize,
+    diagnostics: {
+      candidateCount: candidates.length,
+      eligibleCount: eligible.length,
+      finalCardsCount: Math.min(ordered.length, targetSize),
+      excludedCount: candidates.length - eligible.length,
+    },
   };
 }
 

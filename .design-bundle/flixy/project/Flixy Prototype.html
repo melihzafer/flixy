@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flixy — Interactive Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,600;1,6..72,700;1,6..72,800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#050508;min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;overflow:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 50% 0%,rgba(255,77,28,.09),transparent);pointer-events:none;}
+.stage{display:flex;align-items:center;justify-content:center;width:100vw;height:100vh;gap:40px;}
+.phone{width:390px;height:844px;background:#1c1c1e;border-radius:54px;padding:11px;box-shadow:0 0 0 1px rgba(255,255,255,.08),0 50px 120px rgba(0,0,0,.95),inset 0 1px 0 rgba(255,255,255,.12);flex-shrink:0;position:relative;}
+.phone-screen{width:100%;height:100%;background:#0a0a0b;border-radius:44px;overflow:hidden;position:relative;display:flex;flex-direction:column;}
+.dynamic-island{position:absolute;top:13px;left:50%;transform:translateX(-50%);width:126px;height:37px;background:#000;border-radius:20px;z-index:1000;pointer-events:none;}
+/* Status bar */
+.status-bar{height:59px;display:flex;align-items:flex-end;padding:0 28px 8px;justify-content:space-between;flex-shrink:0;}
+.s-time{font-size:15px;font-weight:600;color:#f5f5f0;letter-spacing:-.01em;}
+.s-icons{display:flex;gap:5px;align-items:center;}
+.s-icon{color:#f5f5f0;font-size:12px;font-weight:600;}
+/* Tab bar */
+.tab-bar{height:83px;background:rgba(10,10,11,.94);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:flex-start;padding:10px 0 0;flex-shrink:0;}
+.tab-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;transition:opacity .2s;}
+.tab-item.on{opacity:1;}.tab-item.off{opacity:.35;}
+.t-icon{font-size:21px;line-height:1;}
+.t-label{font-size:10px;font-weight:600;letter-spacing:.03em;color:#f5f5f0;}
+.tab-item.on .t-label{color:#ff4d1c;}
+/* Content */
+.content{flex:1;overflow:hidden;position:relative;}
+/* Splash */
+.splash{position:absolute;inset:0;background:#0a0a0b;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:300;}
+.splash-logo{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:76px;color:#ff4d1c;letter-spacing:-.02em;line-height:1;}
+.splash-tag{font-size:11px;color:rgba(245,245,240,.35);letter-spacing:.16em;text-transform:uppercase;margin-top:10px;font-weight:500;}
+@keyframes fadeOut{to{opacity:0;pointer-events:none;}}
+.splash-go{animation:fadeOut .4s 2.3s forwards;}
+/* Onboarding */
+.ob{position:absolute;inset:0;background:#0a0a0b;display:flex;flex-direction:column;padding:20px 20px 32px;z-index:200;}
+.ob-dots{display:flex;gap:5px;margin-bottom:28px;}
+.ob-dot{height:3px;border-radius:2px;flex:1;background:rgba(255,255,255,.1);transition:background .3s;}
+.ob-dot.done{background:#ff4d1c;}.ob-dot.cur{background:#ff4d1c;opacity:.5;}
+.ob-h{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:30px;color:#f5f5f0;line-height:1.1;margin-bottom:8px;}
+.ob-sub{font-size:13px;color:rgba(245,245,240,.45);line-height:1.65;margin-bottom:24px;font-weight:300;}
+.ob-cta{margin-top:auto;background:#ff4d1c;color:#fff;border:none;border-radius:14px;height:54px;font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:600;cursor:pointer;width:100%;transition:opacity .15s;}
+.ob-cta:disabled{opacity:.3;cursor:default;}
+.ob-ghost{background:none;border:none;color:rgba(245,245,240,.35);font-family:'Space Grotesk',sans-serif;font-size:14px;cursor:pointer;text-align:center;padding:12px 0 0;}
+/* Services */
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.svc-chip{height:50px;border-radius:12px;border:1.5px solid rgba(255,255,255,.09);background:rgba(255,255,255,.03);display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:all .15s;font-size:13px;font-weight:500;color:rgba(245,245,240,.55);}
+.svc-chip.on{border-color:#ff4d1c;background:rgba(255,77,28,.1);color:#f5f5f0;}
+.svc-dot{width:7px;height:7px;border-radius:50%;background:#ff4d1c;opacity:.3;transition:opacity .15s;}
+.svc-chip.on .svc-dot{opacity:1;}
+/* Genres */
+.gen-wrap{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+.gen-chip{height:34px;padding:0 14px;border-radius:20px;border:1.5px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font-size:13px;font-weight:500;color:rgba(245,245,240,.5);cursor:pointer;transition:all .15s;white-space:nowrap;}
+.gen-chip.on{border-color:#ff4d1c;background:rgba(255,77,28,.1);color:#f5f5f0;}
+/* Deck */
+.deck-wrap{position:absolute;inset:0;display:flex;flex-direction:column;}
+.deck-hdr{padding:14px 20px 6px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.deck-logo{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:26px;color:#ff4d1c;}
+.deck-hdr-right{display:flex;gap:8px;align-items:center;}
+.filter-chip{background:rgba(255,77,28,.15);border:1px solid rgba(255,77,28,.3);color:#ff4d1c;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;cursor:pointer;}
+.filter-btn{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.09);display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(245,245,240,.7);font-size:15px;}
+.stack{flex:1;position:relative;margin:4px 18px 0;}
+/* Cards */
+.card{position:absolute;inset:0;border-radius:20px;overflow:hidden;touch-action:none;user-select:none;}
+.card-poster{position:absolute;inset:0;}
+.card-grad{position:absolute;inset:0;background:linear-gradient(to top,rgba(10,10,11,.98) 0%,rgba(10,10,11,.55) 38%,rgba(10,10,11,.1) 65%,transparent 100%);}
+.card-info{position:absolute;bottom:0;left:0;right:0;padding:18px;}
+.card-hook{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(245,245,240,.4);margin-bottom:5px;}
+.card-title{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:27px;color:#f5f5f0;line-height:1.0;margin-bottom:4px;}
+.card-meta{font-size:11px;color:rgba(245,245,240,.45);margin-bottom:9px;}
+.card-badges{display:flex;gap:5px;flex-wrap:wrap;}
+.bdg{height:22px;padding:0 8px;border-radius:5px;font-size:9px;font-weight:700;display:inline-flex;align-items:center;letter-spacing:.03em;}
+.bdg-svc{background:rgba(255,255,255,.13);color:rgba(245,245,240,.85);}
+.bdg-gen{background:rgba(255,255,255,.06);color:rgba(245,245,240,.45);}
+/* Stamps */
+.stamp{position:absolute;padding:5px 12px;border-radius:7px;border:2.5px solid;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;pointer-events:none;}
+.st-r{color:#3dd68c;border-color:#3dd68c;background:rgba(61,214,140,.1);top:22px;left:18px;transform:rotate(-12deg);}
+.st-l{color:#e05c4b;border-color:#e05c4b;background:rgba(224,92,75,.1);top:22px;right:18px;transform:rotate(12deg);}
+.st-u{color:#f5c842;border-color:#f5c842;background:rgba(245,200,66,.1);top:22px;left:50%;transform:translateX(-50%) rotate(-8deg);}
+.st-d{color:#5b8def;border-color:#5b8def;background:rgba(91,141,239,.1);top:22px;left:50%;transform:translateX(-50%) rotate(8deg);}
+/* Info button */
+.info-btn{position:absolute;top:14px;right:14px;width:30px;height:30px;border-radius:50%;background:rgba(245,245,240,.14);backdrop-filter:blur(8px);border:none;color:#f5f5f0;font-size:13px;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;}
+/* Action bar */
+.action-bar{padding:10px 20px 14px;display:flex;align-items:center;justify-content:center;gap:12px;flex-shrink:0;position:relative;}
+.act{width:50px;height:50px;border-radius:50%;border:1.5px solid rgba(255,255,255,.09);background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;font-size:19px;}
+.act:hover{background:rgba(255,255,255,.1);}
+.act.big{width:58px;height:58px;background:#ff4d1c;border-color:#ff4d1c;font-size:22px;}
+.act.big:hover{background:#ff6030;}
+.undo-btn{font-size:11px;font-weight:600;color:rgba(245,245,240,.3);cursor:pointer;position:absolute;right:20px;top:50%;transform:translateY(-50%);padding:8px;}
+.undo-btn:hover{color:rgba(245,245,240,.6);}
+/* Watchlist */
+.list-screen{position:absolute;inset:0;overflow-y:auto;}
+.list-hdr{padding:18px 20px 10px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(10,10,11,.96);backdrop-filter:blur(20px);z-index:10;}
+.list-title{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:26px;color:#f5f5f0;}
+.list-count{font-size:11px;color:rgba(245,245,240,.4);background:rgba(255,255,255,.06);padding:4px 10px;border-radius:12px;}
+.sec-lbl{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,245,240,.28);padding:0 20px;margin:14px 0 6px;}
+.wl-row{display:flex;align-items:center;gap:12px;padding:9px 20px;cursor:pointer;transition:background .12s;}
+.wl-row:hover{background:rgba(255,255,255,.03);}
+.wl-thumb{width:44px;height:62px;border-radius:8px;flex-shrink:0;overflow:hidden;}
+.wl-info{flex:1;min-width:0;}
+.wl-t{font-family:'Newsreader',serif;font-style:italic;font-weight:700;font-size:15px;color:#f5f5f0;line-height:1.2;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.wl-m{font-size:10px;color:rgba(245,245,240,.38);margin-bottom:5px;}
+.wl-svc{font-size:9px;font-weight:600;padding:2px 7px;border-radius:4px;background:rgba(255,255,255,.07);color:rgba(245,245,240,.5);}
+.wl-play{width:30px;height:30px;border-radius:50%;background:#ff4d1c;border:none;color:#fff;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+/* Search */
+.srch-screen{position:absolute;inset:0;padding:14px 20px;overflow-y:auto;}
+.srch-bar{height:42px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:12px;display:flex;align-items:center;gap:9px;padding:0 13px;margin-bottom:22px;}
+.srch-input{background:none;border:none;outline:none;font-family:'Space Grotesk',sans-serif;font-size:14px;color:#f5f5f0;flex:1;}
+.srch-input::placeholder{color:rgba(245,245,240,.28);}
+.srch-sec{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,245,240,.3);margin-bottom:10px;}
+.srch-row{display:flex;align-items:center;gap:11px;padding:7px 0;cursor:pointer;border-bottom:1px solid rgba(255,255,255,.04);}
+.srch-thumb{width:36px;height:50px;border-radius:6px;flex-shrink:0;overflow:hidden;}
+.srch-t{font-family:'Newsreader',serif;font-style:italic;font-weight:700;font-size:14px;color:#f5f5f0;}
+.srch-m{font-size:10px;color:rgba(245,245,240,.38);margin-top:1px;}
+/* Profile */
+.prof-screen{position:absolute;inset:0;overflow-y:auto;}
+.prof-hdr{padding:22px 20px 18px;text-align:center;border-bottom:1px solid rgba(255,255,255,.05);}
+.prof-av{width:68px;height:68px;border-radius:50%;background:rgba(255,77,28,.18);border:2px solid rgba(255,77,28,.35);display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 10px;}
+.prof-name{font-family:'Newsreader',serif;font-style:italic;font-weight:700;font-size:20px;color:#f5f5f0;margin-bottom:1px;}
+.prof-handle{font-size:12px;color:rgba(245,245,240,.35);margin-bottom:16px;}
+.prof-stats{display:flex;border-top:1px solid rgba(255,255,255,.05);}
+.stat{flex:1;padding:12px 0;text-align:center;border-right:1px solid rgba(255,255,255,.05);}
+.stat:last-child{border-right:none;}
+.stat-n{font-size:18px;font-weight:700;color:#f5f5f0;}
+.stat-l{font-size:9px;color:rgba(245,245,240,.35);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+.set-grp{margin-top:14px;}
+.set-grp-t{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,245,240,.28);padding:0 20px;margin-bottom:4px;}
+.set-row{display:flex;align-items:center;justify-content:space-between;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;}
+.set-lbl{font-size:14px;color:#f5f5f0;}
+.set-val{font-size:12px;color:rgba(245,245,240,.35);}
+/* Detail sheet */
+.overlay{position:absolute;inset:0;background:rgba(0,0,0,.65);z-index:50;display:flex;flex-direction:column;justify-content:flex-end;}
+.sheet{background:#111113;border-radius:22px 22px 0 0;max-height:88%;overflow-y:auto;}
+.sheet-handle{width:34px;height:4px;border-radius:2px;background:rgba(255,255,255,.18);margin:10px auto 0;}
+.sh-hero{height:210px;position:relative;flex-shrink:0;}
+.sh-hero-bg{position:absolute;inset:0;}
+.sh-hero-grad{position:absolute;inset:0;background:linear-gradient(to top,#111113 0%,transparent 60%);}
+.sh-hero-info{position:absolute;bottom:0;left:0;right:0;padding:14px;}
+.sh-title{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:24px;color:#f5f5f0;line-height:1.1;}
+.sh-meta{font-size:11px;color:rgba(245,245,240,.45);margin-top:3px;}
+.sh-acts{display:flex;gap:7px;padding:12px 14px 8px;}
+.sh-act{flex:1;height:44px;border-radius:11px;border:1.5px solid rgba(255,255,255,.09);background:rgba(255,255,255,.04);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;transition:all .15s;}
+.sh-act.main-act{background:#ff4d1c;border-color:#ff4d1c;}
+.sh-act-i{font-size:15px;}.sh-act-l{font-size:9px;font-weight:600;color:rgba(245,245,240,.4);text-transform:uppercase;letter-spacing:.06em;}
+.sh-act.main-act .sh-act-l{color:rgba(255,255,255,.75);}
+.sh-body{padding:0 14px 28px;}
+.sh-sec{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:rgba(245,245,240,.3);margin:14px 0 7px;}
+.sh-syn{font-size:13px;color:rgba(245,245,240,.65);line-height:1.7;font-weight:300;}
+.sh-scores{display:flex;gap:8px;}
+.sc-pill{flex:1;background:rgba(255,255,255,.05);border-radius:10px;padding:9px;text-align:center;}
+.sc-n{font-size:18px;font-weight:700;color:#f5f5f0;}.sc-l{font-size:9px;color:rgba(245,245,240,.35);text-transform:uppercase;letter-spacing:.08em;}
+.cast-row{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;}
+.cast-chip{background:rgba(255,255,255,.05);border-radius:7px;padding:6px 10px;white-space:nowrap;font-size:11px;color:rgba(245,245,240,.6);flex-shrink:0;}
+.avail-wrap{display:flex;gap:7px;flex-wrap:wrap;}
+.avail-chip{padding:7px 11px;border-radius:9px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);font-size:12px;font-weight:500;color:#f5f5f0;cursor:pointer;display:flex;align-items:center;gap:5px;}
+/* Filter sheet */
+.flt-sheet{background:#111113;border-radius:22px 22px 0 0;padding:0 16px 34px;}
+.flt-title{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:21px;color:#f5f5f0;padding:18px 0 14px;}
+.mood-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:18px;}
+.mood-chip{height:44px;border-radius:11px;border:1.5px solid rgba(255,255,255,.07);background:rgba(255,255,255,.04);font-size:13px;font-weight:500;color:rgba(245,245,240,.55);cursor:pointer;padding:0 11px;display:flex;align-items:center;gap:7px;transition:all .15s;}
+.mood-chip.on{border-color:#ff4d1c;background:rgba(255,77,28,.1);color:#f5f5f0;}
+.type-row{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+.type-chip{height:32px;padding:0 13px;border-radius:18px;border:1.5px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);font-size:12px;font-weight:500;color:rgba(245,245,240,.5);cursor:pointer;transition:all .15s;}
+.type-chip.on{border-color:#ff4d1c;background:rgba(255,77,28,.1);color:#f5f5f0;}
+.flt-apply{width:100%;height:50px;background:#ff4d1c;border:none;border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;transition:opacity .15s;}
+.flt-apply:hover{opacity:.9;}
+/* Empty */
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;padding:40px;text-align:center;}
+.empty-ico{font-size:44px;margin-bottom:4px;}
+.empty-t{font-family:'Newsreader',serif;font-style:italic;font-size:22px;color:#f5f5f0;}
+.empty-s{font-size:13px;color:rgba(245,245,240,.38);line-height:1.65;}
+.empty-cta{height:42px;padding:0 22px;border-radius:11px;background:#ff4d1c;border:none;color:#fff;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;}
+/* Auth modal */
+.auth-overlay{position:absolute;inset:0;background:rgba(0,0,0,.7);z-index:80;display:flex;flex-direction:column;justify-content:flex-end;}
+.auth-sheet{background:#111113;border-radius:24px 24px 0 0;padding:0 22px 36px;max-height:92%;overflow-y:auto;}
+.auth-logo{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:38px;color:#ff4d1c;text-align:center;padding:26px 0 6px;}
+.auth-h{font-family:'Newsreader',serif;font-style:italic;font-weight:700;font-size:22px;color:#f5f5f0;text-align:center;margin-bottom:4px;}
+.auth-sub{font-size:12px;color:rgba(245,245,240,.38);text-align:center;margin-bottom:24px;line-height:1.6;}
+/* Social buttons */
+.social-btn{width:100%;height:50px;border-radius:13px;border:1.5px solid rgba(255,255,255,.1);background:rgba(255,255,255,.05);display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:500;color:#f5f5f0;margin-bottom:10px;transition:background .15s;}
+.social-btn:hover{background:rgba(255,255,255,.09);}
+.social-btn.apple{background:#fff;color:#000;border-color:#fff;}
+.social-btn.apple:hover{background:#e8e8e8;}
+.social-icon{font-size:17px;}
+/* Divider */
+.auth-divider{display:flex;align-items:center;gap:10px;margin:14px 0;}
+.auth-divider-line{flex:1;height:1px;background:rgba(255,255,255,.08);}
+.auth-divider-txt{font-size:11px;color:rgba(245,245,240,.3);font-weight:500;white-space:nowrap;}
+/* Input fields */
+.auth-field{width:100%;height:50px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.09);border-radius:13px;padding:0 16px;font-family:'Space Grotesk',sans-serif;font-size:14px;color:#f5f5f0;outline:none;margin-bottom:10px;transition:border-color .15s;}
+.auth-field:focus{border-color:rgba(255,77,28,.5);}
+.auth-field::placeholder{color:rgba(245,245,240,.25);}
+.auth-forgot{font-size:12px;color:rgba(245,245,240,.35);text-align:right;margin:-4px 0 12px;cursor:pointer;}
+.auth-forgot:hover{color:rgba(245,245,240,.6);}
+/* Submit */
+.auth-cta{width:100%;height:50px;background:#ff4d1c;border:none;border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;margin-top:4px;transition:opacity .15s;}
+.auth-cta:hover{opacity:.9;}
+.auth-switch{font-size:13px;color:rgba(245,245,240,.38);text-align:center;margin-top:16px;}
+.auth-switch span{color:#ff4d1c;cursor:pointer;font-weight:500;}
+.auth-switch span:hover{text-decoration:underline;}
+/* Save nudge */
+.nudge-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);z-index:70;display:flex;flex-direction:column;justify-content:flex-end;}
+.nudge-sheet{background:#111113;border-radius:24px 24px 0 0;padding:22px 22px 36px;}
+.nudge-logo{font-family:'Newsreader',serif;font-style:italic;font-weight:800;font-size:28px;color:#ff4d1c;margin-bottom:10px;}
+.nudge-h{font-family:'Newsreader',serif;font-style:italic;font-weight:700;font-size:20px;color:#f5f5f0;margin-bottom:6px;}
+.nudge-sub{font-size:13px;color:rgba(245,245,240,.45);line-height:1.65;margin-bottom:22px;font-weight:300;}
+.nudge-watchlist-preview{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:12px 14px;margin-bottom:20px;display:flex;align-items:center;gap:12px;}
+.nudge-wl-count{font-size:28px;font-weight:700;color:#ff4d1c;}
+.nudge-wl-txt{font-size:12px;color:rgba(245,245,240,.5);line-height:1.5;}
+.nudge-cta{width:100%;height:50px;background:#ff4d1c;border:none;border-radius:13px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:600;color:#fff;cursor:pointer;margin-bottom:10px;}
+.nudge-ghost{width:100%;height:44px;background:none;border:none;font-family:'Space Grotesk',sans-serif;font-size:14px;color:rgba(245,245,240,.35);cursor:pointer;}
+/* Anim */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{animation:fadeUp .28s ease both;}
+::-webkit-scrollbar{width:0;}
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="phone">
+    <div class="dynamic-island"></div>
+    <div class="phone-screen" id="root"></div>
+  </div>
+</div>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+/* ── DATA ────────────────────────────────────────────────────────────── */
+
+const MOVIES = [
+  { id:1, title:"Oppenheimer", year:2023, runtime:"3h 0m", rating:"R", genres:["Drama","History"], synopsis:"The story of J. Robert Oppenheimer and his role in the development of the atomic bomb during WWII — and the political trial that nearly destroyed him.", services:["Netflix","Max"], score:8.3, rt:93, director:"Christopher Nolan", cast:["Cillian Murphy","Emily Blunt","Matt Damon"], bg:"linear-gradient(155deg,#1c1c2e 0%,#2d1b00 100%)", hook:"Nolan's most ambitious film" },
+  { id:2, title:"The Substance", year:2024, runtime:"2h 21m", rating:"R", genres:["Horror","Satire"], synopsis:"A fading celebrity uses a black-market substance that creates a younger, better version of herself. Only one rule: they share time.", services:["MUBI"], score:7.2, rt:88, director:"Coralie Fargeat", cast:["Demi Moore","Margaret Qualley"], bg:"linear-gradient(155deg,#200606 0%,#3d0000 100%)", hook:"Body horror at its most visceral" },
+  { id:3, title:"Poor Things", year:2023, runtime:"2h 21m", rating:"R", genres:["Fantasy","Drama"], synopsis:"The incredible tale of Bella Baxter, brought back to life by the brilliant and unorthodox scientist Dr. Godwin Baxter.", services:["Disney+"], score:8.0, rt:91, director:"Yorgos Lanthimos", cast:["Emma Stone","Mark Ruffalo","Willem Dafoe"], bg:"linear-gradient(155deg,#0a1a0a 0%,#1a2d1a 100%)", hook:"Lanthimos at his most triumphant" },
+  { id:4, title:"Past Lives", year:2023, runtime:"1h 46m", rating:"PG-13", genres:["Romance","Drama"], synopsis:"Two childhood sweethearts separated by emigration reunite twenty years later in New York City, forced to reckon with their choices.", services:["Prime Video"], score:7.9, rt:98, director:"Celine Song", cast:["Greta Lee","Teo Yoo","John Magaro"], bg:"linear-gradient(155deg,#0a0f1a 0%,#1a2040 100%)", hook:"Quietly devastating" },
+  { id:5, title:"Saltburn", year:2023, runtime:"2h 11m", rating:"R", genres:["Thriller","Drama"], synopsis:"An Oxford student is drawn into the glamorous world of a classmate, spending a decadent summer at his family's ancestral estate.", services:["Prime Video"], score:7.1, rt:71, director:"Emerald Fennell", cast:["Barry Keoghan","Jacob Elordi","Rosamund Pike"], bg:"linear-gradient(155deg,#1a150a 0%,#2d2510 100%)", hook:"You will not see the ending coming" },
+  { id:6, title:"The Bear", year:2022, runtime:"30m avg.", rating:"TV-MA", genres:["Drama","Comedy"], synopsis:"A fine dining chef returns to Chicago to run his family's chaotic sandwich shop. The most stressful show on television.", services:["Disney+"], score:8.7, rt:98, director:"Christopher Storer", cast:["Jeremy Allen White","Ebon Moss-Bachrach","Ayo Edebiri"], bg:"linear-gradient(155deg,#1a0f00 0%,#2d1f00 100%)", hook:"The most stressful 30 minutes on TV" },
+  { id:7, title:"Anatomy of a Fall", year:2023, runtime:"2h 31m", rating:"R", genres:["Thriller","Drama"], synopsis:"A woman is suspected of her husband's murder after his body is found below their chalet window. Their blind son witnessed it all.", services:["MUBI","Netflix"], score:7.8, rt:96, director:"Justine Triet", cast:["Sandra Hüller","Swann Arlaud"], bg:"linear-gradient(155deg,#0f0f00 0%,#1f1f05 100%)", hook:"Palme d'Or. Unmissable." },
+  { id:8, title:"All of Us Strangers", year:2023, runtime:"1h 45m", rating:"R", genres:["Drama","Romance"], synopsis:"A screenwriter begins a tender romance with the only other resident of his high-rise while revisiting his childhood home.", services:["Disney+"], score:7.8, rt:95, director:"Andrew Haigh", cast:["Andrew Scott","Paul Mescal","Claire Foy"], bg:"linear-gradient(155deg,#0d0a1a 0%,#1a1230 100%)", hook:"Devastating and beautiful" },
+  { id:9, title:"A Real Pain", year:2024, runtime:"1h 30m", rating:"R", genres:["Drama","Comedy"], synopsis:"Two cousins reunite for a Holocaust memorial tour through Poland to honor their late grandmother. Kieran Culkin is extraordinary.", services:["Hulu"], score:7.8, rt:99, director:"Jesse Eisenberg", cast:["Jesse Eisenberg","Kieran Culkin"], bg:"linear-gradient(155deg,#0a1510 0%,#152015 100%)", hook:"Kieran Culkin is extraordinary" },
+  { id:10, title:"Interstellar", year:2014, runtime:"2h 49m", rating:"PG-13", genres:["Sci-Fi","Drama"], synopsis:"Explorers travel through a wormhole in space in a last-ditch attempt to ensure humanity's survival as Earth slowly dies.", services:["Netflix","Prime Video"], score:8.7, rt:73, director:"Christopher Nolan", cast:["Matthew McConaughey","Anne Hathaway","Jessica Chastain"], bg:"linear-gradient(155deg,#00050f 0%,#001020 100%)", hook:"Watch with headphones" },
+  { id:11, title:"Aftersun", year:2022, runtime:"1h 41m", rating:"R", genres:["Drama"], synopsis:"Sophie reflects on the summer holiday she took with her father twenty years earlier. The memory has taken on new, devastating weight.", services:["MUBI","Prime Video"], score:7.6, rt:96, director:"Charlotte Wells", cast:["Paul Mescal","Frankie Corio"], bg:"linear-gradient(155deg,#001a1a 0%,#003333 100%)", hook:"Paul Mescal's finest hour" },
+  { id:12, title:"Succession", year:2018, runtime:"1h avg.", rating:"TV-MA", genres:["Drama"], synopsis:"The Roy family controls one of the biggest media empires in the world — and they're about to tear each other apart over who inherits it.", services:["Max"], score:8.9, rt:99, director:"Jesse Armstrong", cast:["Brian Cox","Jeremy Strong","Sarah Snook"], bg:"linear-gradient(155deg,#050505 0%,#111111 100%)", hook:"The best TV drama of the decade" },
+];
+
+const ALL_SVCS = ["Netflix","Prime Video","Disney+","Max","Hulu","Apple TV+","MUBI"];
+const ALL_GENRES = ["Action","Animation","Comedy","Crime","Documentary","Drama","Fantasy","History","Horror","International","Romance","Sci-Fi","Thriller","True Crime"];
+const MOODS = [
+  {id:"laugh",label:"Quick laugh",icon:"😂"},
+  {id:"long",label:"Long film night",icon:"🎬"},
+  {id:"crime",label:"True crime",icon:"🔎"},
+  {id:"gems",label:"Hidden gems",icon:"💎"},
+  {id:"comfort",label:"Comfort watch",icon:"🛋️"},
+  {id:"indie",label:"Indie cinema",icon:"🎞️"},
+];
+
+/* ── STATUS BAR ──────────────────────────────────────────────────────── */
+function StatusBar() {
+  return (
+    <div className="status-bar">
+      <div className="s-time">9:41</div>
+      <div className="s-icons">
+        <span className="s-icon" style={{fontSize:10}}>●●●</span>
+        <span className="s-icon" style={{fontSize:10}}>WiFi</span>
+        <span className="s-icon">⚡</span>
+      </div>
+    </div>
+  );
+}
+
+/* ── TAB BAR ─────────────────────────────────────────────────────────── */
+function TabBar({ tab, setTab }) {
+  const tabs = [{id:'discover',icon:'🎬',label:'Discover'},{id:'watchlist',icon:'♥',label:'Watchlist'},{id:'search',icon:'⌕',label:'Search'},{id:'profile',icon:'◎',label:'Profile'}];
+  return (
+    <div className="tab-bar">
+      {tabs.map(t => (
+        <div key={t.id} className={`tab-item ${tab===t.id?'on':'off'}`} onClick={()=>setTab(t.id)}>
+          <div className="t-icon">{t.icon}</div>
+          <div className="t-label">{t.label}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── SWIPE CARD ──────────────────────────────────────────────────────── */
+function SwipeCard({ movie, isTop, depth, onSwipe, onDetail }) {
+  const [drag, setDrag] = useState({x:0,y:0});
+  const [dragging, setDragging] = useState(false);
+  const [flying, setFlying] = useState(false);
+  const start = useRef(null), t0 = useRef(null);
+
+  const doSwipe = (dir) => {
+    const FLY = {right:[720,80],left:[-720,80],up:[60,-900],down:[60,900]};
+    setFlying(true);
+    setDrag({x:FLY[dir][0],y:FLY[dir][1]});
+    setTimeout(()=>onSwipe(dir), 330);
+  };
+
+  const onPD = (e) => {
+    if (!isTop||flying) return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    start.current={x:e.clientX,y:e.clientY};
+    t0.current=Date.now();
+    setDragging(true);
+  };
+  const onPM = (e) => {
+    if (!dragging) return;
+    setDrag({x:e.clientX-start.current.x,y:e.clientY-start.current.y});
+  };
+  const onPU = (e) => {
+    if (!dragging) return;
+    setDragging(false);
+    const dx=e.clientX-start.current.x, dy=e.clientY-start.current.y;
+    const dt=Math.max(Date.now()-t0.current,1);
+    const a=Math.abs, v=(n,t)=>a(n)/t;
+    let dir=null;
+    if (a(dx)>a(dy)){if(a(dx)>80||v(dx,dt)>.4)dir=dx>0?'right':'left';}
+    else{if(a(dy)>80||v(dy,dt)>.4)dir=dy<0?'up':'down';}
+    if(dir) doSwipe(dir);
+    else setDrag({x:0,y:0});
+  };
+
+  const a=Math.abs;
+  let stamp=null;
+  if (dragging){
+    const {x,y}=drag;
+    if(a(x)>a(y)&&a(x)>28) stamp=x>0?'r':'l';
+    else if(a(y)>a(x)&&a(y)>28) stamp=y<0?'u':'d';
+  }
+  const sOp = Math.min((Math.max(a(drag.x),a(drag.y))-28)/60,1);
+
+  const sc  = isTop ? 1 : 1 - depth*0.04;
+  const ty  = isTop ? 0 : depth*10;
+  const gx  = isTop ? drag.x : 0;
+  const gy  = isTop ? drag.y : 0;
+  const rot = isTop ? drag.x*0.07 : 0;
+  const tf  = `translate(${gx}px,${gy}px) scale(${sc}) translateY(${ty}px) rotate(${rot}deg)`;
+  const tr  = dragging ? 'none' : flying ? 'transform .33s ease-out' : 'transform .42s cubic-bezier(.34,1.56,.64,1)';
+
+  return (
+    <div className="card"
+      style={{transform:tf,transition:tr,zIndex:10-depth,pointerEvents:isTop?'auto':'none',cursor:isTop?'grab':'default'}}
+      onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU}>
+      <div className="card-poster" style={{background:movie.bg}}/>
+      <div className="card-grad"/>
+      {stamp==='r'&&<div className="stamp st-r" style={{opacity:sOp}}>Watchlist</div>}
+      {stamp==='l'&&<div className="stamp st-l" style={{opacity:sOp}}>Pass</div>}
+      {stamp==='u'&&<div className="stamp st-u" style={{opacity:sOp}}>Top Pick</div>}
+      {stamp==='d'&&<div className="stamp st-d" style={{opacity:sOp}}>Seen</div>}
+      {isTop&&<button className="info-btn" onPointerDown={e=>e.stopPropagation()} onClick={e=>{e.stopPropagation();onDetail(movie);}}>ⓘ</button>}
+      <div className="card-info">
+        <div className="card-hook">{movie.hook}</div>
+        <div className="card-title">{movie.title}</div>
+        <div className="card-meta">{movie.year} · {movie.runtime} · {movie.rating}</div>
+        <div className="card-badges">
+          {movie.services.slice(0,2).map(s=><span key={s} className="bdg bdg-svc">{s}</span>)}
+          {movie.genres.slice(0,1).map(g=><span key={g} className="bdg bdg-gen">{g}</span>)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── DISCOVER ────────────────────────────────────────────────────────── */
+function DiscoverTab({ onDetail, onFilter, activeFilter, onSwipe, onNudge, signedIn, swipeCount }) {
+  const [deck, setDeck] = useState([...MOVIES]);
+  const [undo, setUndo] = useState([]);
+  const nudgeFired = useRef(false);
+
+  const handleSwipe = (dir) => {
+    const m = deck[0];
+    onSwipe(m, dir);
+    setUndo(u=>[{m,dir},...u.slice(0,4)]);
+    setDeck(d=>d.slice(1));
+    if (!signedIn && !nudgeFired.current && swipeCount + 1 >= 10) {
+      nudgeFired.current = true;
+      setTimeout(onNudge, 400);
+    }
+  };
+  const handleUndo = () => {
+    if (!undo.length) return;
+    setDeck(d=>[undo[0].m,...d]);
+    setUndo(u=>u.slice(1));
+  };
+
+  if (!deck.length) return (
+    <div className="deck-wrap fade-up">
+      <div className="deck-hdr"><div className="deck-logo">Flixy</div></div>
+      <div className="empty">
+        <div className="empty-ico">🎬</div>
+        <div className="empty-t">You've out-swiped us.</div>
+        <div className="empty-s">Broaden your filters or check your watchlist.</div>
+        <button className="empty-cta" onClick={()=>setDeck([...MOVIES])}>Refresh deck</button>
+      </div>
+    </div>
+  );
+
+  const visible = deck.slice(0,3);
+  return (
+    <div className="deck-wrap">
+      <div className="deck-hdr">
+        <div className="deck-logo">Flixy</div>
+        <div className="deck-hdr-right">
+          {activeFilter && <div className="filter-chip" onClick={onFilter}>{activeFilter} ✕</div>}
+          <div className="filter-btn" onClick={onFilter}>⚙</div>
+        </div>
+      </div>
+      <div className="stack">
+        {[...visible].reverse().map((movie, i, arr) => {
+          const isTop = i === arr.length - 1;
+          const depth = arr.length - 1 - i;
+          return (
+            <SwipeCard key={movie.id} movie={movie} isTop={isTop} depth={depth}
+              onSwipe={handleSwipe} onDetail={onDetail}/>
+          );
+        })}
+      </div>
+      <div className="action-bar">
+        {undo.length>0 && <div className="undo-btn" onClick={handleUndo}>Undo</div>}
+        <div className="act" style={{color:'#e05c4b'}} onClick={()=>handleSwipe('left')} title="Pass">✕</div>
+        <div className="act" style={{color:'#5b8def',fontSize:17}} onClick={()=>handleSwipe('down')} title="Seen">✓</div>
+        <div className="act big" onClick={()=>handleSwipe('right')} title="Watchlist">♥</div>
+        <div className="act" style={{color:'#f5c842'}} onClick={()=>handleSwipe('up')} title="Top pick">★</div>
+        <div className="act" style={{color:'rgba(245,245,240,.3)',fontSize:16}} onClick={()=>onDetail(deck[0])} title="Info">ⓘ</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── WATCHLIST ───────────────────────────────────────────────────────── */
+function WatchlistTab({ watchlist, onDetail }) {
+  if (!watchlist.length) return (
+    <div className="list-screen fade-up">
+      <div className="list-hdr"><div className="list-title">Watchlist</div></div>
+      <div className="empty">
+        <div className="empty-ico">♥</div>
+        <div className="empty-t">Nothing here yet.</div>
+        <div className="empty-s">Swipe right on films you want to watch — they'll appear here.</div>
+      </div>
+    </div>
+  );
+  const top = watchlist.filter(w=>w.pri==='top');
+  const norm = watchlist.filter(w=>w.pri!=='top');
+  const Row = ({w}) => (
+    <div className="wl-row" onClick={()=>onDetail(w.m)}>
+      <div className="wl-thumb"><div style={{background:w.m.bg,width:'100%',height:'100%'}}/></div>
+      <div className="wl-info">
+        <div className="wl-t">{w.m.title}</div>
+        <div className="wl-m">{w.m.year} · {w.m.runtime}</div>
+        <div className="wl-svc">{w.m.services[0]}</div>
+      </div>
+      <button className="wl-play" onClick={e=>e.stopPropagation()}>▶</button>
+    </div>
+  );
+  return (
+    <div className="list-screen fade-up">
+      <div className="list-hdr">
+        <div className="list-title">Watchlist</div>
+        <div className="list-count">{watchlist.length} titles</div>
+      </div>
+      {top.length>0&&<><div className="sec-lbl">Top Picks ★</div>{top.map((w,i)=><Row key={i} w={w}/>)}</>}
+      {norm.length>0&&<><div className="sec-lbl">{top.length?'Watchlist':'Saved'}</div>{norm.map((w,i)=><Row key={i} w={w}/>)}</>}
+    </div>
+  );
+}
+
+/* ── SEARCH ──────────────────────────────────────────────────────────── */
+function SearchTab({ onDetail }) {
+  const [q, setQ] = useState('');
+  const res = q.length>1 ? MOVIES.filter(m=>m.title.toLowerCase().includes(q.toLowerCase())||m.genres.some(g=>g.toLowerCase().includes(q.toLowerCase()))) : [];
+  return (
+    <div className="srch-screen fade-up">
+      <div className="srch-bar">
+        <span style={{color:'rgba(245,245,240,.3)',fontSize:15}}>⌕</span>
+        <input className="srch-input" placeholder="Titles, genres, directors…" value={q} onChange={e=>setQ(e.target.value)}/>
+        {q&&<span style={{color:'rgba(245,245,240,.3)',cursor:'pointer'}} onClick={()=>setQ('')}>✕</span>}
+      </div>
+      {!q&&<><div className="srch-sec">Trending now</div>{MOVIES.slice(0,5).map(m=>(
+        <div key={m.id} className="srch-row" onClick={()=>onDetail(m)}>
+          <div className="srch-thumb"><div style={{background:m.bg,width:'100%',height:'100%'}}/></div>
+          <div><div className="srch-t">{m.title}</div><div className="srch-m">{m.year} · {m.genres[0]}</div></div>
+        </div>
+      ))}</>}
+      {q&&res.length>0&&res.map(m=>(
+        <div key={m.id} className="srch-row" onClick={()=>onDetail(m)}>
+          <div className="srch-thumb"><div style={{background:m.bg,width:'100%',height:'100%'}}/></div>
+          <div><div className="srch-t">{m.title}</div><div className="srch-m">{m.year} · {m.genres.join(' · ')}</div></div>
+        </div>
+      ))}
+      {q&&!res.length&&<div className="empty" style={{paddingTop:40}}><div className="empty-ico">🔍</div><div className="empty-s">No results for "{q}"</div></div>}
+    </div>
+  );
+}
+
+/* ── PROFILE ─────────────────────────────────────────────────────────── */
+function ProfileTab({ watchlist, seen, signedIn, onSignIn, onSignUp }) {
+  return (
+    <div className="prof-screen fade-up">
+      {!signedIn && (
+        <div style={{margin:'16px 16px 0',background:'rgba(255,77,28,.08)',border:'1px solid rgba(255,77,28,.22)',borderRadius:14,padding:'16px',display:'flex',flexDirection:'column',gap:10}}>
+          <div style={{fontFamily:"'Newsreader',serif",fontStyle:'italic',fontWeight:700,fontSize:17,color:'#f5f5f0'}}>You're browsing anonymously</div>
+          <div style={{fontSize:12,color:'rgba(245,245,240,.45)',lineHeight:1.6,fontWeight:300}}>Create a free account to save your watchlist, taste profile, and swipe history across devices.</div>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={onSignUp} style={{flex:1,height:40,background:'#ff4d1c',border:'none',borderRadius:10,fontFamily:"'Space Grotesk',sans-serif",fontSize:13,fontWeight:600,color:'#fff',cursor:'pointer'}}>Sign up free</button>
+            <button onClick={onSignIn} style={{flex:1,height:40,background:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',borderRadius:10,fontFamily:"'Space Grotesk',sans-serif",fontSize:13,fontWeight:500,color:'rgba(245,245,240,.7)',cursor:'pointer'}}>Sign in</button>
+          </div>
+        </div>
+      )}
+      <div className="prof-hdr" style={{marginTop: signedIn ? 0 : 8}}>
+        <div className="prof-av">{signedIn ? '🎬' : '👤'}</div>
+        <div className="prof-name">{signedIn ? 'Aysu K.' : 'Anonymous'}</div>
+        <div className="prof-handle">{signedIn ? '@aysu · Istanbul' : 'No account yet'}</div>
+        <div className="prof-stats">
+          <div className="stat"><div className="stat-n">{watchlist.length}</div><div className="stat-l">Saved</div></div>
+          <div className="stat"><div className="stat-n">{seen.length}</div><div className="stat-l">Seen</div></div>
+          <div className="stat"><div className="stat-n">{watchlist.length+seen.length+4}</div><div className="stat-l">Swipes</div></div>
+        </div>
+      </div>
+      {[{t:"STREAMING SERVICES",rows:[{l:"Netflix",v:"✓"},{l:"Disney+",v:"✓"},{l:"MUBI",v:"✓"},{l:"Prime Video",v:"✓"}]},
+        {t:"CONTENT PREFERENCES",rows:[{l:"Favourite genres",v:"Drama, Thriller"},{l:"Region",v:"Turkey 🇹🇷"},{l:"Language",v:"English + Turkish"}]},
+        {t:"NOTIFICATIONS",rows:[{l:"New on my services",v:"On"},{l:"Watchlist updates",v:"On"},{l:"Re-engagement",v:"Off"}]},
+        {t:"ACCOUNT",rows:signedIn?[{l:"Email",v:"aysu@email.com"},{l:"Plan",v:"Free"},{l:"Sign out",v:"→"}]:[{l:"Sign up free",v:"→"},{l:"Sign in",v:"→"}]},
+      ].map(({t,rows})=>(
+        <div className="set-grp" key={t}>
+          <div className="set-grp-t">{t}</div>
+          {rows.map(r=><div key={r.l} className="set-row"><div className="set-lbl">{r.l}</div><div className="set-val">{r.v}</div></div>)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ── DETAIL SHEET ────────────────────────────────────────────────────── */
+function DetailSheet({ movie, onClose, onSwipe }) {
+  if (!movie) return null;
+  return (
+    <div className="overlay" onClick={e=>{if(e.target.classList.contains('overlay'))onClose();}}>
+      <div className="sheet fade-up">
+        <div className="sheet-handle"/>
+        <div className="sh-hero">
+          <div className="sh-hero-bg" style={{background:movie.bg}}/>
+          <div className="sh-hero-grad"/>
+          <div className="sh-hero-info">
+            <div className="sh-title">{movie.title}</div>
+            <div className="sh-meta">{movie.year} · {movie.runtime} · {movie.rating} · Dir. {movie.director}</div>
+          </div>
+        </div>
+        <div className="sh-acts">
+          <div className="sh-act" onClick={()=>{onSwipe(movie,'left');onClose();}}>
+            <div className="sh-act-i" style={{color:'#e05c4b'}}>✕</div><div className="sh-act-l">Pass</div>
+          </div>
+          <div className="sh-act main-act" onClick={()=>{onSwipe(movie,'right');onClose();}}>
+            <div className="sh-act-i">♥</div><div className="sh-act-l" style={{color:'rgba(255,255,255,.75)'}}>Save</div>
+          </div>
+          <div className="sh-act" onClick={()=>{onSwipe(movie,'up');onClose();}}>
+            <div className="sh-act-i" style={{color:'#f5c842'}}>★</div><div className="sh-act-l">Top</div>
+          </div>
+          <div className="sh-act" onClick={()=>{onSwipe(movie,'down');onClose();}}>
+            <div className="sh-act-i" style={{color:'#5b8def',fontSize:13}}>✓</div><div className="sh-act-l">Seen</div>
+          </div>
+        </div>
+        <div className="sh-body">
+          <div className="sh-scores">
+            <div className="sc-pill"><div className="sc-n" style={{color:'#ff4d1c'}}>{movie.score}</div><div className="sc-l">IMDb</div></div>
+            <div className="sc-pill"><div className="sc-n" style={{color:'#fa4a2c'}}>{movie.rt}%</div><div className="sc-l">RT Score</div></div>
+            <div className="sc-pill"><div className="sc-n" style={{fontSize:12,paddingTop:3}}>{movie.genres[0]}</div><div className="sc-l">Genre</div></div>
+          </div>
+          <div className="sh-sec">Synopsis</div>
+          <div className="sh-syn">{movie.synopsis}</div>
+          <div className="sh-sec">Cast</div>
+          <div className="cast-row">{movie.cast.map(c=><div key={c} className="cast-chip">{c}</div>)}</div>
+          <div className="sh-sec">Where to Watch</div>
+          <div className="avail-wrap">
+            {movie.services.map(s=><div key={s} className="avail-chip"><span>▶</span> {s}</div>)}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── FILTER SHEET ────────────────────────────────────────────────────── */
+function FilterSheet({ onClose, active, setActive }) {
+  const [sel, setSel] = useState(active);
+  const [types, setTypes] = useState(new Set(['Movies']));
+  const toggle = t => { const n=new Set(types); n.has(t)?n.delete(t):n.add(t); setTypes(n); };
+  return (
+    <div className="overlay" onClick={e=>{if(e.target.classList.contains('overlay'))onClose();}}>
+      <div className="flt-sheet fade-up">
+        <div className="sheet-handle" style={{marginTop:10,marginBottom:0}}/>
+        <div className="flt-title">What are you in the mood for?</div>
+        <div className="srch-sec">Mood presets</div>
+        <div className="mood-grid">
+          {MOODS.map(m=>(
+            <div key={m.id} className={`mood-chip ${sel===m.id?'on':''}`} onClick={()=>setSel(sel===m.id?null:m.id)}>
+              <span>{m.icon}</span><span>{m.label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="srch-sec">Content type</div>
+        <div className="type-row">
+          {["Movies","Series","Documentaries","Anime"].map(t=>(
+            <div key={t} className={`type-chip ${types.has(t)?'on':''}`} onClick={()=>toggle(t)}>{t}</div>
+          ))}
+        </div>
+        <button className="flt-apply" onClick={()=>{setActive(MOODS.find(m=>m.id===sel)?.label||null);onClose();}}>
+          Apply filters
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ── AUTH MODAL ──────────────────────────────────────────────────────── */
+function AuthModal({ onClose, onSuccess, initialMode='signup' }) {
+  const [mode, setMode] = useState(initialMode);
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
+
+  const isSignUp = mode === 'signup';
+
+  const handleSubmit = () => { onSuccess(); onClose(); };
+
+  return (
+    <div className="auth-overlay" onClick={e=>{if(e.target.classList.contains('auth-overlay'))onClose();}}>
+      <div className="auth-sheet fade-up">
+        <div className="auth-logo">Flixy</div>
+        <div className="auth-h">{isSignUp ? 'Create your account' : 'Welcome back'}</div>
+        <div className="auth-sub">{isSignUp ? 'Save your watchlist. Your taste, your data.' : 'Sign in to pick up where you left off.'}</div>
+
+        <button className="social-btn apple" onClick={handleSubmit}>
+          <span className="social-icon">🍎</span> Continue with Apple
+        </button>
+        <button className="social-btn" onClick={handleSubmit}>
+          <span className="social-icon">G</span> Continue with Google
+        </button>
+
+        <div className="auth-divider">
+          <div className="auth-divider-line"/>
+          <div className="auth-divider-txt">or use email</div>
+          <div className="auth-divider-line"/>
+        </div>
+
+        <input className="auth-field" type="email" placeholder="Email address" value={email} onChange={e=>setEmail(e.target.value)}/>
+        <input className="auth-field" type="password" placeholder="Password" value={pw} onChange={e=>setPw(e.target.value)}/>
+        {!isSignUp && <div className="auth-forgot">Forgot password?</div>}
+
+        <button className="auth-cta" onClick={handleSubmit}>
+          {isSignUp ? 'Create account' : 'Sign in'}
+        </button>
+
+        <div className="auth-switch">
+          {isSignUp ? <>Already have an account? <span onClick={()=>setMode('signin')}>Sign in</span></> : <>No account yet? <span onClick={()=>setMode('signup')}>Sign up free</span></>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── SAVE NUDGE ──────────────────────────────────────────────────────── */
+function SaveNudge({ watchlistCount, onSignUp, onDismiss }) {
+  return (
+    <div className="nudge-overlay" onClick={e=>{if(e.target.classList.contains('nudge-overlay'))onDismiss();}}>
+      <div className="nudge-sheet fade-up">
+        <div className="nudge-logo">Flixy</div>
+        <div className="nudge-h">Save your progress?</div>
+        <div className="nudge-sub">You've been on a roll. Create a free account so your watchlist and taste profile don't disappear when you close the app.</div>
+        <div className="nudge-watchlist-preview">
+          <div className="nudge-wl-count">{watchlistCount}</div>
+          <div className="nudge-wl-txt">titles saved to your watchlist<br/><span style={{color:'#ff4d1c'}}>Don't lose them →</span></div>
+        </div>
+        <button className="nudge-cta" onClick={onSignUp}>Create free account</button>
+        <button className="nudge-ghost" onClick={onDismiss}>Maybe later</button>
+      </div>
+    </div>
+  );
+}
+
+/* ── ONBOARDING ──────────────────────────────────────────────────────── */
+function Onboarding({ onDone }) {
+  const [step, setStep] = useState(0);
+  const [svcs, setSvcs] = useState(new Set());
+  const [genres, setGenres] = useState(new Set());
+  const [coldDeck, setColdDeck] = useState(MOVIES.slice(0,10));
+  const [coldN, setColdN] = useState(0);
+
+  const tSvc = s => { const n=new Set(svcs); n.has(s)?n.delete(s):n.add(s); setSvcs(n); };
+  const tGen = g => { const n=new Set(genres); n.has(g)?n.delete(g):n.add(g); setGenres(n); };
+
+  const TOTAL = 5;
+  const Dots = ({cur}) => <div className="ob-dots">{Array.from({length:TOTAL},(_,i)=><div key={i} className={`ob-dot ${i<cur?'done':i===cur?'cur':''}`}/>)}</div>;
+
+  if (step===0) return (
+    <div className="ob fade-up">
+      <Dots cur={0}/>
+      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',textAlign:'center',gap:14}}>
+        <div style={{fontFamily:"'Newsreader',serif",fontStyle:'italic',fontWeight:800,fontSize:68,color:'#ff4d1c',lineHeight:1}}>Flixy</div>
+        <div className="ob-h" style={{fontSize:24}}>Stop browsing.<br/>Start watching.</div>
+        <div className="ob-sub" style={{textAlign:'center',maxWidth:280}}>Swipe through films and shows. Right to save, left to skip. Your watchlist builds itself.</div>
+      </div>
+      <button className="ob-cta" onClick={()=>setStep(1)}>Get started →</button>
+    </div>
+  );
+
+  if (step===1) return (
+    <div className="ob fade-up">
+      <Dots cur={1}/>
+      <div className="ob-h">What are you<br/>subscribed to?</div>
+      <div className="ob-sub">Pick every service you have access to.</div>
+      <div className="svc-grid">
+        {ALL_SVCS.map(s=>(
+          <div key={s} className={`svc-chip ${svcs.has(s)?'on':''}`} onClick={()=>tSvc(s)}>
+            <div className="svc-dot"/>{s}
+          </div>
+        ))}
+      </div>
+      <button className="ob-cta" disabled={svcs.size===0} onClick={()=>setStep(2)}>Continue →</button>
+    </div>
+  );
+
+  if (step===2) return (
+    <div className="ob fade-up">
+      <Dots cur={2}/>
+      <div className="ob-h">What do you love<br/>to watch?</div>
+      <div className="ob-sub">Pick at least 3 genres.</div>
+      <div className="gen-wrap">
+        {ALL_GENRES.map(g=>(
+          <div key={g} className={`gen-chip ${genres.has(g)?'on':''}`} onClick={()=>tGen(g)}>{g}</div>
+        ))}
+      </div>
+      <button className="ob-cta" disabled={genres.size<3} onClick={()=>setStep(3)}>Continue →</button>
+    </div>
+  );
+
+  if (step===3) return (
+    <div className="ob" style={{padding:0}}>
+      <div style={{padding:'16px 20px 8px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+        <div style={{fontFamily:"'Newsreader',serif",fontStyle:'italic',fontWeight:800,fontSize:20,color:'#f5f5f0'}}>Quick taste check</div>
+        <div style={{fontSize:12,color:'rgba(245,245,240,.35)'}}>{coldN}/10</div>
+      </div>
+      <div style={{flex:1,position:'relative',margin:'4px 16px 0'}}>
+        {coldDeck.length>0 ? [...coldDeck.slice(0,2)].reverse().map((movie,i,arr)=>{
+          const isTop=i===arr.length-1, depth=arr.length-1-i;
+          return <SwipeCard key={movie.id} movie={movie} isTop={isTop} depth={depth} onDetail={()=>{}}
+            onSwipe={()=>{
+              const n=coldN+1; setColdN(n); setColdDeck(d=>d.slice(1));
+              if(n>=10) setTimeout(()=>setStep(4),350);
+            }}/>;
+        }) : (
+          <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100%',flexDirection:'column',gap:10}}>
+            <div style={{fontSize:44}}>✓</div>
+            <div style={{fontFamily:"'Newsreader',serif",fontStyle:'italic',fontSize:20,color:'#f5f5f0'}}>Taste captured!</div>
+          </div>
+        )}
+      </div>
+      <div style={{padding:'8px 0 12px',textAlign:'center',fontSize:11,color:'rgba(245,245,240,.25)'}}>← Pass &nbsp;&nbsp;&nbsp;&nbsp; Watchlist →</div>
+    </div>
+  );
+
+  if (step===4) return (
+    <div className="ob fade-up">
+      <Dots cur={4}/>
+      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:14,textAlign:'center'}}>
+        <div style={{fontSize:52}}>🔔</div>
+        <div className="ob-h">Never miss a drop</div>
+        <div className="ob-sub" style={{textAlign:'center',maxWidth:280}}>We'll let you know when titles leave your services, or when something new lands that you'll love.</div>
+      </div>
+      <button className="ob-cta" onClick={onDone}>Enable notifications</button>
+      <button className="ob-ghost" onClick={onDone}>Maybe later</button>
+    </div>
+  );
+
+  return null;
+}
+
+/* ── MAIN APP ────────────────────────────────────────────────────────── */
+function MainApp() {
+  const [tab, setTab] = useState('discover');
+  const [modal, setModal] = useState(null);
+  const [authMode, setAuthMode] = useState('signup');
+  const [selMovie, setSelMovie] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
+  const [seen, setSeen] = useState([]);
+  const [activeFilter, setActiveFilter] = useState(null);
+  const [signedIn, setSignedIn] = useState(false);
+  const [swipeCount, setSwipeCount] = useState(0);
+
+  const handleSwipe = (movie, dir) => {
+    if (dir==='right') setWatchlist(w=>[...w,{m:movie,pri:'normal'}]);
+    else if (dir==='up')  setWatchlist(w=>[{m:movie,pri:'top'},...w]);
+    else if (dir==='down') setSeen(s=>[...s,movie]);
+    setSwipeCount(c=>c+1);
+  };
+  const openDetail = m => { setSelMovie(m); setModal('detail'); };
+  const openAuth = (mode='signup') => { setAuthMode(mode); setModal('auth'); };
+
+  return (
+    <>
+      <StatusBar/>
+      <div className="content">
+        {tab==='discover'&&<DiscoverTab onDetail={openDetail} onFilter={()=>setModal('filter')} activeFilter={activeFilter} onSwipe={handleSwipe} onNudge={()=>!signedIn&&setModal('nudge')} signedIn={signedIn} swipeCount={swipeCount}/>}
+        {tab==='watchlist'&&<WatchlistTab watchlist={watchlist} onDetail={openDetail}/>}
+        {tab==='search'&&<SearchTab onDetail={openDetail}/>}
+        {tab==='profile'&&<ProfileTab watchlist={watchlist} seen={seen} signedIn={signedIn} onSignIn={()=>openAuth('signin')} onSignUp={()=>openAuth('signup')}/>}
+        {modal==='detail'&&<DetailSheet movie={selMovie} onClose={()=>setModal(null)} onSwipe={handleSwipe}/>}
+        {modal==='filter'&&<FilterSheet onClose={()=>setModal(null)} active={activeFilter} setActive={setActiveFilter}/>}
+        {modal==='nudge'&&<SaveNudge watchlistCount={watchlist.length||1} onSignUp={()=>setModal('auth')} onDismiss={()=>setModal(null)}/>}
+        {modal==='auth'&&<AuthModal initialMode={authMode} onClose={()=>setModal(null)} onSuccess={()=>setSignedIn(true)}/>}
+      </div>
+      <TabBar tab={tab} setTab={setTab}/>
+    </>
+  );
+}
+
+/* ── SPLASH ──────────────────────────────────────────────────────────── */
+function SplashScreen({ onDone }) {
+  useEffect(()=>{ const t=setTimeout(onDone,2500); return ()=>clearTimeout(t); },[]);
+  return (
+    <div className="splash splash-go">
+      <div className="splash-logo">Flixy</div>
+      <div className="splash-tag">Stop browsing. Start watching.</div>
+    </div>
+  );
+}
+
+/* ── ROOT ────────────────────────────────────────────────────────────── */
+function App() {
+  const [screen, setScreen] = useState('splash');
+  return (
+    <>
+      {screen==='splash'&&<SplashScreen onDone={()=>setScreen('onboarding')}/>}
+      {screen==='onboarding'&&<Onboarding onDone={()=>setScreen('main')}/>}
+      {screen==='main'&&<MainApp/>}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

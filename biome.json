@@ -17,6 +17,10 @@
       "**/android",
       "**/*.lock",
       "**/coverage",
+      ".agents/**",
+      ".claude/**",
+      ".design-bundle/**",
+      ".wolf/**",
       "docs/**/*.md",
       "UI_UX_Claude_Design/**"
     ]

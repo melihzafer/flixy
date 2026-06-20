@@ -1,17 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { z } from 'zod';
 
 import { HandleSchema, LanguageCodeSchema, RegionCodeSchema } from '@flixy/shared';
 
+import { localDb } from '../../lib/localDb';
 import { logger } from '../../lib/logger';
-import { supabase } from '../../lib/supabase';
 import { useSession } from '../auth/useSession';
 
 /**
  * Row shape from `public.profiles` (snake_case to match Postgres).
  */
 const ProfileRowSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().min(1),
   handle: z.string().nullable(),
   display_name: z.string().nullable(),
   avatar_url: z.string().nullable(),
@@ -29,14 +31,36 @@ const profileKey = (userId: string) => ['profile', userId] as const;
 export function useProfile() {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
+  const isAnonymous = session?.isAnonymous ?? false;
   return useQuery({
     queryKey: ['profile', userId ?? 'anon'],
     enabled: !!userId,
     queryFn: async () => {
       if (!userId) return null;
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
-      if (error) throw error;
-      return ProfileRowSchema.parse(data);
+      const data = await localDb.getProfile(userId);
+      if (!data) {
+        const created = await localDb.upsertProfile(userId, {
+          id: userId,
+          region: 'US',
+          language: 'en',
+        });
+        return ProfileRowSchema.parse({
+          ...created,
+          handle: null,
+          display_name: null,
+          avatar_url: null,
+          is_anonymous: isAnonymous,
+          updated_at: new Date().toISOString(),
+        });
+      }
+      return ProfileRowSchema.parse({
+        ...data,
+        handle: data.handle ?? null,
+        display_name: data.name ?? null,
+        avatar_url: data.avatar_url ?? null,
+        is_anonymous: isAnonymous,
+        updated_at: new Date().toISOString(),
+      });
     },
   });
 }
@@ -45,7 +69,7 @@ export const ProfileUpdateSchema = z
   .object({
     handle: HandleSchema.nullable(),
     display_name: z.string().min(1).max(80).nullable(),
-    avatar_url: z.string().url().nullable(),
+    avatar_url: z.string().nullable(), // Allow file:// URIs as well
     region: RegionCodeSchema,
     language: LanguageCodeSchema,
   })
@@ -61,14 +85,30 @@ export function useUpdateProfile() {
     mutationFn: async (patch: ProfileUpdate) => {
       if (!userId) throw new Error('not authenticated');
       const safe = ProfileUpdateSchema.parse(patch);
-      const { data, error } = await supabase
-        .from('profiles')
-        .update(safe)
-        .eq('id', userId)
-        .select('*')
-        .single();
-      if (error) throw error;
-      return ProfileRowSchema.parse(data);
+
+      // Only carry through fields that were actually provided in the patch.
+      // upsertProfile merges with `{...existing, ...updates}`, so passing
+      // `undefined` for region/language (as a `.partial()` schema yields when
+      // the caller only edits name/handle/avatar) would OVERWRITE the user's
+      // existing region/language with undefined — silently wiping them.
+      // Build the upsert from present keys only.
+      const upsert: Record<string, unknown> = {};
+      if (safe.region !== undefined) upsert.region = safe.region;
+      if (safe.language !== undefined) upsert.language = safe.language;
+      if (safe.display_name !== undefined) upsert.name = safe.display_name ?? undefined;
+      if (safe.handle !== undefined) upsert.handle = safe.handle ?? undefined;
+      if (safe.avatar_url !== undefined) upsert.avatar_url = safe.avatar_url ?? undefined;
+
+      const updated = await localDb.upsertProfile(userId, upsert);
+
+      return ProfileRowSchema.parse({
+        ...updated,
+        handle: updated.handle ?? null,
+        display_name: updated.name ?? null,
+        avatar_url: updated.avatar_url ?? null,
+        is_anonymous: session?.isAnonymous ?? false,
+        updated_at: new Date().toISOString(),
+      });
     },
     onSuccess: (row) => {
       if (userId) qc.setQueryData(profileKey(userId), row);
@@ -78,39 +118,51 @@ export function useUpdateProfile() {
 }
 
 /**
- * Check whether a handle is currently free. Returns true when nobody owns it
- * (or only the current user does). Profanity filtering is deferred to a
- * server-side moderation pass; this is just the uniqueness check.
+ * Check whether a handle is currently free.
  */
 export async function isHandleAvailable(handle: string, currentUserId: string | null) {
   const safe = HandleSchema.parse(handle);
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('handle', safe)
-    .maybeSingle();
-  if (error) throw error;
-  if (!data) return true;
-  return data.id === currentUserId;
+  const taken = await localDb.isHandleTaken(safe, currentUserId || '');
+  return !taken;
 }
 
 /**
- * Upload avatar bytes to Storage. The path is owner-scoped (`<userId>/...`)
- * to match the Storage RLS policy in migration 0003. Returns the public URL.
+ * Downscale and save avatar locally, returning a persistent file:// URI.
  */
-export async function uploadAvatar(params: {
-  userId: string;
-  bytes: ArrayBuffer;
-  contentType: string;
-  ext: string;
-}) {
-  const { userId, bytes, contentType, ext } = params;
-  const path = `${userId}/${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from('avatars').upload(path, bytes, {
-    contentType,
-    upsert: true,
-  });
-  if (error) throw error;
-  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
-  return data.publicUrl;
+export async function uploadLocalAvatar(userId: string, sourceUri: string): Promise<string> {
+  try {
+    const dir = `${FileSystem.documentDirectory}avatars/`;
+
+    // Ensure directory exists
+    const dirInfo = await FileSystem.getInfoAsync(dir);
+    if (!dirInfo.exists) {
+      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
+    }
+
+    // Downscale and compress
+    const manipResult = await ImageManipulator.manipulateAsync(
+      sourceUri,
+      [{ resize: { width: 300, height: 300 } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
+    );
+
+    const filename = `${userId}-${Date.now()}.jpg`;
+    const destinationUri = `${dir}${filename}`;
+    await FileSystem.copyAsync({
+      from: manipResult.uri,
+      to: destinationUri,
+    });
+
+    return destinationUri;
+  } catch (error) {
+    logger.error('Failed to save avatar locally', { error: String(error) });
+    throw error;
+  }
+}
+
+/**
+ * Legacy unused Supabase upload method, kept for backwards compatibility stub.
+ */
+export async function uploadAvatar() {
+  return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80';
 }

@@ -1,93 +1,157 @@
 import { useQuery } from '@tanstack/react-query';
-import { z } from 'zod';
 
-import { type Title, TitleSchema } from '@flixy/shared';
+import { type Title, TitleAvailabilitySchema, TitleSchema } from '@flixy/shared';
 
-import { supabase } from '../../lib/supabase';
+import { FALLBACK_TITLES, normalizeGenreId, normalizeServiceId } from '../../lib/fallbackCatalogue';
+import { logger } from '../../lib/logger';
+import {
+  discoverTmdbTitles,
+  fetchTmdbTitle,
+  fetchTmdbTitlesByIds,
+  uuidToTmdbId,
+} from '../../lib/tmdb';
 
-/**
- * Catalogue read APIs (FSD section 3.4). The mobile client never writes to
- * `titles` or `title_availability`; ingestion happens server-side via
- * Trigger.dev jobs (out of scope for the mobile PR; see lib/tmdb.ts stub).
- */
+export type CatalogueFallbackReason =
+  | 'supabase_unconfigured'
+  | 'query_failed'
+  | 'live_empty'
+  | 'service_empty'
+  | 'filtered_empty'
+  | 'exhausted'
+  | 'unknown';
 
-const TitleRowSchema = z.object({
-  id: z.string().uuid(),
-  tmdb_id: z.number(),
-  content_type: z.enum(['movie', 'tv']),
-  title: z.string(),
-  original_title: z.string().nullable(),
-  synopsis: z.string().nullable(),
-  poster_url: z.string().nullable(),
-  backdrop_url: z.string().nullable(),
-  trailer_key: z.string().nullable(),
-  release_year: z.number().nullable(),
-  runtime_minutes: z.number().nullable(),
-  imdb_rating: z.union([z.number(), z.string()]).nullable(),
-  popularity: z.union([z.number(), z.string()]),
-  genres: z.array(z.string()),
-  language: z.string().nullable(),
-});
+export type CatalogueDiagnostics = {
+  liveCandidateCount: number | null;
+  candidateCount: number;
+  afterServiceFilterCount: number | null;
+  finalCardsCount?: number;
+  fallbackReason: CatalogueFallbackReason | null;
+  isFallback: boolean;
+  isNarrow: boolean;
+  emptyReason: CatalogueFallbackReason | null;
+};
 
-const AvailabilityRowSchema = z.object({
-  title_id: z.string().uuid(),
-  service_id: z.string(),
-  region: z.string().length(2),
-  offer_type: z.enum(['subscription', 'rent', 'buy', 'free']),
-  deep_link: z.string().nullable(),
-  observed_at: z.string(),
-});
+export type TitleQueryResult = {
+  titles: Title[];
+  diagnostics: CatalogueDiagnostics;
+};
 
-type TitleRow = z.infer<typeof TitleRowSchema>;
-type AvailabilityRow = z.infer<typeof AvailabilityRowSchema>;
+type TitlesQueryOptions = {
+  enabled?: boolean;
+};
 
-function toNum(v: number | string): number {
-  return typeof v === 'string' ? Number.parseFloat(v) : v;
+export const TITLE_QUERY_RESULT_SHAPE_VERSION = 2;
+const TITLE_QUERY_CACHE_VERSION_KEY = `shape-v${TITLE_QUERY_RESULT_SHAPE_VERSION}`;
+
+function fallbackTitleById(id: string): Title | null {
+  return FALLBACK_TITLES.find((t) => t.id === id) ?? null;
 }
 
-function rowToTitle(row: TitleRow, availability: AvailabilityRow[] = []): Title {
-  return TitleSchema.parse({
-    id: row.id,
-    tmdbId: row.tmdb_id,
-    kind: row.content_type,
-    title: row.title,
-    originalTitle: row.original_title,
-    overview: row.synopsis,
-    posterUrl: row.poster_url,
-    backdropUrl: row.backdrop_url,
-    trailerKey: row.trailer_key,
-    releaseYear: row.release_year,
-    runtimeMinutes: row.runtime_minutes,
-    imdbRating: row.imdb_rating == null ? null : toNum(row.imdb_rating),
-    popularity: toNum(row.popularity),
-    genres: row.genres,
-    language: row.language,
-    availability: availability.map((a) => ({
-      serviceId: a.service_id,
-      region: a.region,
-      offerType: a.offer_type,
-      deepLink: a.deep_link,
-      observedAt: a.observed_at,
-    })),
-  });
+function makeDiagnostics(input: {
+  titles: Title[];
+  liveCandidateCount?: number | null;
+  afterServiceFilterCount?: number | null;
+  fallbackReason?: CatalogueFallbackReason | null;
+  isFallback?: boolean;
+  limit?: number;
+}): CatalogueDiagnostics {
+  const candidateCount = input.titles.length;
+  const emptyReason = candidateCount === 0 ? (input.fallbackReason ?? 'filtered_empty') : null;
+  return {
+    liveCandidateCount: input.liveCandidateCount ?? null,
+    candidateCount,
+    afterServiceFilterCount: input.afterServiceFilterCount ?? null,
+    fallbackReason: input.fallbackReason ?? null,
+    isFallback: input.isFallback ?? false,
+    isNarrow: candidateCount < (input.limit ?? 60),
+    emptyReason,
+  };
+}
+
+function withDiagnostics(
+  titles: Title[],
+  filter: TitleQueryFilter,
+  diagnostics: Omit<CatalogueDiagnostics, 'candidateCount' | 'emptyReason' | 'isNarrow'>,
+): TitleQueryResult {
+  return {
+    titles,
+    diagnostics: makeDiagnostics({
+      titles,
+      liveCandidateCount: diagnostics.liveCandidateCount,
+      afterServiceFilterCount: diagnostics.afterServiceFilterCount,
+      fallbackReason: diagnostics.fallbackReason,
+      isFallback: diagnostics.isFallback,
+      limit: filter.limit,
+    }),
+  };
+}
+
+function applyFallbackFilter(filter: TitleQueryFilter): Title[] {
+  const serviceIds = new Set((filter.serviceIds ?? []).map(normalizeServiceId));
+  const genres = new Set((filter.genres ?? []).map(normalizeGenreId));
+  return FALLBACK_TITLES.map((title) => ({
+    ...title,
+    availability: filter.region
+      ? title.availability.filter((a) => a.region === filter.region)
+      : title.availability,
+  }))
+    .filter((title) => {
+      if (filter.kinds && filter.kinds.length > 0 && !filter.kinds.includes(title.kind)) {
+        return false;
+      }
+      if (genres.size > 0) {
+        const hasMatch = title.genres.some((genre) => genres.has(normalizeGenreId(genre)));
+        if (!hasMatch) return false;
+
+        const hasExcluded = title.genres.some((genre) => !genres.has(normalizeGenreId(genre)));
+        if (hasExcluded) return false;
+      }
+      if (
+        filter.minYear != null &&
+        (title.releaseYear == null || title.releaseYear < filter.minYear)
+      ) {
+        return false;
+      }
+      if (
+        filter.maxYear != null &&
+        (title.releaseYear == null || title.releaseYear > filter.maxYear)
+      ) {
+        return false;
+      }
+      if (filter.region && title.availability.length === 0) {
+        return false;
+      }
+      if (
+        serviceIds.size > 0 &&
+        !title.availability.some((a) => serviceIds.has(normalizeServiceId(a.serviceId)))
+      ) {
+        return false;
+      }
+      return true;
+    })
+    .sort((a, b) => b.popularity - a.popularity)
+    .slice(0, filter.limit ?? 60);
 }
 
 export function useTitle(id: string | null | undefined) {
   return useQuery({
-    queryKey: ['title', id],
+    queryKey: ['title', TITLE_QUERY_CACHE_VERSION_KEY, id],
     enabled: !!id,
+    staleTime: 1000 * 60 * 60 * 24, // 24 hours
     queryFn: async () => {
       if (!id) return null;
-      const [{ data: row, error }, { data: avail, error: aErr }] = await Promise.all([
-        supabase.from('titles').select('*').eq('id', id).single(),
-        supabase.from('title_availability').select('*').eq('title_id', id),
-      ]);
-      if (error) throw error;
-      if (aErr) throw aErr;
-      return rowToTitle(
-        TitleRowSchema.parse(row),
-        z.array(AvailabilityRowSchema).parse(avail ?? []),
-      );
+      const tmdbInfo = uuidToTmdbId(id);
+      if (!tmdbInfo) {
+        return fallbackTitleById(id);
+      }
+      try {
+        return await fetchTmdbTitle(tmdbInfo.tmdbId, tmdbInfo.type);
+      } catch (e) {
+        logger.warn('TMDB fetch title failed, trying fallback', { id, error: String(e) });
+        const fallback = fallbackTitleById(id);
+        if (fallback) return fallback;
+        throw e;
+      }
     },
   });
 }
@@ -95,15 +159,27 @@ export function useTitle(id: string | null | undefined) {
 export function useTitlesByIds(ids: string[]) {
   const sorted = [...ids].sort();
   return useQuery({
-    queryKey: ['titles', 'byIds', sorted.join(',')],
+    queryKey: ['titles', 'byIds', TITLE_QUERY_CACHE_VERSION_KEY, sorted.join(',')],
     enabled: sorted.length > 0,
+    staleTime: 1000 * 60 * 60 * 12, // 12 hours
     queryFn: async () => {
-      const { data, error } = await supabase.from('titles').select('*').in('id', sorted);
-      if (error) throw error;
-      return z
-        .array(TitleRowSchema)
-        .parse(data ?? [])
-        .map((r) => rowToTitle(r));
+      try {
+        const liveTitles = await fetchTmdbTitlesByIds(sorted);
+        const byId = new Map(liveTitles.map((title) => [title.id, title]));
+        for (const id of sorted) {
+          if (!byId.has(id)) {
+            const fallback = fallbackTitleById(id);
+            if (fallback) byId.set(id, fallback);
+          }
+        }
+        return sorted.map((id) => byId.get(id)).filter((t): t is Title => t != null);
+      } catch (e) {
+        logger.warn('TMDB fetch titles by ids failed, trying fallbacks', {
+          ids: sorted.length,
+          error: String(e),
+        });
+        return sorted.map(fallbackTitleById).filter((t): t is Title => t !== null);
+      }
     },
   });
 }
@@ -116,55 +192,154 @@ export type TitleQueryFilter = {
   minYear?: number;
   maxYear?: number;
   limit?: number;
+  page?: number;
 };
 
-/**
- * Region-aware deck candidate query. The recommendation/deck composer (FSD
- * section 3.5) wraps this with the 7-layer scoring; here we only filter +
- * popularity-sort.
- */
-export function useTitlesQuery(filter: TitleQueryFilter) {
+export function useTitlesQuery(filter: TitleQueryFilter, options: TitlesQueryOptions = {}) {
   const key = JSON.stringify(filter);
   return useQuery({
-    queryKey: ['titles', 'query', key],
+    queryKey: ['titles', 'query', `shape-v${TITLE_QUERY_RESULT_SHAPE_VERSION}`, key],
+    enabled: options.enabled ?? true,
+    staleTime: 1000 * 60 * 60, // 1 hour
     queryFn: async () => {
-      let q = supabase.from('titles').select('*').order('popularity', { ascending: false });
-      if (filter.kinds && filter.kinds.length > 0) q = q.in('content_type', filter.kinds);
-      if (filter.genres && filter.genres.length > 0) q = q.overlaps('genres', filter.genres);
-      if (filter.minYear != null) q = q.gte('release_year', filter.minYear);
-      if (filter.maxYear != null) q = q.lte('release_year', filter.maxYear);
-      q = q.limit(filter.limit ?? 60);
-      const { data, error } = await q;
-      if (error) throw error;
-      const rows = z.array(TitleRowSchema).parse(data ?? []);
-      if (rows.length === 0) return [];
+      try {
+        const titles = await discoverTmdbTitles({
+          region: filter.region,
+          serviceIds: filter.serviceIds,
+          genres: filter.genres,
+          kinds: filter.kinds,
+          minYear: filter.minYear,
+          maxYear: filter.maxYear,
+          limit: filter.limit,
+          page: filter.page,
+        });
 
-      let availByTitle: Map<string, AvailabilityRow[]> = new Map();
-      if (filter.region) {
-        const ids = rows.map((r) => r.id);
-        const { data: aData, error: aErr } = await supabase
-          .from('title_availability')
-          .select('*')
-          .in('title_id', ids)
-          .eq('region', filter.region);
-        if (aErr) throw aErr;
-        const parsed = z.array(AvailabilityRowSchema).parse(aData ?? []);
-        availByTitle = parsed.reduce((m, a) => {
-          const arr = m.get(a.title_id) ?? [];
-          arr.push(a);
-          m.set(a.title_id, arr);
-          return m;
-        }, new Map<string, AvailabilityRow[]>());
-
-        if (filter.serviceIds && filter.serviceIds.length > 0) {
-          const allowed = new Set(filter.serviceIds);
-          return rows
-            .map((r) => rowToTitle(r, availByTitle.get(r.id) ?? []))
-            .filter((t) => t.availability.some((a) => allowed.has(a.serviceId)));
+        if (titles.length === 0) {
+          const fallbackTitles = applyFallbackFilter(filter);
+          return withDiagnostics(fallbackTitles, filter, {
+            liveCandidateCount: 0,
+            afterServiceFilterCount: null,
+            fallbackReason: 'live_empty',
+            isFallback: true,
+          });
         }
-      }
 
-      return rows.map((r) => rowToTitle(r, availByTitle.get(r.id) ?? []));
+        return withDiagnostics(titles, filter, {
+          liveCandidateCount: titles.length,
+          afterServiceFilterCount: titles.length,
+          fallbackReason: null,
+          isFallback: false,
+        });
+      } catch (e) {
+        logger.warn('TMDB discover failed, trying fallback', { filter: key, error: String(e) });
+        const fallbackTitles = applyFallbackFilter(filter);
+        return withDiagnostics(fallbackTitles, filter, {
+          liveCandidateCount: null,
+          afterServiceFilterCount: null,
+          fallbackReason: 'query_failed',
+          isFallback: true,
+        });
+      }
     },
   });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function stringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string')
+    : [];
+}
+
+function availabilityArray(value: unknown): Title['availability'] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => TitleAvailabilitySchema.safeParse(item))
+    .filter(
+      (result): result is { success: true; data: Title['availability'][number] } => result.success,
+    )
+    .map((result) => result.data);
+}
+
+function titleFromCache(value: unknown): Title | null {
+  if (!isRecord(value)) return null;
+  const parsed = TitleSchema.safeParse({
+    ...value,
+    genres: stringArray(value.genres),
+    availability: availabilityArray(value.availability),
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+function titleArrayFromCache(value: unknown): Title[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(titleFromCache).filter((title): title is Title => title !== null);
+}
+
+function finiteNumberOrNull(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function fallbackReason(value: unknown): CatalogueFallbackReason | null {
+  if (
+    value === 'supabase_unconfigured' ||
+    value === 'query_failed' ||
+    value === 'live_empty' ||
+    value === 'service_empty' ||
+    value === 'filtered_empty' ||
+    value === 'exhausted' ||
+    value === 'unknown'
+  ) {
+    return value;
+  }
+  return null;
+}
+
+function normalizedDiagnostics(
+  value: unknown,
+  titles: Title[],
+  filter: TitleQueryFilter,
+): CatalogueDiagnostics {
+  if (!isRecord(value)) {
+    return makeDiagnostics({ titles, limit: filter.limit });
+  }
+  const diagnostics = makeDiagnostics({
+    titles,
+    liveCandidateCount: finiteNumberOrNull(value.liveCandidateCount),
+    afterServiceFilterCount: finiteNumberOrNull(value.afterServiceFilterCount),
+    fallbackReason: fallbackReason(value.fallbackReason),
+    isFallback: typeof value.isFallback === 'boolean' ? value.isFallback : false,
+    limit: filter.limit,
+  });
+  if (typeof value.finalCardsCount === 'number' && Number.isFinite(value.finalCardsCount)) {
+    diagnostics.finalCardsCount = value.finalCardsCount;
+  }
+  return diagnostics;
+}
+
+export function normalizeTitleQueryData(data: unknown, filter: TitleQueryFilter): TitleQueryResult {
+  if (Array.isArray(data)) {
+    const titles = titleArrayFromCache(data);
+    return {
+      titles,
+      diagnostics: makeDiagnostics({ titles, limit: filter.limit }),
+    };
+  }
+
+  if (isRecord(data) && 'titles' in data) {
+    const titles = titleArrayFromCache(data.titles);
+    return {
+      titles,
+      diagnostics: normalizedDiagnostics(data.diagnostics, titles, filter),
+    };
+  }
+
+  const titles: Title[] = [];
+  return {
+    titles,
+    diagnostics: makeDiagnostics({ titles, limit: filter.limit }),
+  };
 }

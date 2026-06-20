@@ -20,15 +20,15 @@ export function Chip({ label, selected, onPress, accessibilityLabel }: Props) {
       style={({ pressed }) => [
         styles.base,
         selected ? styles.selected : styles.unselected,
-        pressed && { opacity: 0.85 },
+        pressed && { opacity: 0.86, transform: [{ scale: 0.985 }] },
       ]}
     >
       <Text
         variant="body-s"
         style={{
-          color: selected ? colors.accent : colors.text,
+          color: selected ? colors.text : colors.textMuted,
           fontFamily: fonts.bodySemi,
-          letterSpacing: 0.2,
+          letterSpacing: 0.15,
         }}
       >
         {label}
@@ -43,12 +43,13 @@ export function ChipGroup({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   base: {
-    paddingVertical: 9,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1.5,
+    minHeight: 34,
+    paddingVertical: 7,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
   },
-  selected: { backgroundColor: colors.accentDim, borderColor: colors.accent },
-  unselected: { backgroundColor: 'transparent', borderColor: colors.border2 },
-  group: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  selected: { backgroundColor: 'rgba(255,77,28,0.16)', borderColor: colors.accentBorder },
+  unselected: { backgroundColor: 'rgba(245,245,240,0.035)', borderColor: colors.border },
+  group: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
 });

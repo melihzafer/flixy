@@ -92,7 +92,7 @@ describe('composeDeck', () => {
       ],
     });
     const unowned = mkTitle({ id: '00000000-0000-0000-0000-000000000002', popularity: 200 });
-    const { cards } = composeDeck({
+    const { cards, diagnostics } = composeDeck({
       candidates: [owned, unowned],
       taste: noTaste,
       ownedServiceIds: ['netflix'],
@@ -102,6 +102,9 @@ describe('composeDeck', () => {
       targetSize: 2,
     });
     expect(cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000001');
+    expect(diagnostics.candidateCount).toBe(2);
+    expect(diagnostics.eligibleCount).toBe(2);
+    expect(diagnostics.finalCardsCount).toBe(2);
   });
 
   it('marks isNarrow when pool smaller than target', () => {
@@ -116,6 +119,71 @@ describe('composeDeck', () => {
     });
     expect(isNarrow).toBe(true);
     expect(cards.length).toBe(1);
+  });
+
+  it('returns an empty deck when candidates are undefined', () => {
+    const { cards, isNarrow, diagnostics } = composeDeck({
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 3,
+    });
+
+    expect(cards).toEqual([]);
+    expect(isNarrow).toBe(true);
+    expect(diagnostics).toMatchObject({
+      candidateCount: 0,
+      eligibleCount: 0,
+      finalCardsCount: 0,
+      excludedCount: 0,
+    });
+  });
+
+  it('normalizes malformed title arrays before scoring', () => {
+    const malformedTitle = {
+      ...mkTitle({ id: '00000000-0000-0000-0000-000000000001' }),
+      availability: undefined,
+      genres: undefined,
+    } as unknown as Title;
+
+    const { cards, diagnostics } = composeDeck({
+      candidates: [malformedTitle],
+      taste: noTaste,
+      ownedServiceIds: ['netflix'],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 1,
+    });
+
+    expect(cards).toHaveLength(1);
+    expect(cards[0]?.title.genres).toEqual([]);
+    expect(cards[0]?.title.availability).toEqual([]);
+    expect(diagnostics.candidateCount).toBe(1);
+  });
+
+  it('reports exclusion diagnostics', () => {
+    const { diagnostics } = composeDeck({
+      candidates: [
+        mkTitle({ id: '00000000-0000-0000-0000-000000000001' }),
+        mkTitle({ id: '00000000-0000-0000-0000-000000000002' }),
+      ],
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(['00000000-0000-0000-0000-000000000001']),
+      targetSize: 2,
+    });
+
+    expect(diagnostics).toMatchObject({
+      candidateCount: 2,
+      eligibleCount: 1,
+      finalCardsCount: 1,
+      excludedCount: 1,
+    });
   });
 
   it('breaks runs of same-genre cards (diversity)', () => {
@@ -146,5 +214,38 @@ describe('composeDeck', () => {
       }
       expect(run).toBeLessThanOrEqual(3);
     }
+  });
+
+  it('boosts personalization using recommendationScores', () => {
+    const defaultTitle = mkTitle({ id: '00000000-0000-0000-0000-000000000001', popularity: 500 });
+    const recommendedTitle = mkTitle({
+      id: '00000000-0000-0000-0000-000000000002',
+      popularity: 400,
+    });
+
+    const deckWithout = composeDeck({
+      candidates: [defaultTitle, recommendedTitle],
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+    });
+    expect(deckWithout.cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000001');
+
+    const deckWith = composeDeck({
+      candidates: [defaultTitle, recommendedTitle],
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+      recommendationScores: {
+        '00000000-0000-0000-0000-000000000002': 0.9,
+      },
+    });
+    expect(deckWith.cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000002');
   });
 });

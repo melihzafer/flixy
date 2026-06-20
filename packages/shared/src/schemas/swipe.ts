@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { UserIdSchema } from './user';
+
 export const SwipeDirectionSchema = z.enum(['left', 'right', 'up', 'down']);
 export type SwipeDirection = z.infer<typeof SwipeDirectionSchema>;
 
@@ -9,7 +11,7 @@ export type SwipeDirection = z.infer<typeof SwipeDirectionSchema>;
  */
 export const SwipeEventSchema = z.object({
   eventId: z.string().uuid(),
-  userId: z.string().uuid(),
+  userId: UserIdSchema,
   titleId: z.string().uuid(),
   direction: SwipeDirectionSchema,
   occurredAt: z.string(),

@@ -16,6 +16,6 @@ export const queryClient = new QueryClient({
 
 export const queryPersister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'flixy.query-cache.v1',
+  key: 'flixy.query-cache.v2',
   throttleTime: 1000,
 });

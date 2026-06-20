@@ -1,4 +1,10 @@
-import { HandleSchema, LanguageCodeSchema, RegionCodeSchema, UserProfileSchema } from '../user';
+import {
+  HandleSchema,
+  LanguageCodeSchema,
+  RegionCodeSchema,
+  UserIdSchema,
+  UserProfileSchema,
+} from '../user';
 
 describe('UserProfile schema', () => {
   it('accepts a valid profile', () => {
@@ -19,6 +25,23 @@ describe('UserProfile schema', () => {
     expect(RegionCodeSchema.safeParse('Turkey').success).toBe(false);
     expect(RegionCodeSchema.safeParse('tr').success).toBe(false);
     expect(RegionCodeSchema.safeParse('TR').success).toBe(true);
+  });
+
+  it('accepts local-first user ids', () => {
+    expect(UserIdSchema.safeParse('anon').success).toBe(true);
+    expect(UserIdSchema.safeParse('user-qa@flixy.app').success).toBe(true);
+    expect(
+      UserProfileSchema.safeParse({
+        id: 'anon',
+        handle: null,
+        displayName: 'Anonymous',
+        avatarUrl: null,
+        region: 'US',
+        language: 'en',
+        isAnonymous: true,
+        createdAt: '2026-06-20T00:00:00.000Z',
+      }).success,
+    ).toBe(true);
   });
 
   it('only allows the seven launch languages', () => {

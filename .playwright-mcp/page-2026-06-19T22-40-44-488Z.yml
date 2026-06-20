@@ -1,0 +1,16 @@
+- generic [ref=e14]:
+  - generic [ref=e15]:
+    - generic [ref=e16]: Flixy
+    - generic [ref=e17]: Stop browsing. Start watching.
+    - generic [ref=e18]: Swipe through movies and shows curated for your taste.
+  - generic [ref=e19]:
+    - button "Create account" [ref=e20] [cursor=pointer]:
+      - generic [ref=e22]: Create account
+    - button "Continue with Google" [ref=e23] [cursor=pointer]:
+      - img [ref=e25]
+      - generic [ref=e30]: Continue with Google
+    - generic [ref=e31]:
+      - button "Just browse for now" [ref=e32] [cursor=pointer]:
+        - generic [ref=e33]: Just browse for now
+      - button "Sign in" [ref=e35] [cursor=pointer]:
+        - generic [ref=e36]: Sign in

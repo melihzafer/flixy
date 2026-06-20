@@ -7,6 +7,8 @@ export type DeckFilters = {
   kinds: ('movie' | 'tv')[];
   minYear: number | null;
   maxYear: number | null;
+  serviceIds: string[] | null;
+  genres: string[] | null;
 };
 
 const DEFAULTS: DeckFilters = {
@@ -14,12 +16,16 @@ const DEFAULTS: DeckFilters = {
   kinds: ['movie', 'tv'],
   minYear: null,
   maxYear: null,
+  serviceIds: null,
+  genres: null,
 };
 
 type State = DeckFilters & {
   setMood: (m: MoodPreset | null) => void;
   toggleKind: (k: 'movie' | 'tv') => void;
   setYears: (min: number | null, max: number | null) => void;
+  setServices: (services: string[] | null) => void;
+  setGenres: (genres: string[] | null) => void;
   reset: () => void;
 };
 
@@ -37,5 +43,7 @@ export const useDeckFilters = create<State>((set) => ({
       return { kinds: next.length === 0 ? s.kinds : next };
     }),
   setYears: (minYear, maxYear) => set({ minYear, maxYear }),
+  setServices: (serviceIds) => set({ serviceIds }),
+  setGenres: (genres) => set({ genres }),
   reset: () => set(DEFAULTS),
 }));

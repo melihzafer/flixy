@@ -1,16 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { z } from 'zod';
 
-import {
-  type Title,
-  type WatchlistItem,
-  WatchlistItemSchema,
-  type WatchlistPriority,
-} from '@flixy/shared';
+import type { Title, WatchlistItem, WatchlistPriority } from '@flixy/shared';
 
-import { supabase } from '../../lib/supabase';
 import { useSession } from '../auth/useSession';
 import { useTitlesByIds } from '../catalogue/hooks';
+import { events } from '../telemetry/events';
+import { rowToItem, watchlistSchemas, watchlistStore } from './store';
 
 /**
  * Watchlist read/write APIs (FSD section 3.7). Reads come from
@@ -20,29 +15,7 @@ import { useTitlesByIds } from '../catalogue/hooks';
  * queue).
  */
 
-const RowSchema = z.object({
-  id: z.string().uuid(),
-  user_id: z.string().uuid(),
-  title_id: z.string().uuid(),
-  priority: z.enum(['top', 'normal']),
-  position: z.number().int(),
-  added_at: z.string(),
-  watched_at: z.string().nullable(),
-  removed_at: z.string().nullable(),
-});
-
-function rowToItem(r: z.infer<typeof RowSchema>): WatchlistItem {
-  return WatchlistItemSchema.parse({
-    id: r.id,
-    userId: r.user_id,
-    titleId: r.title_id,
-    priority: r.priority,
-    position: r.position,
-    addedAt: r.added_at,
-    watchedAt: r.watched_at,
-    removedAt: r.removed_at,
-  });
-}
+export const __schemas = watchlistSchemas;
 
 export type WatchlistFilter = 'all' | 'top' | 'watched';
 
@@ -57,21 +30,23 @@ export function useWatchlist(filter: WatchlistFilter = 'all') {
     enabled: !!userId,
     queryFn: async () => {
       if (!userId) return [] as WatchlistItem[];
-      let q = supabase
-        .from('watchlist_items')
-        .select('*')
-        .eq('user_id', userId)
-        .is('removed_at', null);
-      if (filter === 'top') q = q.eq('priority', 'top');
-      if (filter === 'watched') q = q.not('watched_at', 'is', null);
-      else q = q.is('watched_at', null);
-      q = q.order('priority', { ascending: false }).order('position', { ascending: true });
-      const { data, error } = await q;
-      if (error) throw error;
-      return z
-        .array(RowSchema)
-        .parse(data ?? [])
-        .map(rowToItem);
+      const data = await watchlistStore.getWatchlist(userId);
+
+      let filtered = data;
+      if (filter === 'top') {
+        filtered = filtered.filter((i) => i.priority === 'top');
+      } else if (filter === 'watched') {
+        filtered = filtered.filter((i) => i.watched_at !== null);
+      }
+
+      // Sort by priority (top first), then position
+      const sorted = [...filtered].sort((a, b) => {
+        if (a.priority === 'top' && b.priority !== 'top') return -1;
+        if (a.priority !== 'top' && b.priority === 'top') return 1;
+        return a.position - b.position;
+      });
+
+      return sorted.map(rowToItem);
     },
   });
 
@@ -102,12 +77,9 @@ function useInvalidate() {
 export function useMarkWatched() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('watchlist_items')
-        .update({ watched_at: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
+    mutationFn: async ({ id, titleId }: { id: string; titleId: string }) => {
+      await watchlistStore.updateWatchlistItem(id, { watched_at: new Date().toISOString() });
+      events.watchlistMarkedWatched(titleId);
     },
     onSettled: () => invalidate(),
   });
@@ -116,12 +88,8 @@ export function useMarkWatched() {
 export function useUnmarkWatched() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('watchlist_items')
-        .update({ watched_at: null })
-        .eq('id', id);
-      if (error) throw error;
+    mutationFn: async ({ id }: { id: string; titleId: string }) => {
+      await watchlistStore.updateWatchlistItem(id, { watched_at: null });
     },
     onSettled: () => invalidate(),
   });
@@ -130,12 +98,9 @@ export function useUnmarkWatched() {
 export function useRemoveFromWatchlist() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('watchlist_items')
-        .update({ removed_at: new Date().toISOString() })
-        .eq('id', id);
-      if (error) throw error;
+    mutationFn: async ({ id, titleId }: { id: string; titleId: string }) => {
+      await watchlistStore.updateWatchlistItem(id, { removed_at: new Date().toISOString() });
+      events.watchlistRemoved(titleId);
     },
     onSettled: () => invalidate(),
   });
@@ -144,9 +109,17 @@ export function useRemoveFromWatchlist() {
 export function useSetPriority() {
   const invalidate = useInvalidate();
   return useMutation({
-    mutationFn: async ({ id, priority }: { id: string; priority: WatchlistPriority }) => {
-      const { error } = await supabase.from('watchlist_items').update({ priority }).eq('id', id);
-      if (error) throw error;
+    mutationFn: async ({
+      id,
+      titleId,
+      priority,
+    }: {
+      id: string;
+      titleId: string;
+      priority: WatchlistPriority;
+    }) => {
+      await watchlistStore.updateWatchlistItem(id, { priority });
+      events.watchlistPriorityChanged(titleId, priority === 'top' ? 1 : 0);
     },
     onSettled: () => invalidate(),
   });

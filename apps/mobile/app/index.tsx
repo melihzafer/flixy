@@ -25,7 +25,7 @@ function Spinner() {
  *   2. no session -> /(auth)/welcome
  *   3. session + prefs loading -> spinner
  *   4. session + onboarding incomplete -> /(onboarding)/welcome
- *   5. session + onboarded -> /(app)
+ *   5. session + onboarded -> /(app) (which renders the (tabs) group)
  */
 export default function Index() {
   const { data, isLoading } = useSession();
@@ -35,5 +35,5 @@ export default function Index() {
   if (!data?.session) return <Redirect href="/(auth)/welcome" />;
   if (prefsLoading) return <Spinner />;
   if (!isOnboarded) return <Redirect href="/(onboarding)/welcome" />;
-  return <Redirect href="/(app)" />;
+  return <Redirect href="/(app)/(tabs)/deck" />;
 }

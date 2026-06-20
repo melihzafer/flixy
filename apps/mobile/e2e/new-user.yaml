@@ -1,22 +1,26 @@
 # New user — sign up, complete onboarding, first cold-start swipe.
 # Maps to FSD § 15 New User journey.
-appId: app.flixy
+appId: app.flixy.mobile
 ---
 - launchApp:
     clearState: true
 - assertVisible: "Flixy"
-- tapOn: "Sign up"
+- tapOn: "Continue with email"
 - inputText: "qa+${output.timestamp}@flixy.app"
 - pressKey: Tab
 - inputText: "Test1234!"
 - tapOn: "Create account"
 - assertVisible:
-    text: "Pick your region"
+    text: "Where are you"
     timeout: 8000
-- tapOn: "United States"
+- tapOn: "US"
 - tapOn: "Continue"
-- tapOn: "Continue"  # services step (skip)
-- tapOn: "Continue"  # genres step (skip)
+- tapOn: "Netflix"
+- tapOn: "Continue"
+- tapOn: "Action"
+- tapOn: "Drama"
+- tapOn: "Thriller"
+- tapOn: "Continue"
 - assertVisible:
     id: "swipe-card"
     timeout: 8000
@@ -24,6 +28,24 @@ appId: app.flixy
     direction: RIGHT
 - swipe:
     direction: LEFT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: LEFT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: LEFT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: LEFT
+- swipe:
+    direction: RIGHT
+- swipe:
+    direction: LEFT
+- assertVisible: "Taste captured!"
+- tapOn: "Continue"
 - assertVisible: "Notifications"
-- tapOn: "Skip"
+- tapOn: "Maybe later"
 - assertVisible: "Flixy"

@@ -8,15 +8,15 @@ import { Text } from './Text';
  * letter, dimmed when the user does not own the service.
  */
 
-const BRAND: Record<string, { bg: string; letter: string }> = {
+const BRAND: Record<string, { bg: string; letter: string; border?: string }> = {
   netflix: { bg: '#E50914', letter: 'N' },
   prime: { bg: '#00A8E1', letter: 'P' },
   disney: { bg: '#0E2A65', letter: 'D' },
   hbo: { bg: '#5C2D91', letter: 'H' },
-  appletv: { bg: '#000000', letter: 'A' },
+  appletv: { bg: '#151311', letter: 'A', border: 'rgba(245,245,240,0.14)' },
   hulu: { bg: '#1CE783', letter: 'H' },
   paramount: { bg: '#0064FF', letter: 'P' },
-  peacock: { bg: '#000000', letter: 'P' },
+  peacock: { bg: '#16120F', letter: 'P', border: 'rgba(255,77,28,0.22)' },
 };
 
 type Size = 'sm' | 'md' | 'lg';
@@ -46,6 +46,8 @@ export function ServiceBadge({
           height: sz,
           borderRadius: sz * 0.28,
           backgroundColor: owned ? brand.bg : colors.surface3,
+          borderWidth: 1,
+          borderColor: owned ? (brand.border ?? 'rgba(245,245,240,0.1)') : colors.border,
           opacity: owned ? 1 : 0.45,
         },
       ]}

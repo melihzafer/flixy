@@ -1,0 +1,338 @@
+{
+  "session_id": "session-2026-06-20-1351",
+  "started": "2026-06-20T10:51:17.169Z",
+  "files_read": {
+    "D:/Projects/Flixy/supabase/migrations/0018_recommendations.sql": {
+      "count": 2,
+      "tokens": 1704,
+      "first_read": "2026-06-20T10:52:51.210Z"
+    },
+    "D:/Projects/Flixy/packages/shared/src/composer.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T10:52:51.537Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/features/deck/hooks.ts": {
+      "count": 1,
+      "tokens": 5200,
+      "first_read": "2026-06-20T10:52:51.741Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0016_watchlist_api_title_ids.sql": {
+      "count": 1,
+      "tokens": 250,
+      "first_read": "2026-06-20T10:53:34.942Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0005_swipes_and_taste.sql": {
+      "count": 2,
+      "tokens": 4200,
+      "first_read": "2026-06-20T10:53:35.371Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/lib/tmdb.ts": {
+      "count": 1,
+      "tokens": 5200,
+      "first_read": "2026-06-20T11:00:01.875Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/features/swipe/queue.ts": {
+      "count": 2,
+      "tokens": 1200,
+      "first_read": "2026-06-20T11:00:09.267Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/features/swipe/hooks.ts": {
+      "count": 1,
+      "tokens": 3600,
+      "first_read": "2026-06-20T11:00:21.628Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/omdb-enrich/index.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:01:06.319Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/supabaseWriter.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:01:06.475Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/catalogue-ingest/deno.json": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:01:13.794Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/omdb-enrich/deno.json": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:01:14.229Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0007_title_metadata_integrity.sql": {
+      "count": 2,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:02:18.249Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0008_catalogue_ingestion_runtime.sql": {
+      "count": 2,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:02:25.012Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0001_init_profiles.sql": {
+      "count": 1,
+      "tokens": 3300,
+      "first_read": "2026-06-20T11:09:57.080Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0002_user_preferences_lookups.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:09:58.043Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0003_profile_handle_and_avatars.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:09:58.228Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0004_titles_catalogue.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:10:53.218Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0006_user_push_tokens.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:12:11.855Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0009_catalogue_ingest_cron.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:13:06.781Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0010_omdb_enrichment.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:13:07.230Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0011_trakt_signals.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:13:08.133Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0012_enrichment_cron.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:13:09.522Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0013_catalogue_backfill_runtime.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:14:17.247Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0014_catalogue_backfill_candidates.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:14:17.737Z"
+    },
+    "D:/Projects/Flixy/supabase/migrations/0015_catalogue_cron_timeout.sql": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:14:18.246Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/(app)/title/[id].tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:21:48.829Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/catalogue-ingest/index.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:32:40.611Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/trakt-sync/index.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:32:41.143Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/traktClient.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:34:28.733Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/traktSync.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:34:29.109Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/cache.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:35:26.694Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/omdbClient.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:35:27.187Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/omdbEnrich.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:35:27.467Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/types.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:36:26.290Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/tmdbClient.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:36:26.488Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/mapper.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:36:33.265Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/ingest.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:36:33.735Z"
+    },
+    "D:/Projects/Flixy/supabase/functions/_shared/catalogue/backfill.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T11:36:34.080Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/eas.json": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-20T12:07:59.980Z"
+    }
+  },
+  "files_written": [
+    {
+      "file": "D:/Projects/Flixy/supabase/migrations/0018_recommendations.sql",
+      "action": "edit",
+      "tokens": 163,
+      "at": "2026-06-20T11:02:46.522Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/migrations/0018_recommendations.sql",
+      "action": "edit",
+      "tokens": 97,
+      "at": "2026-06-20T11:02:53.021Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/migrations/0018_recommendations.sql",
+      "action": "edit",
+      "tokens": 507,
+      "at": "2026-06-20T11:03:14.829Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/functions/_shared/catalogue/embeddings.ts",
+      "action": "create",
+      "tokens": 1249,
+      "at": "2026-06-20T11:03:36.463Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/functions/embed-titles/index.ts",
+      "action": "create",
+      "tokens": 702,
+      "at": "2026-06-20T11:03:58.414Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/functions/embed-titles/deno.json",
+      "action": "create",
+      "tokens": 24,
+      "at": "2026-06-20T11:04:02.610Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/functions/embed-titles/README.md",
+      "action": "create",
+      "tokens": 455,
+      "at": "2026-06-20T11:04:15.048Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/migrations/0018_recommendations.sql",
+      "action": "edit",
+      "tokens": 119,
+      "at": "2026-06-20T11:05:51.949Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/migrations/0019_recommendations_hardening.sql",
+      "action": "create",
+      "tokens": 1175,
+      "at": "2026-06-20T11:17:04.848Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/migrations/0020_taste_signal_security_invoker.sql",
+      "action": "create",
+      "tokens": 174,
+      "at": "2026-06-20T11:20:07.252Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/title/[id].tsx",
+      "action": "edit",
+      "tokens": 105,
+      "at": "2026-06-20T11:22:45.250Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/title/[id].tsx",
+      "action": "edit",
+      "tokens": 46,
+      "at": "2026-06-20T11:22:54.134Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/migrations/0021_embeddings_gte_small.sql",
+      "action": "create",
+      "tokens": 653,
+      "at": "2026-06-20T11:29:58.176Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/functions/_shared/catalogue/embeddings.ts",
+      "action": "create",
+      "tokens": 1069,
+      "at": "2026-06-20T11:30:16.565Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/functions/embed-titles/index.ts",
+      "action": "create",
+      "tokens": 817,
+      "at": "2026-06-20T11:30:35.431Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/supabase/functions/embed-titles/README.md",
+      "action": "create",
+      "tokens": 519,
+      "at": "2026-06-20T11:30:48.173Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/title/[id].tsx",
+      "action": "edit",
+      "tokens": 23,
+      "at": "2026-06-20T12:10:40.340Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/title/[id].tsx",
+      "action": "edit",
+      "tokens": 16,
+      "at": "2026-06-20T12:10:49.238Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/title/[id].tsx",
+      "action": "edit",
+      "tokens": 10,
+      "at": "2026-06-20T12:10:57.968Z"
+    }
+  ],
+  "edit_counts": {
+    "supabase/migrations/0018_recommendations.sql": 4,
+    "supabase/functions/_shared/catalogue/embeddings.ts": 2,
+    "supabase/functions/embed-titles/index.ts": 2,
+    "supabase/functions/embed-titles/deno.json": 1,
+    "supabase/functions/embed-titles/README.md": 2,
+    "supabase/migrations/0019_recommendations_hardening.sql": 1,
+    "supabase/migrations/0020_taste_signal_security_invoker.sql": 1,
+    "apps/mobile/app/(app)/title/[id].tsx": 5,
+    "supabase/migrations/0021_embeddings_gte_small.sql": 1
+  },
+  "anatomy_hits": 7,
+  "anatomy_misses": 33,
+  "repeated_reads_warned": 5,
+  "cerebrum_warnings": 0,
+  "stop_count": 11
+}

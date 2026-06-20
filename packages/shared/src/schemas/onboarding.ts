@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { LanguageCodeSchema, RegionCodeSchema } from './user';
+import { LanguageCodeSchema, RegionCodeSchema, UserIdSchema } from './user';
 
 /**
  * Onboarding state shared between mobile + (future) edge handlers.
@@ -43,7 +43,7 @@ export const ONBOARDING = {
 } as const;
 
 export const UserPreferencesSchema = z.object({
-  userId: z.string().uuid(),
+  userId: UserIdSchema,
   region: RegionCodeSchema,
   language: LanguageCodeSchema,
   selectedServices: z.array(StreamingServiceIdSchema),

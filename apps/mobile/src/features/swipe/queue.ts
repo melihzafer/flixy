@@ -4,8 +4,9 @@ import { create } from 'zustand';
 import type { SwipeEvent } from '@flixy/shared';
 import { SwipeEventSchema } from '@flixy/shared';
 
+import { localDb } from '../../lib/localDb';
 import { logger } from '../../lib/logger';
-import { supabase } from '../../lib/supabase';
+import { events } from '../telemetry/events';
 
 /**
  * Swipe queue (FSD section 3.6.4). Every swipe is an immutable event with a
@@ -17,7 +18,7 @@ import { supabase } from '../../lib/supabase';
  * useSession layer.
  */
 
-const STORAGE_KEY = 'flixy.swipe_queue.v1';
+const STORAGE_KEY = 'flixy.swipe_queue.v2';
 const MAX_BACKOFF_MS = 30_000;
 
 type QueueState = {
@@ -38,22 +39,19 @@ async function persist(pending: SwipeEvent[]): Promise<void> {
   }
 }
 
-async function postSwipe(ev: SwipeEvent): Promise<void> {
-  const { error } = await supabase.from('swipes').upsert(
-    {
-      event_id: ev.eventId,
-      user_id: ev.userId,
-      title_id: ev.titleId,
-      direction: ev.direction,
-      occurred_at: ev.occurredAt,
-      session_id: ev.sessionId,
-      deck_position: ev.deckPosition,
-      region: ev.region,
-      filters_snapshot: ev.filtersSnapshot,
-    },
-    { onConflict: 'event_id', ignoreDuplicates: true },
-  );
-  if (error) throw error;
+async function postSwipe(ev: SwipeEvent & { genres?: string[] }): Promise<void> {
+  await localDb.insertSwipe({
+    event_id: ev.eventId,
+    user_id: ev.userId,
+    title_id: ev.titleId,
+    direction: ev.direction,
+    occurred_at: ev.occurredAt,
+    session_id: ev.sessionId,
+    deck_position: ev.deckPosition,
+    region: ev.region,
+    filters_snapshot: ev.filtersSnapshot,
+    genres: ev.genres,
+  });
 }
 
 export const useSwipeQueue = create<QueueState>((set, get) => ({
@@ -103,10 +101,9 @@ export const useSwipeQueue = create<QueueState>((set, get) => ({
           const msg = (err as Error).message ?? 'unknown';
           set({ lastError: msg });
           logger.warn('swipe.flush failed; will retry', { message: msg });
+          events.swipeSyncFailed({ reason: msg, queued: get().pending.length });
           await new Promise((r) => setTimeout(r, backoff));
           backoff = Math.min(MAX_BACKOFF_MS, backoff * 2);
-          // Bail after one backoff cycle so the UI thread isn't blocked; the
-          // next enqueue or NetInfo reconnect triggers another flush attempt.
           break;
         }
       }
@@ -116,12 +113,6 @@ export const useSwipeQueue = create<QueueState>((set, get) => ({
   },
 
   markUndone: async (eventId) => {
-    // Compensating server-side update; preserved in history for analytics
-    // (FSD section 3.6.3). Best-effort — failures are tolerated.
-    const { error } = await supabase
-      .from('swipes')
-      .update({ is_undone: true })
-      .eq('event_id', eventId);
-    if (error) logger.warn('swipe.undo failed', { message: error.message });
+    await localDb.updateSwipe(eventId, { is_undone: true });
   },
 }));

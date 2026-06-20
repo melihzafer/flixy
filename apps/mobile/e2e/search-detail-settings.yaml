@@ -1,0 +1,43 @@
+# Search, detail, watchlist actions, and settings preference edits.
+appId: app.flixy.mobile
+---
+- launchApp:
+    clearState: false
+- tapOn:
+    id: "search-button"
+- tapOn: "Titles, genres, directors…"
+- inputText: "Inception"
+- assertVisible:
+    text: "Inception"
+    timeout: 8000
+- assertVisible:
+    id: "search-result-row"
+- tapOn: "Inception"
+- assertVisible: "Synopsis"
+- tapOn:
+    id: "detail-save-button"
+- tapOn:
+    id: "watchlist-button"
+- assertVisible:
+    id: "watchlist-row"
+    timeout: 5000
+- tapOn:
+    id: "watchlist-filter-top"
+- tapOn:
+    id: "watchlist-filter-all"
+- tapOn:
+    id: "profile-button"
+- tapOn:
+    id: "profile-settings-row"
+- tapOn:
+    id: "settings-services-row"
+- tapOn:
+    id: "settings-service-netflix"
+- tapOn:
+    id: "settings-services-save"
+- tapOn:
+    id: "settings-genres-row"
+- tapOn:
+    id: "settings-genre-action"
+- tapOn:
+    id: "settings-genres-save"

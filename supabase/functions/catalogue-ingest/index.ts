@@ -7,22 +7,29 @@
 // Modes:
 //   * trending — pulls TMDB trending/day per region (cheap, fresh)
 //   * full     — pulls popular + now_playing/on_the_air per region
+//   * backfill_step — processes one resumable TMDB export backfill step
 
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+import { processCatalogueBackfillStep } from '../_shared/catalogue/backfill.ts';
 import { runCatalogueIngestion } from '../_shared/catalogue/ingest.ts';
 import { TmdbClient } from '../_shared/catalogue/tmdbClient.ts';
 import type { CandidateSource, ContentType } from '../_shared/catalogue/types.ts';
 
-type IngestMode = 'trending' | 'full';
+type IngestMode = 'trending' | 'full' | 'backfill_step';
 
 type RequestBody = {
   mode?: IngestMode;
+  jobId?: string;
+  kind?: ContentType;
   regions?: string[];
   kinds?: ContentType[];
   limit?: number;
   dryRun?: boolean;
   language?: string;
+  snapshotDate?: string;
+  maxCandidates?: number;
+  maxSeconds?: number;
 };
 
 const DEFAULT_REGIONS = ['US', 'TR', 'BG', 'ES', 'DE', 'FR', 'BR'];
@@ -73,7 +80,8 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(400, { ok: false, error: 'invalid_json' });
   }
 
-  const mode: IngestMode = body.mode === 'full' ? 'full' : 'trending';
+  const mode: IngestMode =
+    body.mode === 'full' || body.mode === 'backfill_step' ? body.mode : 'trending';
   const regions =
     Array.isArray(body.regions) && body.regions.length > 0
       ? body.regions.map((r) => String(r).toUpperCase()).filter((r) => /^[A-Z]{2}$/.test(r))
@@ -82,6 +90,7 @@ Deno.serve(async (req: Request) => {
     Array.isArray(body.kinds) && body.kinds.length > 0
       ? body.kinds.filter(isValidKind)
       : DEFAULT_KINDS;
+  const backfillKind = isValidKind(body.kind) ? body.kind : (kinds[0] ?? 'movie');
   const limit =
     typeof body.limit === 'number' && body.limit > 0
       ? Math.min(Math.floor(body.limit), MAX_LIMIT)
@@ -122,7 +131,7 @@ Deno.serve(async (req: Request) => {
     .insert({
       mode: dryRun ? 'dry_run' : 'write',
       regions,
-      content_types: kinds,
+      content_types: mode === 'backfill_step' ? [backfillKind] : kinds,
       requested_limit: limit,
       candidate_count: 0,
       title_count: 0,
@@ -144,6 +153,46 @@ Deno.serve(async (req: Request) => {
   const runId = runRow.id as string;
 
   try {
+    if (mode === 'backfill_step') {
+      const result = await processCatalogueBackfillStep({
+        supabase,
+        tmdb,
+        jobId: body.jobId,
+        kind: body.jobId ? undefined : backfillKind,
+        regions,
+        language,
+        snapshotDate: body.snapshotDate,
+        batchSize: limit,
+        dryRun,
+        includeAdult: true,
+        includeUnreleased: true,
+        maxCandidates: body.maxCandidates,
+        maxSeconds: body.maxSeconds ?? 80,
+        autoStart: true,
+        useCache: true,
+      });
+
+      await supabase
+        .from('catalogue_ingest_runs')
+        .update({
+          candidate_count: result.succeededIds.length + result.failedIds.length,
+          title_count: result.titleCount,
+          video_count: result.videoCount,
+          availability_count: result.availabilityCount,
+          error_message:
+            result.failedIds.length > 0 ? `failed ids: ${result.failedIds.join(',')}` : null,
+        })
+        .eq('id', runId);
+
+      return jsonResponse(200, {
+        ok: true,
+        runId,
+        mode,
+        dryRun,
+        ...result,
+      });
+    }
+
     const result = await runCatalogueIngestion({
       supabase,
       tmdb,

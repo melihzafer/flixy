@@ -22,11 +22,12 @@ export const colors = {
 
   // Type
   text: '#F5F5F0',
-  textMuted: 'rgba(245,245,240,0.55)',
+  textMuted: 'rgba(245,245,240,0.45)',
   textDim: 'rgba(245,245,240,0.30)',
 
   // Brand
   accent: '#FF4D1C',
+  onAccent: '#170806',
   accentDim: 'rgba(255,77,28,0.18)',
   accentBorder: 'rgba(255,77,28,0.35)',
 
@@ -48,12 +49,16 @@ export const colors = {
 } as const;
 
 export const fonts = {
-  display: 'Newsreader_700Bold_Italic',
+  wordmark: 'Damion_400Regular',
+  display: 'Newsreader_800ExtraBold_Italic',
+  displayBold: 'Newsreader_700Bold_Italic',
   displaySemi: 'Newsreader_600SemiBold_Italic',
-  body: 'SpaceGrotesk_400Regular',
-  bodyMedium: 'SpaceGrotesk_500Medium',
-  bodySemi: 'SpaceGrotesk_600SemiBold',
-  bodyBold: 'SpaceGrotesk_700Bold',
+  displayRegular: 'Newsreader_400Regular',
+  displayMedium: 'Newsreader_500Medium',
+  body: 'DMSans_400Regular',
+  bodyMedium: 'DMSans_500Medium',
+  bodySemi: 'DMSans_600SemiBold',
+  bodyBold: 'DMSans_700Bold',
 } as const;
 
 export const radii = {
@@ -79,51 +84,63 @@ export const spacing = {
   16: 64,
 } as const;
 
+export const layout = {
+  wordmarkMinWidth: 104,
+} as const;
+
 export const typography = {
+  // Display — Newsreader (italic for hero/card titles, regular for section heads)
   'display-xl': {
     fontFamily: fonts.display,
-    fontSize: 48,
-    lineHeight: 52,
-    letterSpacing: -0.5,
-    fontStyle: 'italic',
-  },
-  'display-l': {
-    fontFamily: fonts.display,
-    fontSize: 38,
-    lineHeight: 42,
+    fontSize: 40,
+    lineHeight: 44,
     letterSpacing: -0.4,
     fontStyle: 'italic',
   },
-  'display-m': {
+  'display-l': {
     fontFamily: fonts.display,
     fontSize: 28,
     lineHeight: 32,
     letterSpacing: -0.3,
     fontStyle: 'italic',
   },
-  'display-s': {
-    fontFamily: fonts.display,
+  'display-m': {
+    fontFamily: fonts.displayMedium,
     fontSize: 22,
-    lineHeight: 26,
-    letterSpacing: -0.2,
-    fontStyle: 'italic',
+    lineHeight: 28,
+    letterSpacing: -0.1,
   },
-  'title-l': { fontFamily: fonts.bodySemi, fontSize: 18, lineHeight: 24 },
-  'title-m': { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 22 },
-  'body-l': { fontFamily: fonts.body, fontSize: 15, lineHeight: 22 },
+  'display-s': {
+    fontFamily: fonts.displayRegular,
+    fontSize: 18,
+    lineHeight: 24,
+  },
+  // Title — sans alternates kept for legacy callers
+  'title-l': { fontFamily: fonts.bodySemi, fontSize: 16, lineHeight: 24 },
+  'title-m': { fontFamily: fonts.bodySemi, fontSize: 14, lineHeight: 20 },
+  // Body — Space Grotesk regular
+  'body-l': { fontFamily: fonts.body, fontSize: 16, lineHeight: 24 },
   'body-m': { fontFamily: fonts.body, fontSize: 14, lineHeight: 20 },
   'body-s': { fontFamily: fonts.body, fontSize: 13, lineHeight: 18 },
-  caption: {
+  // Label — Space Grotesk Medium, uppercase, +0.04em ≈ 0.48px on 12px
+  label: {
     fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.48,
+    textTransform: 'uppercase',
+  },
+  caption: {
+    fontFamily: fonts.body,
     fontSize: 11,
     lineHeight: 14,
-    letterSpacing: 0.6,
   },
   overline: {
-    fontFamily: fonts.bodySemi,
-    fontSize: 10,
-    lineHeight: 12,
-    letterSpacing: 1.2,
+    fontFamily: fonts.bodyMedium,
+    fontSize: 12,
+    lineHeight: 16,
+    letterSpacing: 0.48,
+    textTransform: 'uppercase',
   },
 } as const;
 

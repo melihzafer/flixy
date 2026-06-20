@@ -1,6 +1,6 @@
 # Returning user — sign in, swipe, add to watchlist, verify.
 # Maps to FSD § 15 Returning User journey.
-appId: app.flixy
+appId: app.flixy.mobile
 ---
 - launchApp:
     clearState: false

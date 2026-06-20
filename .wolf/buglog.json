@@ -1,0 +1,2462 @@
+{
+  "version": 1,
+  "bugs": [
+    {
+      "id": "bug-107",
+      "timestamp": "2026-06-12T20:30:00+03:00",
+      "error_message": "Audit found three real settings/profile defects: (1) edit-profile.tsx has separate handle and display name inputs but useUpdateProfile only persists `name`, so the handle is silently dropped. (2) isHandleAvailable / isHandleTaken compares the candidate handle against `name` only, with no separate `handle` field, so two distinct handles were always treated as the same when their names matched. (3) settings-language.tsx writes profile.language but never calls i18n.changeLanguage, so the UI never re-renders in the saved language until the device locale matches. (4) welcome.tsx `handleAnon` skipped the root gate (`router.replace('/(app)')`) when isSupabaseConfigured is false, bypassing onboarding for anon users entirely.",
+      "file": "apps/mobile/src/features/profile/hooks.ts; apps/mobile/src/lib/localDb.ts; apps/mobile/src/lib/__tests__/localDb.test.ts; apps/mobile/src/features/auth/useI18nLanguage.ts (new); apps/mobile/app/(app)/settings-language.tsx; apps/mobile/app/(onboarding)/region.tsx; apps/mobile/app/(auth)/welcome.tsx; apps/mobile/app/_layout.tsx",
+      "root_cause": "LocalProfile had only `name` (display name) and the schema was shaped so handle was an alias of name. Language writes never reached i18next. The anon path had a legacy Supabase-config branch that took a shortcut around the routing gate.",
+      "fix": "Added a separate `handle` field on LocalProfile; isHandleTaken now checks handle first and falls back to name; useProfile/useUpdateProfile read and write both fields. settings-language.tsx and onboarding/region.tsx now call i18n.changeLanguage on success. New useI18nLanguage hook in the root layout syncs i18n whenever the saved profile language changes (covers app restart). welcome.tsx anon path always runs useAnonymousSignIn first then routes to '/' so the root gate decides where to send the user. New unit tests cover handle persistence, case-insensitive handle uniqueness, and clearUser handle cleanup.",
+      "tags": [
+        "settings",
+        "profile",
+        "handle",
+        "language",
+        "i18n",
+        "welcome",
+        "onboarding",
+        "local-first",
+        "fixed-e2e"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-12T20:30:00+03:00"
+    },
+    {
+      "id": "bug-108",
+      "timestamp": "2026-06-12T20:55:00+03:00",
+      "error_message": "User reported all settings/profile features broken: language change, region, services, genres, recommendation, auth, signout, and crucially 'when I do something and go back it redirects me to home even when I am in profile'. Five real defects: (1) navigation: (app)/_layout.tsx was a flat Tabs with every settings/edit-profile/title detail as a Tabs.Screen, so router.push to those screens from the profile tab pushed a stack screen whose back popped the tabs root and redirected to /(app)/deck. (2) Auth: createMockUser minted id=user-${Date.now()}, so every sign-in created a new user_id and the previous user data (wiped by useSignOut calling localDb.clearUser) was lost on re-login. (3) i18n: only en/tr/bg resource files existed, so picking Deutsch/Español/Français/Português fell back to en. (4) Sign-out from settings.tsx main page had no router.replace, leaving the user on a dead page. (5) Change password pushed to /(auth)/reset-password which uses useAuthRedirect and bounced signed-in users back to root.",
+      "file": "app/(app)/_layout.tsx; app/(app)/(tabs)/_layout.tsx; src/components/SettingsPage.tsx; src/features/auth/hooks.ts; src/lib/localDb.ts; src/i18n/index.ts; src/i18n/locales/{de,es,fr,pt-BR}.json; app/(app)/settings.tsx; app/(app)/settings-privacy.tsx; app/(app)/change-password.tsx; app/(app)/settings-account.tsx; src/features/onboarding/hooks.ts; src/features/auth/useI18nLanguage.ts; app.config.ts; app/index.tsx",
+      "root_cause": "Tabs+push was the wrong navigator stack shape; auth user_ids were unstable; i18n resource registry was missing languages; sign-out had no navigation handler; change-password lived in the auth group and ran the auth redirect.",
+      "fix": "Restructured (app) to a Stack wrapping a (tabs) Tabs group: tab files (deck, watchlist, search, profile, index) live in (app)/(tabs)/ with their own _layout.tsx; modal screens (settings-*, edit-profile, privacy, terms, title/[id], change-password) stay as Stack Screens of (app)/_layout.tsx so the system back button pops to the originating tab. Added an in-screen back button to SettingsPage. Stable user_id = user-${email} for accounts, fixed 'anon' for anon sessions; signOut no longer clears user data so re-sign-in restores prefs/watchlist/profile. Added de/es/fr/pt-BR locale files with translated common strings; i18n detects language from expo-localization and supports the new langs. Real Google OAuth uses WebBrowser.openAuthSessionAsync with EXPO_PUBLIC_GOOGLE_OAUTH_CLIENT_ID + flixy://oauth/google redirect; falls back to the device mock when no client_id is configured. Both settings.tsx and settings-account.tsx sign-out now router.replace('/(auth)/welcome'). Change password moved to (app)/change-password.tsx. Optimistic updates added to useUpdatePreferences and useUpdateProfileRegion (onMutate + rollback on error). Personalization banner added to deck empty state. Added a Delete account action in settings-privacy that uses useDeleteLocalAccount.",
+      "tags": [
+        "navigation",
+        "tabs",
+        "stack",
+        "settings",
+        "profile",
+        "auth",
+        "google-oauth",
+        "i18n",
+        "locale",
+        "personalization",
+        "deck",
+        "sign-out",
+        "fixed-e2e"
+      ],
+      "related_bugs": [
+        "bug-107"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-12T20:55:00+03:00"
+    },
+    {
+      "id": "bug-migration-0007-cast-keyword",
+      "timestamp": "2026-05-02T00:00:00Z",
+      "error_message": "ERROR: syntax error at or near \"cast\" (SQLSTATE 42601) when applying 0007_title_metadata_integrity.sql",
+      "file": "supabase/migrations/0007_title_metadata_integrity.sql",
+      "root_cause": "`cast` is a reserved SQL keyword in PostgreSQL; used unquoted as a column name in alter-table, insert column list, and update set clause.",
+      "fix": "Quote the column name as \\\"cast\\\" everywhere it appears as an identifier (lines 10, 44, 73).",
+      "tags": [
+        "supabase",
+        "migration",
+        "postgres",
+        "reserved-keyword",
+        "schema"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T00:00:00Z"
+    },
+    {
+      "id": "bug-tmdb-cache-missing",
+      "timestamp": "2026-05-02T00:00:00Z",
+      "error_message": "TMDB cache read failed: Could not find the table 'public.tmdb_ingest_cache' in the schema cache",
+      "file": "packages/catalogue-ingest/src/cache.ts",
+      "root_cause": "Migration 0008_catalogue_ingestion_runtime.sql (which creates tmdb_ingest_cache) is not applied to staging Supabase.",
+      "fix": "Apply migration 0008 via `supabase db push` against staging, or run CLI with --no-cache to bypass.",
+      "tags": [
+        "tmdb",
+        "ingest",
+        "supabase",
+        "migration",
+        "staging"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T00:00:00Z"
+    },
+    {
+      "id": "bug-tmdb-cli-env-mismatch",
+      "timestamp": "2026-05-02T00:00:00Z",
+      "error_message": "CLI requires SUPABASE_URL and TMDB_BEARER_TOKEN but .env.local defines EXPO_PUBLIC_SUPABASE_URL and TMDB_READ_ACCESS_TOKEN",
+      "file": "packages/catalogue-ingest/src/cli.ts",
+      "root_cause": "Env var naming drift between mobile (.env.local) and the server-side ingester CLI.",
+      "fix": "Workaround: shell-alias at run time (SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL TMDB_BEARER_TOKEN=$TMDB_READ_ACCESS_TOKEN). Permanent fix: have CLI fall back to EXPO_PUBLIC_SUPABASE_URL and TMDB_READ_ACCESS_TOKEN.",
+      "tags": [
+        "tmdb",
+        "ingest",
+        "env",
+        "cli",
+        "config"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T00:00:00Z"
+    },
+    {
+      "id": "bug-001",
+      "timestamp": "2026-04-27T13:39:20.531+03:00",
+      "error_message": "pnpm lint failed with 129 Biome errors and 9 warnings; pnpm lint && pnpm test exited before tests ran.",
+      "file": "multiple files",
+      "root_cause": "Repository lint scope includes unformatted OpenWolf/generated files and mobile app files with lint errors such as explicit any and unused imports.",
+      "fix": "Not fixed in this planning pass; added baseline cleanup as the first MVP plan task.",
+      "tags": [
+        "lint",
+        "biome",
+        "baseline",
+        "mvp"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-04-27T13:39:20.531+03:00"
+    },
+    {
+      "id": "bug-002",
+      "timestamp": "2026-05-01T15:29:06.559+03:00",
+      "error_message": "User reported the app does not fetch movies.",
+      "file": "apps/mobile/app/(onboarding)/services.tsx",
+      "root_cause": "Onboarding stored selected streaming service display names such as Netflix, but deck filtering expected service IDs such as netflix.",
+      "fix": "Services and genres now store normalized IDs; deck/catalogue filters normalize legacy names and genre labels before querying.",
+      "tags": [
+        "catalogue",
+        "deck",
+        "onboarding",
+        "filters"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T15:29:06.559+03:00"
+    },
+    {
+      "id": "bug-003",
+      "timestamp": "2026-05-01T15:29:06.559+03:00",
+      "error_message": "Supabase client throws 'supabaseUrl is required' when Expo env vars are absent.",
+      "file": "apps/mobile/src/lib/supabase.ts",
+      "root_cause": "The app passed empty strings into createClient during local/dev bootstraps with no EXPO_PUBLIC_SUPABASE_URL or anon key.",
+      "fix": "Added isSupabaseConfigured and placeholder client values so the app boots, then catalogue/auth code can degrade intentionally.",
+      "tags": [
+        "supabase",
+        "env",
+        "bootstrap"
+      ],
+      "related_bugs": [
+        "bug-002"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T15:29:06.559+03:00"
+    },
+    {
+      "id": "bug-004",
+      "timestamp": "2026-05-01T15:29:06.559+03:00",
+      "error_message": "expo export failed with ReferenceError: window is not defined from posthog-react-native AsyncStorage.",
+      "file": "apps/mobile/src/lib/analytics.ts",
+      "root_cause": "PostHog was instantiated at module load during Expo static rendering, which touched browser-only AsyncStorage globals.",
+      "fix": "Analytics now constructs PostHog only when window exists and sanitizes event properties before capture.",
+      "tags": [
+        "expo",
+        "web-export",
+        "analytics",
+        "ssr"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T15:29:06.559+03:00"
+    },
+    {
+      "id": "bug-005",
+      "timestamp": "2026-05-01T15:29:06.559+03:00",
+      "error_message": "pnpm lint failed on generated agent/design bundle files and app lint drift.",
+      "file": "biome.json",
+      "root_cause": "Biome scanned generated .agents/.design-bundle/.claude/.wolf files and several app files had format/type lint violations.",
+      "fix": "Ignored generated context folders in Biome and applied/fixed app lint violations so pnpm lint passes.",
+      "tags": [
+        "lint",
+        "biome",
+        "generated-files"
+      ],
+      "related_bugs": [
+        "bug-001"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T15:29:06.559+03:00"
+    },
+    {
+      "id": "bug-006",
+      "timestamp": "2026-05-01T00:00:00+03:00",
+      "error_message": "Supabase mobile OAuth callbacks with ?code= were ignored, leaving Google sign-in unable to complete PKCE sessions.",
+      "file": "apps/mobile/src/features/auth/hooks.ts",
+      "root_cause": "Auth callback handling only parsed access_token and refresh_token from URL fragments and duplicated that logic between WebBrowser and deep-link paths.",
+      "fix": "Added shared OAuth callback parsing/completion for PKCE code exchange and fragment token sessions, reused it from WebBrowser and Linking handlers, and bootstrapped missing onboarding preference rows after auth.",
+      "tags": [
+        "auth",
+        "oauth",
+        "pkce",
+        "navigation",
+        "onboarding"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T00:00:00+03:00"
+    },
+    {
+      "id": "bug-007",
+      "timestamp": "2026-05-01T00:00:00+03:00",
+      "error_message": "Catalogue fallback/search/deck states looked like normal product data and fallback catalogue only covered 15 of 20 seed titles.",
+      "file": "apps/mobile/src/features/catalogue/hooks.ts",
+      "root_cause": "Catalogue hooks returned plain title arrays and silently fell back on live-empty/service-empty cases, so deck/search had no degraded-state diagnostics; fallbackCatalogue.ts also lagged the 20-title Supabase dev seed.",
+      "fix": "Catalogue/search hooks now return explicit diagnostics and reason codes, deck composition reports candidate/exclusion/final counts with a relaxed query recovery path and reason-specific empty copy, search shows fallback state and wider trending, and fallback catalogue now matches the 20-title seed.",
+      "tags": [
+        "catalogue",
+        "deck",
+        "search",
+        "fallback",
+        "diagnostics"
+      ],
+      "related_bugs": [
+        "bug-002"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T00:00:00+03:00"
+    },
+    {
+      "id": "bug-008",
+      "timestamp": "2026-05-01T00:00:00+03:00",
+      "error_message": "Auth forms could be obscured by keyboards and auth screens duplicated local social button implementations with unstable glyphs.",
+      "file": "apps/mobile/src/components/AuthSheet.tsx",
+      "root_cause": "The auth surface was bottom anchored and screens used local SocialBtn components with emoji/text glyphs instead of the shared provider primitive.",
+      "fix": "AuthSheet now centers a safe-area KeyboardAvoidingView card, auth screens use the shared SocialButton with stable marks, and auth inputs expose visible labels.",
+      "tags": [
+        "auth",
+        "keyboard",
+        "accessibility",
+        "ui-system"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T00:00:00+03:00"
+    },
+    {
+      "id": "bug-009",
+      "timestamp": "2026-05-01T00:00:00+03:00",
+      "error_message": "Profile/settings product surfaces displayed fake identity/location fallbacks and long preference values could collapse rows.",
+      "file": "apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "Profile and settings screens built their own display strings with hard-coded defaults such as User/@user/Istanbul and ad-hoc rows without robust truncation.",
+      "fix": "Added a shared profile/preference display mapper, reused SettingsRow for robust rows, removed fake fallbacks, localized genre summaries, mapped service IDs to names, and made read-only/coming-soon settings explicit.",
+      "tags": [
+        "profile",
+        "settings",
+        "preferences",
+        "ui"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T00:00:00+03:00"
+    },
+    {
+      "id": "bug-010",
+      "timestamp": "2026-05-01T17:40:38.863+03:00",
+      "error_message": "User reports Flixv branding leakage, weak auth UI, unreadable auth inputs/password, bad keyboard behavior, unstable Google OAuth, and runtime crash: Cannot read property 'filter' of undefined.",
+      "file": "apps/mobile/src/components/AuthSheet.tsx; apps/mobile/src/components/Input.tsx; apps/mobile/src/features/auth/hooks.ts; apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "Auth surfaces still read as generic card/form UI, duplicated local dividers and links, weak keyboard-safe layout, and inputs lacked an inline password reveal control. OAuth mutation could treat browser return as successful without proving a callback was handled or a fresh session existed; duplicate native/linking callbacks could also re-run PKCE exchange. Deck crash was caused by stale persisted TanStack catalogue data hydrating the old Title[] shape after useTitlesQuery changed to { titles, diagnostics }, plus unsafe assumptions around malformed title arrays.",
+      "fix": "Auth UI/input scope completed: AuthSheet is now a full-screen cinematic, keyboard-safe poster surface; auth routes share AuthHeader/AuthDivider/AuthMessage/AuthFooterLink; Input has visible auth-grade text, focus/error/helper states, caret/selection color, and password reveal; SocialButton is stable Google/email only. OAuth now classifies browser results, logs redirect/result/handled flow without token URLs, waits briefly for Android deep-link session arrival, conditionally invalidates only completed sessions, dedupes repeated PKCE callbacks, and has callback/result regression tests. Deck/catalogue crash scope fixed earlier by bumping the AsyncStorage persister to flixy.query-cache.v2, adding shape-v2 title query keys, normalizing legacy Title[] and malformed cached titles to { titles, diagnostics }, guarding deck/cold-start consumers, hardening composeDeck against undefined/malformed candidates, and adding regression tests.",
+      "tags": [
+        "planning",
+        "brand",
+        "auth",
+        "oauth",
+        "deck",
+        "cache",
+        "crash",
+        "fixed-oauth",
+        "fixed-deck",
+        "fixed-auth-ui",
+        "fixed-input",
+        "keyboard"
+      ],
+      "related_bugs": [
+        "bug-006",
+        "bug-007",
+        "bug-008"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T17:53:22.3404752+03:00"
+    },
+    {
+      "id": "bug-011",
+      "timestamp": "2026-05-01T17:51:15.0588945+03:00",
+      "error_message": "PowerShell rejected a Bash-style python heredoc with 'Missing file specification after redirection operator.'",
+      "file": "session command",
+      "root_cause": "Used Unix heredoc syntax in PowerShell while counting brand-string occurrences.",
+      "fix": "Retried with a PowerShell here-string piped to python, which completed the count successfully.",
+      "tags": [
+        "powershell",
+        "command",
+        "audit"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T17:51:15.0607802+03:00"
+    },
+    {
+      "id": "bug-012",
+      "timestamp": "2026-05-01T17:52:22.597+03:00",
+      "error_message": "Focused OAuth tests initially failed because Supabase auth mocks returned { error: null } without the typed data payload; focused Biome check then failed on touched auth file formatting.",
+      "file": "apps/mobile/src/features/auth/__tests__/oauthCallback.test.ts",
+      "root_cause": "New tests used under-shaped Supabase mock responses and manual patches left formatter/import-order drift.",
+      "fix": "Typed test mocks now return data placeholders, and touched auth files were normalized with Biome after apply_patch edits.",
+      "tags": [
+        "test",
+        "typescript",
+        "biome",
+        "auth",
+        "oauth"
+      ],
+      "related_bugs": [
+        "bug-010"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T17:52:22.597+03:00"
+    },
+    {
+      "id": "bug-013",
+      "timestamp": "2026-05-01T17:52:41.1577062+03:00",
+      "error_message": "Catalogue normalization test initially failed because importing catalogue hooks pulled untransformed ESM from @sentry/react-native and expo-secure-store.",
+      "file": "apps/mobile/src/features/catalogue/__tests__/hooks.test.ts",
+      "root_cause": "The pure normalizer test imported the catalogue hook module without mocking React Native native-side dependencies reached through logger and Supabase initialization.",
+      "fix": "Mocked @sentry/react-native and the local Supabase module in the catalogue normalization test so it exercises normalizeTitleQueryData without loading native ESM packages.",
+      "tags": [
+        "test",
+        "jest",
+        "catalogue",
+        "native-mock"
+      ],
+      "related_bugs": [
+        "bug-010"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T17:52:41.1577062+03:00"
+    },
+    {
+      "id": "bug-014",
+      "timestamp": "2026-05-01T17:54:33.7392812+03:00",
+      "error_message": "Focused full Biome check failed on touched auth files because the formatter wanted to rewrite CRLF line endings/format output.",
+      "file": "apps/mobile/app/(auth)/sign-in.tsx",
+      "root_cause": "The Windows working tree and Biome formatter disagreed on line ending/format normalization for touched files; the diagnostics were formatting-only after code lint/import checks passed.",
+      "fix": "Ran focused Biome with formatter disabled to validate lint/import correctness, which passed on all touched auth UI, component, and locale files. Full formatter normalization was left unchanged to respect the apply_patch-only edit constraint.",
+      "tags": [
+        "biome",
+        "format",
+        "line-endings",
+        "validation"
+      ],
+      "related_bugs": [
+        "bug-012"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T17:54:33.7392812+03:00"
+    },
+    {
+      "id": "bug-015",
+      "timestamp": "2026-05-01T18:01:29.888000+03:00",
+      "error_message": "PowerShell rejected a Bash-style python heredoc with 'Missing file specification after redirection operator.' while updating OpenWolf tracking.",
+      "file": "session command",
+      "root_cause": "Used Unix heredoc redirection syntax in a Windows PowerShell session.",
+      "fix": "Retried with a PowerShell here-string piped into python, then updated cerebrum tracking successfully.",
+      "tags": [
+        "powershell",
+        "command",
+        "openwolf"
+      ],
+      "related_bugs": [
+        "bug-011"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T18:01:29.888000+03:00"
+    },
+    {
+      "id": "bug-016",
+      "timestamp": "2026-05-01T18:07:00.458487+03:00",
+      "error_message": "Regression audit found generic watchlist empty-state copy and unversioned detail/title-id catalogue query keys after cache-shape hardening.",
+      "file": "apps/mobile/app/(app)/watchlist.tsx; apps/mobile/src/features/catalogue/hooks.ts",
+      "root_cause": "The earlier brand/cache passes covered main deck/title-list paths but left watchlist empty copy hardcoded and useTitle/useTitlesByIds on old persisted query keys.",
+      "fix": "Watchlist empty states now use localized filter-aware copy, and useTitle/useTitlesByIds include the shared title query shape version in their query keys.",
+      "tags": [
+        "regression",
+        "watchlist",
+        "empty-state",
+        "catalogue",
+        "cache"
+      ],
+      "related_bugs": [
+        "bug-010"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T18:07:00.458487+03:00"
+    },
+    {
+      "id": "bug-017",
+      "timestamp": "2026-05-01T18:07:00.458487+03:00",
+      "error_message": "PowerShell treated unquoted Expo Router path apps\\mobile\\app\\(app)\\watchlist.tsx as syntax/command and printed 'The term app is not recognized'.",
+      "file": "session command",
+      "root_cause": "The route-group parentheses in an unquoted Windows path were parsed by PowerShell instead of passed to git.",
+      "fix": "Retried the git diff command with the route-group path quoted and recorded the PowerShell gotcha in cerebrum.",
+      "tags": [
+        "powershell",
+        "command",
+        "expo-router",
+        "audit"
+      ],
+      "related_bugs": [
+        "bug-011",
+        "bug-015"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T18:07:00.458487+03:00"
+    },
+    {
+      "id": "bug-018",
+      "timestamp": "2026-05-01T18:21:32+03:00",
+      "error_message": "User complaint: \"Terrible layout u should chekc layout stop using hte emojies use icons instead and the fontof the auth and the normal apps font are diffrents auht signign buttons text color should be changed and make it as a button with background and center it. the apps layout is terrible by the way\"",
+      "file": "multiple mobile UI files",
+      "root_cause": "Audit found literal emoji/glyph characters still used as UI icons across tab bar, deck actions, filters, search, title detail, onboarding, and profile/watchlist rows; typography is tokenized but app screens often apply Newsreader display type to dense product labels while CustomTabBar uses raw React Native Text for glyph icons; auth social/buttons are centered with backgrounds, but primary text sometimes uses warm ivory on orange instead of the darker button foreground token.",
+      "fix": "Audit only: recommended replacing literal glyphs with lucide-react-native icons, consolidating app/auth typography through shared Text/tokens, and standardizing auth/app primary button text color, shape, and centered layout.",
+      "tags": [
+        "audit",
+        "layout",
+        "icons",
+        "emoji",
+        "typography",
+        "auth-ui"
+      ],
+      "related_bugs": [
+        "bug-008",
+        "bug-010"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T18:21:32+03:00"
+    },
+    {
+      "id": "bug-019",
+      "timestamp": "2026-05-01T18:21:32+03:00",
+      "error_message": "rg failed with regex parse error because look-around '(?!Input)' is unsupported by default ripgrep regex.",
+      "file": "session command",
+      "root_cause": "A lookahead pattern was used with the rg tool, whose default regex engine does not support look-around.",
+      "fix": "Retried with simpler literal searches and separate patterns instead of lookahead.",
+      "tags": [
+        "rg",
+        "regex",
+        "command",
+        "audit"
+      ],
+      "related_bugs": [
+        "bug-011",
+        "bug-015",
+        "bug-017"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T18:21:32+03:00"
+    },
+    {
+      "id": "bug-020",
+      "timestamp": "2026-05-01T18:25:32+03:00",
+      "error_message": "User complaint: auth layout still bad, auth sign-in/sign-up footer actions were text links, glyphs should be icons, auth/app fonts differed, orange CTA text needed readable contrast, and AuthMessage used a side-stripe style.",
+      "file": "apps/mobile/src/components/AuthSheet.tsx; apps/mobile/src/components/SocialButton.tsx; apps/mobile/app/(auth)/welcome.tsx; apps/mobile/src/components/Button.tsx",
+      "root_cause": "AuthFooterLink still rendered footer actions as inline text links; AuthMessage used a left accent stripe; SocialButton used a text G provider mark and welcome anonymous loading used a literal ellipsis glyph. Shared auth controls needed to stay on Space Grotesk while preserving display serif only for the wordmark/headline.",
+      "fix": "Converted AuthFooterLink actions into centered secondary background buttons with readable text, changed AuthMessage to full bordered/tinted messages with no side stripe, replaced the Google text mark with a lucide icon and anonymous ellipsis with ActivityIndicator, and verified Button primary already uses dark foreground on orange.",
+      "tags": [
+        "auth",
+        "layout",
+        "buttons",
+        "icons",
+        "typography",
+        "contrast",
+        "ui"
+      ],
+      "related_bugs": [
+        "bug-008",
+        "bug-018"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T18:25:32+03:00"
+    },
+    {
+      "id": "bug-021",
+      "timestamp": "2026-05-01T18:30:14+03:00",
+      "error_message": "Node icon export probe failed with SyntaxError: Unexpected token 'typeof' while requiring lucide-react-native.",
+      "file": "session command",
+      "root_cause": "Requiring lucide-react-native directly in Node traversed React Native entry files containing Flow syntax that plain Node cannot parse.",
+      "fix": "Verified Lucide icon availability from the installed package type declarations instead of requiring the React Native package at runtime.",
+      "tags": [
+        "command",
+        "lucide-react-native",
+        "react-native",
+        "flow-syntax"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T18:30:14+03:00"
+    },
+    {
+      "id": "bug-022",
+      "timestamp": "2026-05-02T01:16:00+03:00",
+      "error_message": "supabase db push failed with status 403 and requested SUPABASE_DB_PASSWORD.",
+      "file": "supabase/migrations/0007_title_metadata_integrity.sql; supabase/migrations/0008_catalogue_ingestion_runtime.sql",
+      "root_cause": "The current Supabase account lacks privileges to access the remote database push endpoint without explicit database password credentials.",
+      "fix": "Migration was written but DB push is blocked until SUPABASE_DB_PASSWORD or sufficient Supabase privileges are provided.",
+      "tags": [
+        "supabase",
+        "migration",
+        "db-push",
+        "permissions"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-05-02T01:50:00+03:00"
+    },
+    {
+      "id": "bug-023",
+      "timestamp": "2026-05-02T01:17:00+03:00",
+      "error_message": "Mobile typecheck failed with TS2552: Cannot find name 'events' in app/(app)/deck.tsx.",
+      "file": "apps/mobile/app/(app)/deck.tsx",
+      "root_cause": "Telemetry calls for anonymous upgrade events were added to the deck without importing the central event catalogue.",
+      "fix": "Imported events from src/features/telemetry/events in deck.tsx.",
+      "tags": [
+        "typescript",
+        "telemetry",
+        "deck",
+        "typecheck"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T01:17:00+03:00"
+    },
+    {
+      "id": "bug-024",
+      "timestamp": "2026-05-02T01:19:00+03:00",
+      "error_message": "Mobile Jest failed with TS1005 ')' expected in src/features/catalogue/__tests__/display.test.ts.",
+      "file": "apps/mobile/src/features/catalogue/__tests__/display.test.ts",
+      "root_cause": "New display regression test had the helper and describe block closers inverted.",
+      "fix": "Restored the helper function closing brace and closed the describe block correctly.",
+      "tags": [
+        "jest",
+        "typescript",
+        "catalogue",
+        "test"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-05-02T01:20:00+03:00"
+    },
+    {
+      "id": "bug-025",
+      "timestamp": "2026-05-02T01:22:00+03:00",
+      "error_message": "Repository lint failed because apps/mobile/expo-env.d.ts needed formatter normalization.",
+      "file": "apps/mobile/expo-env.d.ts",
+      "root_cause": "Generated Expo env declaration had a missing trailing newline relative to Biome formatting rules.",
+      "fix": "Ran Biome write on the generated declaration, then pnpm lint passed.",
+      "tags": [
+        "biome",
+        "format",
+        "expo",
+        "validation"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-05-02T01:50:00+03:00"
+    },
+    {
+      "id": "bug-026",
+      "timestamp": "2026-05-01T22:41:28+00:00",
+      "error_message": "Fleet todo action-button-system found deck swipe controls and title detail action controls implemented as separate local button languages.",
+      "file": "apps/mobile/src/components/ActionButton.tsx; apps/mobile/app/(app)/deck.tsx; apps/mobile/app/(app)/title/[id].tsx",
+      "root_cause": "Deck and detail surfaces had independent Pressable implementations with different shapes, state styling, labels, foreground contrast, and disabled/loading vocabulary.",
+      "fix": "Expanded the shared ActionButton primitive into the Lucide-based action system and migrated deck and title detail swipe controls to use shared tone, sizing, labels, accessibility labels, disabled, selected, pressed, and loading states.",
+      "tags": [
+        "ui",
+        "action-buttons",
+        "deck",
+        "title-detail",
+        "lucide",
+        "accessibility"
+      ],
+      "related_bugs": [
+        "bug-018",
+        "bug-020"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T22:41:28+00:00"
+    },
+    {
+      "id": "bug-027",
+      "timestamp": "2026-05-01T22:41:28+00:00",
+      "error_message": "Focused Biome check failed after ActionButton changes because imports needed organizeImports formatting.",
+      "file": "apps/mobile/src/components/ActionButton.tsx; apps/mobile/app/(app)/deck.tsx; apps/mobile/app/(app)/title/[id].tsx",
+      "root_cause": "The initial manual edit left import ordering and formatting inconsistent with Biome rules.",
+      "fix": "Ran focused Biome check --write on touched files, then reran focused Biome successfully.",
+      "tags": [
+        "biome",
+        "format",
+        "validation",
+        "action-buttons"
+      ],
+      "related_bugs": [
+        "bug-025"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T22:41:28+00:00"
+    },
+    {
+      "id": "bug-028",
+      "timestamp": "2026-05-02T01:41:29+03:00",
+      "error_message": "User reported Google OAuth appears to loop infinitely on the account picker and blocks real signups.",
+      "file": "apps/mobile/src/features/auth/hooks.ts; apps/mobile/src/features/auth/oauthCallback.ts; docs/HUMAN_BLOCKERS.md",
+      "root_cause": "Code audit found remaining hardening gaps around canonical native redirect construction, callback origin allow-listing, duplicate fragment callbacks, and sensitive redirect/error telemetry; exact provider account-picker loops still require external Google/Supabase redirect verification.",
+      "fix": "Forced the native Google OAuth redirect URI to flixy:///, allow-listed only Flixy callback origins/paths, deduped fragment callbacks with hashed keys, sanitized OAuth failure logs/telemetry, and added the external dashboard checklist.",
+      "tags": [
+        "auth",
+        "oauth",
+        "google",
+        "supabase",
+        "redirect",
+        "deep-link"
+      ],
+      "related_bugs": [
+        "bug-012"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T01:41:29+03:00"
+    },
+    {
+      "id": "bug-029",
+      "timestamp": "2026-05-02T01:41:29+03:00",
+      "error_message": "Focused Biome check failed after OAuth edits because formatter changes were needed on touched auth files.",
+      "file": "apps/mobile/src/features/auth/hooks.ts; apps/mobile/src/features/auth/oauthCallback.ts; apps/mobile/src/features/auth/__tests__/oauthCallback.test.ts",
+      "root_cause": "Manual OAuth hardening edits left Biome formatter drift before the focused check was rerun.",
+      "fix": "Ran focused Biome with --write on the touched OAuth files, then reran focused Biome successfully.",
+      "tags": [
+        "biome",
+        "format",
+        "validation",
+        "oauth"
+      ],
+      "related_bugs": [
+        "bug-012",
+        "bug-014"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T01:41:29+03:00"
+    },
+    {
+      "id": "bug-030",
+      "timestamp": "2026-05-02T01:42:08+03:00",
+      "error_message": "OpenWolf anatomy apply_patch failed because the expected line context was not matched exactly.",
+      "file": ".wolf/anatomy.md",
+      "root_cause": "The first exact apply_patch hunk did not match the current anatomy line context despite the target entries existing.",
+      "fix": "Retried with a PowerShell string replacement against the current anatomy entries and appended memory entries for the retry.",
+      "tags": [
+        "openwolf",
+        "apply_patch",
+        "anatomy",
+        "command"
+      ],
+      "related_bugs": [
+        "bug-015"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T01:42:08+03:00"
+    },
+    {
+      "id": "bug-031",
+      "timestamp": "2026-05-02T01:44:35+03:00",
+      "error_message": "Catalogue ingestion validation failed initially: tsc rejected widened 'youtube' provider/auth union types, then Biome rejected console usage and literal computed keys.",
+      "file": "packages/catalogue-ingest/src/mapper.ts; packages/catalogue-ingest/src/tmdbClient.ts; packages/catalogue-ingest/src/cli.ts",
+      "root_cause": "New ingestion code used inferred string literals and discriminated-union narrowing that did not satisfy strict TypeScript, and CLI output used console despite Biome noConsole.",
+      "fix": "Pinned the provider literal with 'as const', narrowed TMDB auth explicitly, switched CLI output to process stdout/stderr, simplified watch/providers type keys, and reran validation successfully.",
+      "tags": [
+        "catalogue-ingest",
+        "typescript",
+        "biome",
+        "validation"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T01:44:35+03:00"
+    },
+    {
+      "id": "bug-032",
+      "timestamp": "2026-05-02T01:45:32+03:00",
+      "error_message": "Fleet todo auth-brand-unification found remaining auth brand issues: Welcome email CTA was secondary/neutral, browse/back/forgot were local Pressable text actions, and AuthSheet ember glow used a negative edge bleed.",
+      "file": "apps/mobile/app/(auth)/welcome.tsx; apps/mobile/app/(auth)/sign-in.tsx; apps/mobile/app/(auth)/reset-password.tsx; apps/mobile/src/components/AuthSheet.tsx; apps/mobile/src/components/SocialButton.tsx",
+      "root_cause": "Earlier auth polish introduced the cinematic shared surface but left one primary account path as an email social button, kept tertiary auth actions duplicated per route, and positioned the decorative ember partially off-canvas.",
+      "fix": "Welcome now uses the shared primary Button for Create Account, SocialButton is Google-only, browse/back/forgot use shared AuthTertiaryAction with loading/accessibility states, and the ember glow sits inside the canvas with lower opacity.",
+      "tags": [
+        "auth",
+        "brand",
+        "cta",
+        "layout",
+        "ui-system",
+        "contrast"
+      ],
+      "related_bugs": [
+        "bug-020"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T01:45:32+03:00"
+    },
+    {
+      "id": "bug-033",
+      "timestamp": "2026-05-02T01:45:32+03:00",
+      "error_message": "OpenWolf designqc auth screenshot capture failed because the auto-started dev server did not respond on port 3000; a manual Expo web start then prompted for an alternate port and did not become responsive to probes.",
+      "file": "session command",
+      "root_cause": "The designqc auto-start path runs pnpm start and expects a conventional web server on port 3000, while this Expo app serves web through Expo's Metro port negotiation.",
+      "fix": "Code validation continued with focused Biome and mobile typecheck; future screenshot QC should start Expo web with a known responsive URL first, then pass that URL to openwolf designqc.",
+      "tags": [
+        "openwolf",
+        "designqc",
+        "expo",
+        "validation",
+        "port"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T01:45:32+03:00"
+    },
+    {
+      "id": "bug-034",
+      "timestamp": "2026-05-01T23:09:49.999Z",
+      "error_message": "Missing guard clause",
+      "file": "apps/mobile/src/features/catalogue/display.ts",
+      "root_cause": "No early return/throw for edge case: !mins || mins <= 0",
+      "fix": "Added guard clause: if (!mins || mins <= 0)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:09:49.999Z"
+    },
+    {
+      "id": "bug-035",
+      "timestamp": "2026-05-01T23:10:06.783Z",
+      "error_message": "Wrong reference: analytics should be track",
+      "file": "apps/mobile/app/(onboarding)/notifications.tsx",
+      "root_cause": "Used \"analytics\" instead of \"track\"",
+      "fix": "Changed analytics → track",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:10:06.783Z"
+    },
+    {
+      "id": "bug-036",
+      "timestamp": "2026-05-01T23:10:15.249Z",
+      "error_message": "CSS fix: lineHeight",
+      "file": "apps/mobile/app/(onboarding)/notifications.tsx",
+      "root_cause": "lineHeight: 32, → 34,",
+      "fix": "Changed lineHeight: 32, → 34,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-05-01T23:10:24.687Z"
+    },
+    {
+      "id": "bug-037",
+      "timestamp": "2026-05-01T23:10:41.532Z",
+      "error_message": "Incorrect value in code",
+      "file": "apps/mobile/src/features/catalogue/__tests__/display.test.ts",
+      "root_cause": "Had '1h 0m'",
+      "fix": "Changed to '1h'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:10:41.532Z"
+    },
+    {
+      "id": "bug-038",
+      "timestamp": "2026-05-01T23:14:54.433Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(onboarding)/cold-start.tsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 33→61 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:14:54.433Z"
+    },
+    {
+      "id": "bug-039",
+      "timestamp": "2026-05-01T23:15:12.399Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:15:12.399Z"
+    },
+    {
+      "id": "bug-040",
+      "timestamp": "2026-05-01T23:15:26.522Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(app)/search.tsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 8→11 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:15:26.522Z"
+    },
+    {
+      "id": "bug-041",
+      "timestamp": "2026-05-01T23:16:06.231Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(app)/watchlist.tsx",
+      "root_cause": "26 lines replaced/restructured",
+      "fix": "Rewrote 124→215 lines (26 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:16:06.231Z"
+    },
+    {
+      "id": "bug-042",
+      "timestamp": "2026-05-01T23:16:17.038Z",
+      "error_message": "CSS fix: gap",
+      "file": "apps/mobile/app/(auth)/welcome.tsx",
+      "root_cause": "gap: spacing[3], → spacing[4],",
+      "fix": "Changed gap: spacing[3], → spacing[4],",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:16:17.038Z"
+    },
+    {
+      "id": "bug-043",
+      "timestamp": "2026-05-01T23:16:24.110Z",
+      "error_message": "Missing error handling in function",
+      "file": "apps/mobile/src/features/auth/oauthCallback.ts",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:16:24.110Z"
+    },
+    {
+      "id": "bug-044",
+      "timestamp": "2026-05-01T23:17:03.642Z",
+      "error_message": "Wrong reference: __DEV__ should be typeof",
+      "file": "apps/mobile/src/features/auth/oauthCallback.ts",
+      "root_cause": "Used \"__DEV__\" instead of \"typeof\"",
+      "fix": "Changed __DEV__ → typeof",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-01T23:17:03.642Z"
+    },
+    {
+      "id": "bug-045",
+      "timestamp": "2026-05-02T02:45:00+03:00",
+      "error_message": "Fresh screenshots showed launch-blocking UI/data regressions: clipped Flixy wordmark, bottom tab bleed, auth ember/CTA concerns, notification headline truncation, misleading search fallback copy, missing Android flixy OAuth scheme, and missing focused regression coverage.",
+      "file": "apps/mobile/src/components/AppHeader.tsx; apps/mobile/src/components/CustomTabBar.tsx; apps/mobile/src/components/AuthSheet.tsx; apps/mobile/app/(onboarding)/notifications.tsx; apps/mobile/app.config.ts; apps/mobile/src/features/search/hooks.ts",
+      "root_cause": "Main tabs used ad-hoc headers without safe-area/glyph-overhang handling, tab bar used near-zero side padding, auth decoration and CTAs were not locked to shared tokenized behavior, notifications used hardcoded copy, search lacked an explicit UI state helper/test around clean miss vs fallback, and Android app links did not register the custom flixy scheme used by OAuth redirects.",
+      "fix": "Added shared AppHeader and wordmark token, applied it to all four main tabs, widened tab safe padding, moved primary button foreground to tokens.onAccent, repositioned the ember glow inside the auth canvas, switched notifications to i18n 'Stay in the loop', added the Android flixy intent filter, added exact PostHog event names, wired flixy_catalogue_v2 through the PostHog feature-flag API, and added focused tab/search regression tests plus the QA checklist update.",
+      "tags": [
+        "layout",
+        "wordmark",
+        "tab-bar",
+        "auth",
+        "onboarding",
+        "search",
+        "oauth",
+        "posthog",
+        "tests"
+      ],
+      "related_bugs": [
+        "bug-028",
+        "bug-032",
+        "bug-035",
+        "bug-036"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T02:45:00+03:00"
+    },
+    {
+      "id": "bug-046",
+      "timestamp": "2026-05-02T02:45:00+03:00",
+      "error_message": "Focused Biome check failed after repair-pass edits due import ordering and formatter drift in deck/watchlist/profile.",
+      "file": "apps/mobile/app/(app)/deck.tsx; apps/mobile/app/(app)/watchlist.tsx; apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "Manual apply_patch edits introduced formatting/organize-import differences relative to Biome rules.",
+      "fix": "Ran focused `pnpm biome check --write` on the touched files, then reran focused Biome successfully.",
+      "tags": [
+        "biome",
+        "format",
+        "validation",
+        "repair-pass"
+      ],
+      "related_bugs": [
+        "bug-027",
+        "bug-029"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T02:45:00+03:00"
+    },
+    {
+      "id": "bug-047",
+      "timestamp": "2026-05-02T13:52:19.249Z",
+      "error_message": "CSS fix: minHeight, paddingTop, paddingBottom",
+      "file": "apps/mobile/src/components/CustomTabBar.tsx",
+      "root_cause": "minHeight: 58 + insets.bottom, → 60 + insets.bottom,; paddingTop: 7, → 10,; paddingBottom: Math.max(8, insets.bottom), → Math.max(10, insets.bottom),",
+      "fix": "Changed minHeight: 58 + insets.bottom, → 60 + insets.bottom,; paddingTop: 7, → 10,; paddingBottom: Math.max(8, insets.bottom), → Math.max(10, insets.bottom),",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T13:52:19.249Z"
+    },
+    {
+      "id": "bug-048",
+      "timestamp": "2026-05-02T13:54:43.419Z",
+      "error_message": "CSS fix: marginTop",
+      "file": "apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "marginTop: 16, → 12,",
+      "fix": "Changed marginTop: 16, → 12,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-05-02T13:55:11.394Z"
+    },
+    {
+      "id": "bug-049",
+      "timestamp": "2026-05-02T13:59:16.589Z",
+      "error_message": "Type error",
+      "file": "apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T13:59:16.589Z"
+    },
+    {
+      "id": "bug-050",
+      "timestamp": "2026-05-02T14:22:08.383Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:22:08.383Z"
+    },
+    {
+      "id": "bug-051",
+      "timestamp": "2026-05-02T14:22:16.584Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 19→14 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:22:16.584Z"
+    },
+    {
+      "id": "bug-052",
+      "timestamp": "2026-05-02T14:29:27.747Z",
+      "error_message": "CSS fix: flex, flexShrink",
+      "file": "apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "flex: 1 → 1,; flexShrink: 0, → 1,",
+      "fix": "Changed flex: 1 → 1,; flexShrink: 0, → 1,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:29:27.747Z"
+    },
+    {
+      "id": "bug-053",
+      "timestamp": "2026-05-02T14:31:32.474Z",
+      "error_message": "CSS fix: paddingLeft, paddingRight",
+      "file": "apps/mobile/src/components/CustomTabBar.tsx",
+      "root_cause": "paddingLeft: insets.left + 12, → insets.left + 24,; paddingRight: insets.right + 12, → insets.right + 24,",
+      "fix": "Changed paddingLeft: insets.left + 12, → insets.left + 24,; paddingRight: insets.right + 12, → insets.right + 24,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-05-02T14:31:44.946Z"
+    },
+    {
+      "id": "bug-054",
+      "timestamp": "2026-05-02T14:32:09.232Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/src/components/__tests__/CustomTabBar.test.ts",
+      "root_cause": "26 lines replaced/restructured",
+      "fix": "Rewrote 38→12 lines (26 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:32:09.232Z"
+    },
+    {
+      "id": "bug-055",
+      "timestamp": "2026-05-02T14:48:02.918Z",
+      "error_message": "Wrong reference: subtitle should be title",
+      "file": "apps/mobile/app/(app)/profile.tsx",
+      "root_cause": "Used \"subtitle\" instead of \"title\"",
+      "fix": "Changed subtitle → title",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:48:02.918Z"
+    },
+    {
+      "id": "bug-056",
+      "timestamp": "2026-05-02T14:48:03.703Z",
+      "error_message": "Wrong reference: subtitle should be title",
+      "file": "apps/mobile/app/(app)/search.tsx",
+      "root_cause": "Used \"subtitle\" instead of \"title\"",
+      "fix": "Changed subtitle → title",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:48:03.703Z"
+    },
+    {
+      "id": "bug-057",
+      "timestamp": "2026-05-02T14:48:10.408Z",
+      "error_message": "Wrong reference: subtitle should be title",
+      "file": "apps/mobile/app/(app)/watchlist.tsx",
+      "root_cause": "Used \"subtitle\" instead of \"title\"",
+      "fix": "Changed subtitle → title",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:48:10.408Z"
+    },
+    {
+      "id": "bug-058",
+      "timestamp": "2026-05-02T14:48:20.742Z",
+      "error_message": "Wrong reference: status should be title",
+      "file": "apps/mobile/app/(app)/deck.tsx",
+      "root_cause": "Used \"status\" instead of \"title\"",
+      "fix": "Changed status → title",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:48:20.742Z"
+    },
+    {
+      "id": "bug-059",
+      "timestamp": "2026-05-02T14:52:30.413Z",
+      "error_message": "Wrong reference: displayRegular should be displayMedium",
+      "file": "apps/mobile/src/components/AppHeader.tsx",
+      "root_cause": "Used \"displayRegular\" instead of \"displayMedium\"",
+      "fix": "Changed displayRegular → displayMedium",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:52:30.413Z"
+    },
+    {
+      "id": "bug-060",
+      "timestamp": "2026-05-02T14:58:04.537Z",
+      "error_message": "CSS fix: fontFamily",
+      "file": "apps/mobile/src/components/AuthSheet.tsx",
+      "root_cause": "fontFamily: fonts.display, → fonts.wordmark,",
+      "fix": "Changed fontFamily: fonts.display, → fonts.wordmark,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T14:58:04.537Z"
+    },
+    {
+      "id": "bug-061",
+      "timestamp": "2026-05-02T15:00:01.480Z",
+      "error_message": "Incorrect value in code",
+      "file": "apps/mobile/app/_layout.tsx",
+      "root_cause": "Had 'react-native-gesture-handler'",
+      "fix": "Changed to 'react-native'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:00:01.480Z"
+    },
+    {
+      "id": "bug-062",
+      "timestamp": "2026-05-02T15:00:06.125Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/_layout.tsx",
+      "root_cause": "7 lines replaced/restructured",
+      "fix": "Rewrote 14→6 lines (7 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:00:06.125Z"
+    },
+    {
+      "id": "bug-063",
+      "timestamp": "2026-05-02T15:04:05.822Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/app.config.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:04:05.822Z"
+    },
+    {
+      "id": "bug-064",
+      "timestamp": "2026-05-02T15:21:31.462Z",
+      "error_message": "Incorrect value in code",
+      "file": "apps/mobile/app/_layout.tsx",
+      "root_cause": "Had '@expo-google-fonts/playfair-display'",
+      "fix": "Changed to '@expo-google-fonts/damion'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:21:31.462Z"
+    },
+    {
+      "id": "bug-065",
+      "timestamp": "2026-05-02T15:21:33.904Z",
+      "error_message": "Incorrect value in code",
+      "file": "apps/mobile/src/theme/tokens.ts",
+      "root_cause": "Had 'PlayfairDisplay_900Black_Italic'",
+      "fix": "Changed to 'Damion_400Regular'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:21:33.904Z"
+    },
+    {
+      "id": "bug-066",
+      "timestamp": "2026-05-02T15:21:36.570Z",
+      "error_message": "CSS fix: fontSize, letterSpacing, lineHeight",
+      "file": "apps/mobile/src/components/AuthSheet.tsx",
+      "root_cause": "fontSize: 68, → 76,; letterSpacing: -2.8, → 0,; lineHeight: 76, → 84,",
+      "fix": "Changed fontSize: 68, → 76,; letterSpacing: -2.8, → 0,; lineHeight: 76, → 84,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:21:36.570Z"
+    },
+    {
+      "id": "bug-067",
+      "timestamp": "2026-05-02T15:24:28.018Z",
+      "error_message": "Missing import: ../src/lib/silenceWarnings",
+      "file": "apps/mobile/app/_layout.tsx",
+      "root_cause": "Module(s) not imported: ../src/lib/silenceWarnings",
+      "fix": "Added import(s) for ../src/lib/silenceWarnings",
+      "tags": [
+        "auto-detected",
+        "missing-import",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:24:28.018Z"
+    },
+    {
+      "id": "bug-068",
+      "timestamp": "2026-05-02T15:24:30.467Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/_layout.tsx",
+      "root_cause": "13 lines replaced/restructured",
+      "fix": "Rewrote 20→6 lines (13 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:24:30.467Z"
+    },
+    {
+      "id": "bug-069",
+      "timestamp": "2026-05-02T15:30:38.728Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(auth)/welcome.tsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 8→15 lines (3 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:30:38.728Z"
+    },
+    {
+      "id": "bug-072",
+      "timestamp": "2026-05-02T15:46:02.840Z",
+      "error_message": "Null/undefined access in ",
+      "file": "packages/catalogue-ingest/src/cli.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T15:46:02.840Z"
+    },
+    {
+      "id": "bug-073",
+      "timestamp": "2026-05-02T16:16:51.222Z",
+      "error_message": "Incorrect value in code",
+      "file": "supabase/migrations/0007_title_metadata_integrity.sql",
+      "root_cause": "Had '{}'",
+      "fix": "Changed to \"cast\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "sql"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T16:16:51.222Z"
+    },
+    {
+      "id": "bug-075",
+      "timestamp": "2026-05-02T17:16:02.531Z",
+      "error_message": "Type error",
+      "file": "packages/catalogue-ingest/src/ingest.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T17:16:02.531Z"
+    },
+    {
+      "id": "bug-076",
+      "timestamp": "2026-05-02T17:16:28.697Z",
+      "error_message": "Significant refactor of ",
+      "file": "supabase/functions/catalogue-ingest/index.ts",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 7→6 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T17:16:28.697Z"
+    },
+    {
+      "id": "bug-077",
+      "timestamp": "2026-05-02T17:21:21.975Z",
+      "error_message": "Significant refactor of ",
+      "file": "supabase/functions/catalogue-ingest/README.md",
+      "root_cause": "13 lines replaced/restructured",
+      "fix": "Rewrote 17→14 lines (13 removed) | Also: | Name                        | Auto-injected? | N; | --------------------------- | -------------- | - | Also: # 2. Deploy the function; pnpm exec supabase functions deploy catalogue-inge | Also: ## Cron schedules (defined in migration 0009); | Job name                   | Cron        | Mode ",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "md"
+      ],
+      "related_bugs": [],
+      "occurrences": 4,
+      "last_seen": "2026-05-02T17:22:12.402Z"
+    },
+    {
+      "id": "bug-078",
+      "timestamp": "2026-05-02T17:23:05.187Z",
+      "error_message": "Type error",
+      "file": "packages/catalogue-ingest/src/traktSync.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T17:23:05.187Z"
+    },
+    {
+      "id": "bug-079",
+      "timestamp": "2026-05-02T17:23:52.661Z",
+      "error_message": "Null/undefined access in ",
+      "file": "supabase/functions/catalogue-ingest/index.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-02T17:23:52.661Z"
+    },
+    {
+      "id": "bug-080",
+      "timestamp": "2026-05-03T00:55:00+03:00",
+      "error_message": "pnpm exec biome check .github\\copilot-instructions.md exited with No files were processed in the specified paths.",
+      "file": ".github/copilot-instructions.md",
+      "root_cause": "Biome 1.9 in this repo does not process the Markdown instructions file when addressed directly, so the focused check reports an unmatched path instead of linting it.",
+      "fix": "Validated the new instructions with git diff --check instead; no whitespace errors were reported.",
+      "tags": [
+        "biome",
+        "markdown",
+        "validation",
+        "copilot-instructions"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-03T00:55:00+03:00"
+    },
+    {
+      "id": "bug-081",
+      "timestamp": "2026-05-03T01:14:00+03:00",
+      "error_message": "packages/catalogue-ingest typecheck failed with TS18048 and TS2322 around optional TMDB export row id parsing.",
+      "file": "packages/catalogue-ingest/src/tmdbClient.ts",
+      "root_cause": "The JSON export parser treated row.id as definitely present after an object cast, but strict TypeScript still correctly saw it as number | undefined.",
+      "fix": "Introduced a local id variable, checked typeof id === 'number' before integer/range checks, and returned a row with a guaranteed id.",
+      "tags": [
+        "typescript",
+        "tmdb",
+        "backfill",
+        "export-parser"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-03T01:14:00+03:00"
+    },
+    {
+      "id": "bug-082",
+      "timestamp": "2026-05-03T01:18:00+03:00",
+      "error_message": "Focused Biome check failed on touched ingestion files because formatter/import normalization was needed.",
+      "file": "packages/catalogue-ingest/src/backfill.ts; supabase/functions/_shared/catalogue/backfill.ts",
+      "root_cause": "Manual apply_patch edits introduced formatting and import-order drift from Biome conventions.",
+      "fix": "Ran focused Biome --write on touched ingestion and Edge mirror files, then reran focused Biome successfully.",
+      "tags": [
+        "biome",
+        "format",
+        "ingestion",
+        "validation"
+      ],
+      "related_bugs": [
+        "bug-081"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-03T01:18:00+03:00"
+    },
+    {
+      "id": "bug-083",
+      "timestamp": "2026-05-03T01:22:00+03:00",
+      "error_message": "Full pnpm lint failed on pre-existing unrelated mobile package formatting drift.",
+      "file": "apps/mobile/package.json",
+      "root_cause": "The repository has broad existing formatting drift outside the ingestion scope; Biome reported app/mobile package formatting before reaching the new backfill files.",
+      "fix": "Kept unrelated user changes untouched and validated all touched ingestion files with focused Biome; workspace typecheck and tests pass.",
+      "tags": [
+        "biome",
+        "baseline",
+        "unrelated",
+        "validation"
+      ],
+      "related_bugs": [
+        "bug-025"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-03T01:22:00+03:00"
+    },
+    {
+      "id": "bug-084",
+      "timestamp": "2026-05-03T01:25:00+03:00",
+      "error_message": "Initial candidate snapshot patch failed because exact backfill.ts context had changed after Biome formatting.",
+      "file": "packages/catalogue-ingest/src/backfill.ts",
+      "root_cause": "The patch hunk targeted pre-format code around getExportCandidates, but the file had been reformatted and the exact lines no longer matched.",
+      "fix": "Re-read the current backfill file and applied smaller targeted patches for candidate persistence and cursor batch loading.",
+      "tags": [
+        "apply_patch",
+        "backfill",
+        "context",
+        "formatting"
+      ],
+      "related_bugs": [
+        "bug-082"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-03T01:25:00+03:00"
+    },
+    {
+      "id": "bug-085",
+      "timestamp": "2026-05-07T17:45:00+03:00",
+      "error_message": "User reported the v2 catalogue backfill had been present for a week but Supabase still had only about 60 titles.",
+      "file": "supabase/migrations/0009_catalogue_ingest_cron.sql; supabase/migrations/0013_catalogue_backfill_runtime.sql; supabase/migrations/0015_catalogue_cron_timeout.sql; packages/catalogue-ingest/src/tmdbClient.ts; packages/catalogue-ingest/src/backfill.ts",
+      "root_cause": "Production Vault had no catalogue_ingest_function_url or catalogue_ingest_cron_secret, so catalogue_ingest_invoke returned null and pg_cron skipped every job silently. After secrets were set, the 30s pg_net timeout was shorter than the 80s backfill step window, causing partial title writes without cursor checkpoints. Local movie snapshot startup also stalled on Node's Web DecompressionStream for the large TMDb movie export and used small 1000-row candidate upsert chunks.",
+      "fix": "Created the required Vault secrets remotely, increased catalogue_ingest_invoke timeout to 120000ms via remote SQL and migration 0015, patched Node export decompression to use node:zlib, raised candidate snapshot chunks to 10000 rows, manually created top-10k and full movie jobs, and verified remote title count rose above 1400 with movie and TV cursors advancing.",
+      "tags": [
+        "catalogue",
+        "backfill",
+        "supabase",
+        "cron",
+        "vault",
+        "pg_net",
+        "tmdb",
+        "production"
+      ],
+      "related_bugs": [
+        "bug-tmdb-cache-missing",
+        "bug-082"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:45:00+03:00"
+    },
+    {
+      "id": "bug-086",
+      "timestamp": "2026-05-07T16:42:02.182Z",
+      "error_message": "CSS fix: deckPosition",
+      "file": "apps/mobile/app/(app)/deck.tsx",
+      "root_cause": "deckPosition: position, → swipeIndex,",
+      "fix": "Changed deckPosition: position, → swipeIndex,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T16:42:02.182Z"
+    },
+    {
+      "id": "bug-087",
+      "timestamp": "2026-05-07T16:42:19.476Z",
+      "error_message": "Wrong reference: cards should be remaining",
+      "file": "apps/mobile/app/(app)/deck.tsx",
+      "root_cause": "Used \"cards\" instead of \"remaining\"",
+      "fix": "Changed cards → remaining",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T16:42:19.476Z"
+    },
+    {
+      "id": "bug-088",
+      "timestamp": "2026-05-07",
+      "error_message": "After 2-3 swipes on the deck, a card appears then is instantly replaced by a different card; repeats for one more swipe then stops.",
+      "file": "apps/mobile/app/(app)/deck.tsx",
+      "root_cause": "Visible card was selected via cards.slice(position, position+3) using an integer index. The composer's cards array reorders mid-session — TanStack Query background refetch (5-min staleTime) and per-swipe ['taste_signal'] invalidation cause composeDeck to recompute, so cards[position] points to a different title. The View key `${title.id}-${position+indexInStack}` also changed when a title's absolute index shifted, forcing SwipeCard remounts.",
+      "fix": "Track swiped title ids in an ordered array; visible = cards.filter(c => !swiped.has(c.title.id)).slice(0,3). Key wrappers by title.id only. position derived from swipedIds.length for telemetry/nudge/undo.",
+      "tags": [
+        "deck",
+        "swipe",
+        "tanstack-query",
+        "render",
+        "race",
+        "fixed-deck"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07"
+    },
+    {
+      "id": "bug-089",
+      "timestamp": "2026-05-07T17:09:02.226Z",
+      "error_message": "Wrong reference: 1_800 should be 4_000",
+      "file": "apps/mobile/src/features/auth/hooks.ts",
+      "root_cause": "Used \"1_800\" instead of \"4_000\"",
+      "fix": "Changed 1_800 → 4_000",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:09:02.226Z"
+    },
+    {
+      "id": "bug-090",
+      "timestamp": "2026-05-07T17:09:12.848Z",
+      "error_message": "Missing await",
+      "file": "apps/mobile/src/features/auth/hooks.ts",
+      "root_cause": "Async call without await — returned Promise instead of value",
+      "fix": "Added await to async call",
+      "tags": [
+        "auto-detected",
+        "async-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:09:12.848Z"
+    },
+    {
+      "id": "bug-091",
+      "timestamp": "2026-05-07T17:09:27.267Z",
+      "error_message": "CSS fix: height",
+      "file": "apps/mobile/src/components/SocialButton.tsx",
+      "root_cause": "height: 52, → 54,",
+      "fix": "Changed height: 52, → 54,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:09:27.267Z"
+    },
+    {
+      "id": "bug-092",
+      "timestamp": "2026-05-07",
+      "error_message": "Cannot login with Google account, it gets on some loop (auth/welcome screen never advances after OAuth completes).",
+      "file": "apps/mobile/src/features/auth/hooks.ts; apps/mobile/src/features/auth/useAuthRedirect.ts; apps/mobile/app/(auth)/welcome.tsx; apps/mobile/app/(auth)/sign-in.tsx; apps/mobile/app/(auth)/sign-up.tsx; apps/mobile/app/(auth)/reset-password.tsx",
+      "root_cause": "On Android, WebBrowser.openAuthSessionAsync resolves with type='dismiss' before the deep-link callback (PKCE code) lands. The 1.8s waitForOAuthSession poll times out, so the mutation returned {status:'dismissed'} without invalidating session. Meanwhile useAuthDeepLink consumed the deep link and onAuthStateChange wrote the session to TanStack cache directly. But auth screens did not subscribe to session changes, so the user stayed on /welcome despite being authenticated and tapped Google again, looping.",
+      "fix": "Three changes: (1) Added useAuthRedirect hook that calls router.replace('/') whenever a session exists; mounted in all 4 auth screens. (2) Bumped OAUTH_DEEP_LINK_GRACE_MS from 1800 to 4000. (3) Added a final readOAuthSession check on cancel/dismiss branches in useOAuthSignIn so a session that arrived via deep link after the grace window is treated as completed.",
+      "tags": [
+        "auth",
+        "oauth",
+        "google",
+        "android",
+        "race",
+        "deep-link",
+        "fixed-oauth",
+        "fixed-auth-loop"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07"
+    },
+    {
+      "id": "bug-093",
+      "timestamp": "2026-05-07",
+      "error_message": "User dislikes the design of the auth pages — feel like a generic placeholder vs. onboarding's cinematic style.",
+      "file": "apps/mobile/app/(auth)/welcome.tsx; apps/mobile/app/(auth)/sign-in.tsx; apps/mobile/app/(auth)/sign-up.tsx; apps/mobile/app/(auth)/reset-password.tsx; apps/mobile/src/components/AuthSheet.tsx (deleted); apps/mobile/src/components/SocialButton.tsx",
+      "root_cause": "AuthSheet shell duplicated Screen and added gradient/glow/grain noise; auth screens used Damion wordmark and clinical bordered error pills, breaking the onboarding's 'one decision per screen, dark canvas, accent CTA, Newsreader hero' language.",
+      "fix": "Replaced AuthSheet wholesale (deleted file). Rewrote welcome to mirror (onboarding)/welcome.tsx (rotated rounded-rect hero + 74px Newsreader Flixy wordmark + tagline + subtitle, then SocialButton primary, secondary 'Create account' Button, anon tertiary text, sign-in footer link). Rewrote sign-in/sign-up/reset-password to mirror (onboarding)/notifications.tsx (compact 82×82 F badge + 28px display title + form + bottom action footer with KeyboardAvoidingView). Bumped SocialButton 52→54 to match onboarding's 54px CTA rhythm. Inline error text in colors.left replaces bordered AuthMessage pills.",
+      "tags": [
+        "auth",
+        "ui",
+        "redesign",
+        "onboarding-parity",
+        "fixed-auth-design"
+      ],
+      "related_bugs": [
+        "bug-092"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-07"
+    },
+    {
+      "id": "bug-094",
+      "timestamp": "2026-05-07T17:23:02.843Z",
+      "error_message": "CSS fix: fontFamily",
+      "file": "apps/mobile/app/(auth)/sign-in.tsx",
+      "root_cause": "fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "fix": "Changed fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:23:02.843Z"
+    },
+    {
+      "id": "bug-095",
+      "timestamp": "2026-05-07T17:23:08.095Z",
+      "error_message": "CSS fix: fontFamily",
+      "file": "apps/mobile/app/(auth)/sign-up.tsx",
+      "root_cause": "fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "fix": "Changed fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:23:08.095Z"
+    },
+    {
+      "id": "bug-096",
+      "timestamp": "2026-05-07T17:23:13.139Z",
+      "error_message": "CSS fix: fontFamily",
+      "file": "apps/mobile/app/(auth)/reset-password.tsx",
+      "root_cause": "fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "fix": "Changed fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:23:13.139Z"
+    },
+    {
+      "id": "bug-097",
+      "timestamp": "2026-05-07T17:23:19.665Z",
+      "error_message": "CSS fix: fontFamily",
+      "file": "apps/mobile/app/(onboarding)/notifications.tsx",
+      "root_cause": "fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "fix": "Changed fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:23:19.665Z"
+    },
+    {
+      "id": "bug-098",
+      "timestamp": "2026-05-07T17:23:25.427Z",
+      "error_message": "CSS fix: fontFamily",
+      "file": "apps/mobile/app/(app)/watchlist.tsx",
+      "root_cause": "fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "fix": "Changed fontFamily: fonts.display, fontSize: 38, color: colors.accent → fonts.display,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:23:25.427Z"
+    },
+    {
+      "id": "bug-099",
+      "timestamp": "2026-05-07T17:23:45.539Z",
+      "error_message": "CSS fix: fontFamily",
+      "file": "apps/mobile/app/(app)/edit-profile.tsx",
+      "root_cause": "fontFamily: fonts.display, fontSize: 34, color: colors.accent → fonts.display,",
+      "fix": "Changed fontFamily: fonts.display, fontSize: 34, color: colors.accent → fonts.display,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:23:45.539Z"
+    },
+    {
+      "id": "bug-100",
+      "timestamp": "2026-05-07T17:27:34.187Z",
+      "error_message": "CSS fix: gap, minHeight",
+      "file": "apps/mobile/app/(auth)/welcome.tsx",
+      "root_cause": "gap: 10, → 12,; minHeight: 44, → 40,",
+      "fix": "Changed gap: 10, → 12,; minHeight: 44, → 40,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:27:34.187Z"
+    },
+    {
+      "id": "bug-101",
+      "timestamp": "2026-05-07T17:33:26.928Z",
+      "error_message": "CSS fix: primary",
+      "file": "apps/mobile/src/components/Button.tsx",
+      "root_cause": "primary: { bg: colors.accent, fg: colors.onAccent → { bg: colors.accent, fg: colors.text",
+      "fix": "Changed primary: { bg: colors.accent, fg: colors.onAccent → { bg: colors.accent, fg: colors.text",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-05-07T17:33:26.928Z"
+    },
+    {
+      "id": "bug-102",
+      "timestamp": "2026-05-07T17:37:38.986Z",
+      "error_message": "CSS fix: paddingRight",
+      "file": "apps/mobile/src/components/Input.tsx",
+      "root_cause": "paddingRight: spacing[5], → spacing[6],",
+      "fix": "Changed paddingRight: spacing[5], → spacing[6],",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-05-07T17:40:32.515Z"
+    },
+    {
+      "id": "bug-103",
+      "timestamp": "2026-05-09T11:00:32+03:00",
+      "error_message": "WARN Method readAsStringAsync imported from \"expo-file-system\" is deprecated; AuthApiError: error finding refresh token for update: ERROR: cannot execute SELECT FOR UPDATE in a read-only transaction (SQLSTATE 25006)",
+      "file": "apps/mobile/src/lib/silenceWarnings.ts; apps/mobile/src/entry.ts; apps/mobile/src/features/auth/authErrors.ts; apps/mobile/src/features/auth/useSession.ts; apps/mobile/src/features/auth/hooks.ts",
+      "root_cause": "The Expo filesystem warning was emitted before the previous _layout-level LogBox/console filters could install. Supabase auth-js surfaced a server-side refresh-token rotation failure during getSession polling, causing auth screens/OAuth verification to treat a stale refresh attempt as an app error.",
+      "fix": "Moved warning suppression into a custom Expo entrypoint before expo-router loads, broadened the warning matcher, downgraded the known auth-js read-only refresh-token console.error to a short warning, added shared auth error classification for the read-only refresh-token message, and made session/OAuth reads return null instead of throwing on that classified failure.",
+      "tags": [
+        "expo",
+        "filesystem",
+        "warning",
+        "supabase",
+        "auth",
+        "refresh-token",
+        "oauth",
+        "fixed-auth"
+      ],
+      "related_bugs": [
+        "bug-092"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-09T11:00:32+03:00"
+    },
+    {
+      "id": "bug-104",
+      "timestamp": "2026-05-09T11:00:32+03:00",
+      "error_message": "Google auth returned Supabase Auth 500: { code: 500, error_code: unexpected_failure, msg: Error creating flow state, error_id: 019e0bc9-e8d2-78f8-859f-5a685b48bb41 }",
+      "file": "apps/mobile/src/features/auth/hooks.ts",
+      "root_cause": "Supabase Auth failed while inserting OAuth flow_state before redirecting to Google. The client was also opening an authorize URL created with skipBrowserRedirect/skip_http_redirect even though React Native does not auto-redirect, increasing the chance of surfacing raw JSON errors instead of the normal provider redirect path.",
+      "fix": "Removed skipBrowserRedirect from the native Google OAuth start options so WebBrowser opens the normal Supabase authorize redirect URL. If the same error_id remains, the remaining root cause is Supabase Auth database/provider state and must be checked in Supabase Auth logs.",
+      "tags": [
+        "supabase",
+        "auth",
+        "oauth",
+        "google",
+        "flow-state",
+        "mobile"
+      ],
+      "related_bugs": [
+        "bug-092",
+        "bug-103"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-09T11:00:32+03:00"
+    },
+    {
+      "id": "bug-105",
+      "timestamp": "2026-05-09T11:18:38+03:00",
+      "error_message": "Google auth still returns Supabase Auth 500 Error creating flow state with new error_id 019e0bce-65c7-7086-8993-5703da5fcdc0 after app-side skipBrowserRedirect removal.",
+      "file": "apps/mobile/src/features/auth/authErrors.ts; apps/mobile/src/features/auth/hooks.ts; apps/mobile/src/features/auth/__tests__/authErrors.test.ts",
+      "root_cause": "Direct probes to https://mgnbvhnhjresbnblytuk.supabase.co/auth/v1/authorize?provider=google also return 500 Error creating flow state before any mobile WebBrowser/callback code runs. Normal redirect_to variants fail, while invalid PKCE params return a 400 validation error, proving Supabase Auth reaches provider validation but cannot persist its internal OAuth flow_state row.",
+      "fix": "Added OAuth flow-state error classification and converted this hosted Supabase failure into a concise app-side unavailable error/log. The remaining fix must be done in Supabase Auth/project state using the Auth logs and error_id.",
+      "tags": [
+        "supabase",
+        "auth",
+        "oauth",
+        "google",
+        "flow-state",
+        "hosted-auth",
+        "external-blocker"
+      ],
+      "related_bugs": [
+        "bug-104"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-09T11:18:38+03:00"
+    },
+    {
+      "id": "bug-106",
+      "timestamp": "2026-05-09T12:39:51+03:00",
+      "error_message": "Supabase database exceeded free storage quota (1.1GB used out of 0.5GB), blocking Auth flow_state writes and requiring bulky movie catalogue offload.",
+      "file": "packages/catalogue-ingest/src/r2Export.ts; packages/catalogue-ingest/src/cli.ts; packages/catalogue-ingest/package.json; supabase/README.md; docs/HUMAN_BLOCKERS.md",
+      "root_cause": "Movie catalogue/backfill/cache data is too large for Supabase free Postgres and can push the project into write-restricted/degraded behavior, while the app only needs public catalogue documents/indexes for runtime browsing.",
+      "fix": "Added a Cloudflare R2 export command to the existing catalogue-ingest package. It exports canonical title rows with embedded availability/videos to gzipped R2 JSON objects, writes a slim index and manifest, loads env files without hardcoded secrets, accepts either SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY, and documents the safe smoke/full export runbook plus credential rotation blocker.",
+      "tags": [
+        "supabase",
+        "quota",
+        "cloudflare-r2",
+        "catalogue",
+        "migration",
+        "storage",
+        "secrets"
+      ],
+      "related_bugs": [
+        "bug-105"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-05-09T12:39:51+03:00"
+    },
+    {
+      "id": "bug-109",
+      "timestamp": "2026-06-20T21:30:00+03:00",
+      "error_message": "UX architect audit (Mode C) found the Settings/Profile surface structurally broken: (1) useUpdateProfile spread `undefined` for region/language on a partial edit (name/handle/avatar), wiping the user's region + language via upsertProfile's merge. (2) Profile tab sign-out had no router.replace, leaving a dead page. (3) The main settings.tsx was UNREACHABLE — nothing pushed to /(app)/settings, so users only saw the Profile tab's inline settings. (4) Two parallel, inconsistent settings systems (ProfileRow inline vs SettingsRow) with 3 different header shells. (5) Settings/Profile ~100% hardcoded English despite 7-language i18n. (6) Profile 'Swipes' stat misleadingly = watchlist count, not swipes. (7) edit-profile had no validation, no handle-availability check, no error display, raw Pressable save. (8) settings-notifications showed fake-value disabled Email/Frequency rows. (9) SelectOption used 'Selected' text not a check icon. (10) biome 96 lint errors.",
+      "file": "apps/mobile/src/features/profile/hooks.ts; apps/mobile/src/features/profile/display.ts; apps/mobile/src/features/onboarding/hooks.ts; apps/mobile/src/features/swipe/hooks.ts; apps/mobile/src/features/notifications/useNotificationDeepLinks.ts; apps/mobile/src/lib/tmdb.ts; apps/mobile/src/lib/localDb.ts; apps/mobile/src/components/SettingsPage.tsx; apps/mobile/src/i18n/locales/en.json; apps/mobile/app/(app)/(tabs)/profile.tsx; apps/mobile/app/(app)/settings.tsx; apps/mobile/app/(app)/edit-profile.tsx; apps/mobile/app/(app)/settings-account.tsx; apps/mobile/app/(app)/settings-language.tsx; apps/mobile/app/(app)/settings-region.tsx; apps/mobile/app/(app)/settings-services.tsx; apps/mobile/app/(app)/settings-genres.tsx; apps/mobile/app/(app)/settings-notifications.tsx; apps/mobile/app/(app)/settings-privacy.tsx; apps/mobile/app/(app)/settings-help.tsx; apps/mobile/src/lib/__tests__/localDb.test.ts",
+      "root_cause": "useUpdateProfile always passed region/language keys (undefined on partial patches) into a merge that overwrites. Sign-out on profile.tsx missed the redirect that settings.tsx/settings-account had (bug-108 fixed those but not profile). settings.tsx had no inbound route. No shared settings design system: Profile tab re-implemented rows/cards; services+genres used raw Screen+Newsreader header while siblings used SettingsPage. i18n discipline absent on the settings/profile surface. Stats derived from watchlist instead of the swipe store. edit-profile skipped validation/availability/error UI. tmdb.ts used `any` throughout + unsafe non-null + literal-key access.",
+      "fix": "useUpdateProfile now only passes present keys to upsertProfile (region/language preserved on partial edits) + 2 regression tests. Profile tab rebuilt: identity + real swipe count (new useSwipeCount hook) + single Settings entry (removed duplicated inline settings) + shared SettingsRow/Button + i18n + sign-out redirect to welcome. settings.tsx rebuilt as the unified reachable hub (linked from Profile) using SettingsPage + SettingsGroup + SettingsRow + full i18n; sign-out consolidated to Profile + settings-account only (one label t('auth.signOut'), one behavior). services+genres migrated to SettingsPage shell + Button (preserved Maestro testIDs). edit-profile rebuilt with HandleSchema inline validation, isHandleAvailable check, error display via Input.error, disabled-when-invalid, shared Button, loading. All settings subpages i18n'd; display.ts wired through t(). settings-notifications: removed fake Email/Frequency rows, kept Push + a clearly-marked coming-soon row. SelectOption: Check icon instead of 'Selected' text. Added shared SettingsGroup component. tmdb.ts: defined TmdbTitle/TmdbProvidersResult/TmdbListResponse types, replaced all `any`, fixed non-null guard + literal-key access. localDb filters_snapshot typed Record<string,unknown>. useNotificationDeepLinks `as any` -> `as Href`. biome 96 -> 0 errors. typecheck PASS, 65/65 tests PASS.",
+      "tags": [
+        "settings",
+        "profile",
+        "data-loss",
+        "i18n",
+        "design-system",
+        "sign-out",
+        "navigation",
+        "edit-profile",
+        "validation",
+        "handle-availability",
+        "tmdb",
+        "lint",
+        "fixed-e2e"
+      ],
+      "related_bugs": [
+        "bug-107",
+        "bug-108"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T21:30:00+03:00"
+    },
+    {
+      "id": "bug-110",
+      "timestamp": "2026-06-20T09:15:00+03:00",
+      "error_message": "User reported the Settings screen UI/layout was not cool or familiar and asked for a total redesign. Android emulator screenshot also showed a real layout bug: Settings row labels were missing/floating because row children stacked/laid out incorrectly under native Android Pressable/Button semantics.",
+      "file": "apps/mobile/app/(app)/settings.tsx; apps/mobile/src/components/ListRow.tsx; apps/mobile/src/components/SettingsPage.tsx",
+      "root_cause": "The Settings hub was visually a flat dark list with weak hierarchy and no familiar settings signifiers. ListRow and SettingsPage back button put flex row styles directly on Pressable; on Android Pressable with accessibilityRole=button maps to a native Button that does not reliably honor direct child row layout, causing labels/values to appear centered or stacked. A shared SettingsPage padding change also made subpage chips edge-to-edge before adding explicit body inset control.",
+      "fix": "Redesigned settings.tsx with a familiar native-style account/preferences hierarchy: cinematic Tonight Profile summary card, icon-led grouped rows, clear right-side values, concise subtitles, and preserved settings-services/settings-genres testIDs. Moved ListRow and SettingsPage back-button row layout into inner View wrappers so Android renders labels, values, icons, and Back horizontally. Added SettingsPage bodyInset prop so the redesigned hub can manage custom insets while subpages keep safe gutters. Verified on the Android emulator with screenshot and Services/Genres navigation. Mobile typecheck, tests, and focused Biome passed.",
+      "tags": [
+        "settings",
+        "ui",
+        "android",
+        "pressable",
+        "layout",
+        "emulator",
+        "ux-architect",
+        "fixed-e2e"
+      ],
+      "related_bugs": [
+        "bug-109"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T09:15:00+03:00"
+    },
+    {
+      "id": "bug-111",
+      "timestamp": "2026-06-20T06:35:00Z",
+      "error_message": "pnpm --filter @flixy/mobile typecheck failed after moving watchlist row schemas into watchlist/store.ts: Cannot find name 'z' and Cannot find name 'RowSchema' in apps/mobile/src/features/watchlist/hooks.ts.",
+      "file": "apps/mobile/src/features/watchlist/hooks.ts; apps/mobile/src/features/watchlist/store.ts",
+      "root_cause": "watchlist/hooks.ts still parsed sorted rows with z.array(RowSchema) after the z import and RowSchema definition were moved into the new store module.",
+      "fix": "Changed the hook to map already store-validated rows through rowToItem instead of referencing the moved schema directly.",
+      "tags": [
+        "typecheck",
+        "watchlist",
+        "supabase",
+        "schema",
+        "fixed-e2e"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T06:35:00Z"
+    },
+    {
+      "id": "bug-112",
+      "timestamp": "2026-06-20T06:38:00Z",
+      "error_message": "pnpm --filter @flixy/mobile test failed in src/features/onboarding/__tests__/hooks.test.ts because importing onboarding hooks now reached useSession -> logger -> @sentry/react-native, and Jest could not parse Sentry's ESM export syntax.",
+      "file": "apps/mobile/src/features/onboarding/__tests__/hooks.test.ts; apps/mobile/src/features/auth/useSession.ts",
+      "root_cause": "useSession now imports logger for Supabase session error handling. The onboarding schema-only test did not mock logger or the Supabase seam, so it loaded native/ESM runtime modules unnecessarily.",
+      "fix": "Mocked ../../../lib/logger and ../../../lib/supabase in the onboarding hook test so it stays focused on schema parsing and avoids native runtime imports.",
+      "tags": [
+        "jest",
+        "sentry",
+        "esm",
+        "onboarding",
+        "supabase",
+        "fixed-e2e"
+      ],
+      "related_bugs": [
+        "bug-111"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T06:38:00Z"
+    },
+    {
+      "id": "bug-113",
+      "timestamp": "2026-06-20T06:41:00Z",
+      "error_message": "pnpm lint failed after Supabase auth/watchlist edits because Biome wanted import ordering/formatting changes in useSession.ts, hooks.ts, store.ts, supabase.ts, and reported one unused suppression comment.",
+      "file": "apps/mobile/src/features/auth/useSession.ts; apps/mobile/src/features/auth/hooks.ts; apps/mobile/src/features/watchlist/store.ts; apps/mobile/src/lib/supabase.ts",
+      "root_cause": "Manual apply_patch edits left Biome formatter/import-order drift and a noUnusedVariables suppression stayed after the provider argument became used.",
+      "fix": "Removed the stale suppression comment and ran focused biome check --write on the touched TypeScript files.",
+      "tags": [
+        "biome",
+        "format",
+        "imports",
+        "supabase",
+        "watchlist",
+        "fixed-e2e"
+      ],
+      "related_bugs": [
+        "bug-111"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T06:41:00Z"
+    },
+    {
+      "id": "bug-114",
+      "timestamp": "2026-06-20T06:44:00Z",
+      "error_message": "maestro --version failed: The term 'maestro' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "file": "apps/mobile/e2e/README.md; apps/mobile/e2e/new-user.yaml; apps/mobile/e2e/returning-user.yaml; apps/mobile/e2e/search-detail-settings.yaml",
+      "root_cause": "The project E2E flows are Maestro-based, but the Maestro CLI is not installed in this environment.",
+      "fix": "No code fix applied. Unit, typecheck, lint, and diff review were run; Maestro E2E remains blocked until the CLI and a configured preview build/emulator are available.",
+      "tags": [
+        "e2e",
+        "maestro",
+        "tooling",
+        "blocked"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T06:44:00Z"
+    },
+    {
+      "id": "bug-115",
+      "timestamp": "2026-06-20T06:46:00Z",
+      "error_message": "supabase migration list failed with unexpected login role status 401: Unauthorized; Connect to your database by setting SUPABASE_DB_PASSWORD.",
+      "file": "supabase/migrations/0016_watchlist_api_title_ids.sql",
+      "root_cause": "The Supabase CLI is installed, but this workspace is not linked/configured with usable database credentials for remote migration inspection or push.",
+      "fix": "Migration was written locally. Remote apply remains blocked until SUPABASE_DB_PASSWORD or a linked Supabase project context is provided.",
+      "tags": [
+        "supabase",
+        "migration",
+        "credentials",
+        "blocked"
+      ],
+      "related_bugs": [
+        "bug-114"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T06:46:00Z"
+    },
+    {
+      "id": "bug-116",
+      "timestamp": "2026-06-20T06:51:00Z",
+      "error_message": "Self-review found Supabase OAuth was passing skipBrowserRedirect and useDeleteLocalAccount cleared only the local session even when Supabase Auth was configured.",
+      "file": "apps/mobile/src/features/auth/hooks.ts",
+      "root_cause": "The Supabase OAuth branch reused an option previously identified as unsafe for React Native, and the local-account cleanup path predated live Supabase sessions.",
+      "fix": "Removed skipBrowserRedirect from Supabase OAuth and made useDeleteLocalAccount call supabase.auth.signOut() when Supabase is configured.",
+      "tags": [
+        "auth",
+        "oauth",
+        "supabase",
+        "self-review",
+        "fixed-e2e"
+      ],
+      "related_bugs": [
+        "bug-115"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T06:51:00Z"
+    },
+    {
+      "id": "bug-117",
+      "timestamp": "2026-06-20T07:04:00Z",
+      "error_message": "Expo web smoke start failed: Port 8081 is being used by another process; non-interactive Expo asked whether to use port 8082 instead and skipped the dev server.",
+      "file": "apps/mobile/package.json",
+      "root_cause": "The first Expo web smoke command selected a port that was already occupied in this workspace.",
+      "fix": "Retry the browser smoke with an explicit free port instead of relying on Expo's interactive port fallback.",
+      "tags": [
+        "expo",
+        "web",
+        "e2e",
+        "port",
+        "blocked"
+      ],
+      "related_bugs": [
+        "bug-114"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T07:04:00Z"
+    },
+    {
+      "id": "bug-118",
+      "timestamp": "2026-06-20T07:25:00Z",
+      "error_message": "Browser E2E anonymous sign-in failed with net::ERR_NAME_NOT_RESOLVED for https://mgnbvhnhjresbnblytuk.supabase.co/auth/v1/signup.",
+      "file": "apps/mobile/.env.local",
+      "root_cause": "Expo loaded apps/mobile/.env.local, which still pointed to the old Supabase project while the root .env.local had the new ckbjvwwsdatoszqphuki project URL.",
+      "fix": "Synced EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY from root .env.local to apps/mobile/.env.local without printing the key.",
+      "tags": [
+        "supabase",
+        "env",
+        "e2e",
+        "auth",
+        "fixed-e2e"
+      ],
+      "related_bugs": [
+        "bug-117"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T07:25:00Z"
+    },
+    {
+      "id": "bug-119",
+      "timestamp": "2026-06-20T10:50:00+03:00",
+      "error_message": "Android Bundling failed: Unable to resolve \"../../App\" from \"node_modules/.pnpm/expo@54.0.35_.../node_modules/expo/AppEntry.js\"",
+      "file": "apps/mobile/package.json; apps/mobile/index.js",
+      "root_cause": "In pnpm monorepos, custom TypeScript entry files like 'src/entry.ts' (without a relative './' prefix) are resolved as package/module lookups rather than local files, causing Expo CLI to fall back to the default AppEntry.js. AppEntry.js then attempts to load a root App.js which does not exist in an Expo Router setup. Metro also sometimes fails to resolve non-JS entry files directly in certain configurations.",
+      "fix": "Created apps/mobile/index.js as the canonical root entry point that imports './src/entry', and updated apps/mobile/package.json main field to 'index.js'.",
+      "tags": [
+        "expo",
+        "metro",
+        "pnpm",
+        "monorepo",
+        "entry-point",
+        "fixed-e2e"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T10:48:13+03:00"
+    },
+    {
+      "id": "bug-120",
+      "timestamp": "2026-06-20T10:58:00+03:00",
+      "error_message": "Google OAuth Access Blocked: This app's request is invalid (redirect_uri_mismatch)",
+      "file": "Google Cloud Console; Supabase Dashboard Providers",
+      "root_cause": "The Supabase project URL was changed to ckbjvwwsdatoszqphuki.supabase.co, but the Google Developer Console OAuth credentials do not have the new callback URL (https://ckbjvwwsdatoszqphuki.supabase.co/auth/v1/callback) in the Authorized Redirect URIs list.",
+      "fix": "Instructed user to add the new callback URL to the Authorized Redirect URIs in Google Cloud Console, and ensure Google client keys are enabled in the new Supabase project providers.",
+      "tags": [
+        "auth",
+        "google-oauth",
+        "supabase",
+        "redirect-uri"
+      ],
+      "related_bugs": [
+        "bug-118",
+        "bug-119"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T10:58:00+03:00"
+    },
+    {
+      "id": "bug-121",
+      "timestamp": "2026-06-20T11:02:00+03:00",
+      "error_message": "Google OAuth redirects to localhost:3000 instead of returning to the Android app",
+      "file": "Supabase Dashboard Authentication URL Configuration",
+      "root_cause": "The redirect URI requested by the app (flixy:///auth/callback) is not registered in the new Supabase project's allowed Redirect URLs. As a result, Supabase Auth ignores it and falls back to the default Site URL (http://localhost:3000).",
+      "fix": "Instructed the user to add flixy:///auth/callback to the Redirect URLs list under Authentication -> URL Configuration in the Supabase Dashboard.",
+      "tags": [
+        "auth",
+        "google-oauth",
+        "supabase",
+        "redirect-uri",
+        "site-url"
+      ],
+      "related_bugs": [
+        "bug-120"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T11:01:32+03:00"
+    },
+    {
+      "id": "bug-122",
+      "timestamp": "2026-06-20T11:04:00+03:00",
+      "error_message": "Supabase Dashboard URL Configuration rejects custom URI flixy:///auth/callback with 'Please provide a valid URL'",
+      "file": "Supabase Dashboard Authentication URL Configuration",
+      "root_cause": "The Supabase Dashboard validator rejects triple-slash custom protocol URLs (e.g. flixy:///) as invalid URL formats.",
+      "fix": "Instructed the user to use the wildcard pattern flixy://** (with two slashes) which satisfies the Dashboard validator and matches any deep link at runtime.",
+      "tags": [
+        "supabase",
+        "dashboard",
+        "validation",
+        "redirect-uri",
+        "wildcard"
+      ],
+      "related_bugs": [
+        "bug-121"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T11:04:02+03:00"
+    },
+    {
+      "id": "bug-123",
+      "timestamp": "2026-06-20T11:08:00+03:00",
+      "error_message": "Google OAuth opens a white screen in the WebBrowser on Android",
+      "file": "Supabase Dashboard Authentication Settings",
+      "root_cause": "If the requested redirect URI (flixy:///auth/callback) is not successfully whitelisted OR if Google Auth provider is disabled/misconfigured, Supabase redirects to the default Site URL (http://localhost:3000) with error parameters. Since localhost:3000 is not reachable on the mobile device, it displays as a blank white page.",
+      "fix": "Instructed user to verify the URL bar on the white page to check if it has redirected to localhost:3000, and ensure both Google provider settings and URL Configuration are correctly saved in the new Supabase Dashboard.",
+      "tags": [
+        "auth",
+        "google-oauth",
+        "supabase",
+        "white-screen",
+        "localhost"
+      ],
+      "related_bugs": [
+        "bug-121",
+        "bug-122"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T11:07:57+03:00"
+    },
+    {
+      "id": "bug-124",
+      "timestamp": "2026-06-20T11:15:00+03:00",
+      "error_message": "Supabase sign-in requests continue to use hardcoded flixy:/// redirect URI in Expo Go",
+      "file": "apps/mobile/app.config.ts",
+      "root_cause": "The supabaseOAuthRedirectUri field in app.config.ts had a hardcoded fallback of 'flixy:///auth/callback'. Because of this, readSupabaseOAuthRedirectUri always returned 'flixy:///auth/callback' and bypassed the dynamic Linking.createURL check.",
+      "fix": "Removed the hardcoded fallback from app.config.ts so supabaseOAuthRedirectUri remains undefined unless explicitly set by an environment variable, enabling dynamic expo-linking fallback.",
+      "tags": [
+        "expo",
+        "app-config",
+        "oauth",
+        "redirect-uri",
+        "expo-go"
+      ],
+      "related_bugs": [
+        "bug-123"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T11:13:37+03:00"
+    },
+    {
+      "id": "bug-125",
+      "timestamp": "2026-06-20T11:20:00+03:00",
+      "error_message": "Google OAuth redirects to localhost:3000 even after dev server restart",
+      "file": "apps/mobile/src/features/auth/hooks.ts",
+      "root_cause": "The app config or bundle was still caching the hardcoded fallback flixy:///auth/callback redirect URI. Restart alone did not clear the client/bundler cache.",
+      "fix": "Added a compile-time __DEV__ check inside readSupabaseOAuthRedirectUri to explicitly ignore the 'flixy:///auth/callback' value when running in development mode, ensuring the dynamic Linking.createURL is used.",
+      "tags": [
+        "expo",
+        "metro",
+        "cache",
+        "google-oauth",
+        "redirect-uri",
+        "development"
+      ],
+      "related_bugs": [
+        "bug-124"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T11:19:05+03:00"
+    },
+    {
+      "id": "bug-126",
+      "timestamp": "2026-06-20T11:21:00+03:00",
+      "error_message": "Google OAuth redirects to localhost:3000 even after dev-only fallback added",
+      "file": "apps/mobile/src/features/auth/hooks.ts",
+      "root_cause": "The Metro/Expo Go client-side bundle was still cached, preventing the new dev-check code from running on the device. Added explicit Metro logging to trace what redirect URI is being generated at runtime.",
+      "fix": "Added logger.info messages inside readSupabaseOAuthRedirectUri so the developer can see the exact resolved redirect URI in the Metro console when Google Sign-In is triggered.",
+      "tags": [
+        "expo",
+        "metro",
+        "cache",
+        "google-oauth",
+        "redirect-uri",
+        "logging"
+      ],
+      "related_bugs": [
+        "bug-125"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T11:19:05+03:00"
+    },
+    {
+      "id": "bug-127",
+      "timestamp": "2026-06-20T11:24:00+03:00",
+      "error_message": "Google OAuth redirects to localhost:3000 due to persistent redirect mismatch or cache",
+      "file": "Supabase Dashboard Authentication URL Configuration",
+      "root_cause": "Aggressive caching on the dev client/Metro bundler or misconfigured redirect URIs in Supabase caused Google OAuth to continue falling back to the default Site URL (http://localhost:3000).",
+      "fix": "Instructed the user to change the default Site URL in the Supabase Dashboard to their exact Expo Go LAN URL (e.g. exp://192.168.x.x:8081) as a robust fallback.",
+      "tags": [
+        "supabase",
+        "site-url",
+        "redirect-uri",
+        "expo-go",
+        "fallback"
+      ],
+      "related_bugs": [
+        "bug-126"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T11:23:44+03:00"
+    },
+    {
+      "id": "bug-128",
+      "timestamp": "2026-06-20T11:02:46.525Z",
+      "error_message": "Significant refactor of ",
+      "file": "supabase/migrations/0018_recommendations.sql",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 5→10 lines (2 removed) | Also: -- Compute the average embedding vector of titles ; select vector_avg(te.embedding)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "sql"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-20T11:02:53.023Z"
+    },
+    {
+      "id": "bug-129",
+      "timestamp": "2026-06-20T12:00:00+03:00",
+      "error_message": "recommend_titles_by_watchlist calls vector_avg(te.embedding), which does not exist in pgvector -> function-does-not-exist error at runtime, caught as vectorError in deck/hooks.ts and silently logged, so content-based recommendations always returned empty.",
+      "file": "supabase/migrations/0018_recommendations.sql",
+      "root_cause": "pgvector exposes the aggregate as avg(vector) (>= 0.5.0); there is no vector_avg() function. The RPC used a non-existent name.",
+      "fix": "Changed vector_avg(te.embedding) to avg(te.embedding) in recommend_titles_by_watchlist.",
+      "tags": [
+        "recommendations",
+        "pgvector",
+        "supabase",
+        "rpc",
+        "vector-avg",
+        "migration"
+      ],
+      "related_bugs": [
+        "bug-128",
+        "bug-130"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T12:00:00+03:00"
+    },
+    {
+      "id": "bug-130",
+      "timestamp": "2026-06-20T12:00:00+03:00",
+      "error_message": "Recommendation engine bridged two incompatible UUID spaces: title_embeddings.title_id FK'd to titles.id (random gen_random_uuid from server ingest), while watchlist_items.title_id and the mobile catalogue use the DETERMINISTIC TMDB UUID (tmdb.ts::tmdbIdToUuid). The join 'title_embeddings te on te.title_id = w.title_id' matched zero rows, and any returned titles.id could not be resolved by useTitlesByIds/uuidToTmdbId. Vector recs broken end-to-end even with valid data.",
+      "file": "supabase/migrations/0018_recommendations.sql; supabase/functions/embed-titles/index.ts; supabase/functions/_shared/catalogue/embeddings.ts",
+      "root_cause": "title_embeddings was keyed by the catalogue random UUID instead of the deterministic TMDB UUID the mobile client and watchlist speak.",
+      "fix": "Re-keyed title_embeddings.title_id to the deterministic TMDB UUID and dropped the titles FK. Added SQL helper title_api_uuid(tmdb_id, content_type) and RPC get_titles_needing_embeddings(p_limit) that emits the deterministic id. Scaffolded the embed-titles edge function + _shared/catalogue/embeddings.ts to backfill title_embeddings keyed by that id (OpenAI text-embedding-3-small, 1536 dims, idempotent).",
+      "tags": [
+        "recommendations",
+        "uuid",
+        "id-space",
+        "pgvector",
+        "embeddings",
+        "edge-function",
+        "tmdb",
+        "supabase"
+      ],
+      "related_bugs": [
+        "bug-128",
+        "bug-129"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T12:00:00+03:00"
+    },
+    {
+      "id": "bug-131",
+      "timestamp": "2026-06-20T12:30:00+03:00",
+      "error_message": "apply_migration of 0018 failed: ERROR 42P01 relation \"public.titles\" does not exist. The remote Supabase project (ckbjvwwsdatoszqphuki) only had watchlist_items; the entire catalogue/swipes/profile schema (migrations 0001-0015) was never pushed (only 0016/0017 were recorded).",
+      "file": "supabase/migrations/0001-0015 + 0018",
+      "root_cause": "Migrations 0001-0015 were authored but never applied to the remote DB (prior db push was blocked, see bug-022). Only 0016/0017 had been applied, leaving the DB without titles/swipes/profiles that 0018 depends on.",
+      "fix": "Applied the full chain 0001-0015 then 0018 in numeric order via Supabase MCP apply_migration. All idempotent (if not exists / create or replace). watchlist_items already existed from 0016 so 0005's create-table was a no-op, preserving the deterministic-uuid no-FK design. Verified: titles=21, get_titles_needing_embeddings=21, pgvector live, RPCs execute.",
+      "tags": [
+        "supabase",
+        "migration",
+        "schema-gap",
+        "apply_migration",
+        "mcp",
+        "recommendations"
+      ],
+      "related_bugs": [
+        "bug-022",
+        "bug-130"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T12:30:00+03:00"
+    },
+    {
+      "id": "bug-132",
+      "timestamp": "2026-06-20T12:45:00+03:00",
+      "error_message": "Supabase security advisor (0028/0029): recommend_titles_by_watchlist and get_collaborative_recommendations were SECURITY DEFINER, trusted caller-supplied p_user_id, and were executable by the anon role -> any caller could pass another user's id and read their watchlist-derived recommendations (cross-user data leak).",
+      "file": "supabase/migrations/0019_recommendations_hardening.sql",
+      "root_cause": "0018 created the recommendation RPCs as SECURITY DEFINER keyed on p_user_id without binding to auth.uid() or restricting EXECUTE, so the default public/anon grant exposed other users' taste data.",
+      "fix": "Added migration 0019: recreated both RPCs to bind queries to auth.uid() (p_user_id kept only for client RPC signature compatibility, returns empty for anon); revoked execute from public/anon and granted to authenticated; restricted get_titles_needing_embeddings to service_role; pinned title_api_uuid search_path. Verified via has_function_privilege: anon=false on all three.",
+      "tags": [
+        "supabase",
+        "security",
+        "rls",
+        "security-definer",
+        "recommendations",
+        "auth-uid",
+        "advisor"
+      ],
+      "related_bugs": [
+        "bug-130",
+        "bug-131"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T12:45:00+03:00"
+    },
+    {
+      "id": "bug-133",
+      "timestamp": "2026-06-20T13:00:00+03:00",
+      "error_message": "Supabase security advisor 0010 (security_definer_view, ERROR): view public.user_taste_signal ran with owner privileges/RLS, potentially exposing swipe rows across users regardless of the swipes RLS policy.",
+      "file": "supabase/migrations/0020_taste_signal_security_invoker.sql",
+      "root_cause": "Views default to SECURITY DEFINER behavior (run as owner). user_taste_signal (from 0005) joins swipes+titles, so without security_invoker it bypassed the per-user 'swipes: owner read' RLS policy.",
+      "fix": "Added migration 0020: alter view public.user_taste_signal set (security_invoker = true) (Postgres 17). Verified via pg_class.reloptions that security_invoker=true; the view now enforces the querying user's RLS.",
+      "tags": [
+        "supabase",
+        "security",
+        "rls",
+        "security-definer-view",
+        "view",
+        "advisor"
+      ],
+      "related_bugs": [
+        "bug-132"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T13:00:00+03:00"
+    },
+    {
+      "id": "bug-134",
+      "timestamp": "2026-06-20T11:22:45.254Z",
+      "error_message": "Type error",
+      "file": "apps/mobile/app/(app)/title/[id].tsx",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T11:22:45.254Z"
+    }
+  ]
+}

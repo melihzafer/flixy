@@ -1,0 +1,117 @@
+{
+  "app": {
+    "name": "Flixy",
+    "tagline": "Desliza. Descubre. Mira."
+  },
+  "auth": {
+    "welcomeTitle": "Encuentra qué ver esta noche",
+    "welcomeSubtitle": "Desliza entre películas y series pensadas para tu gusto.",
+    "tagline": "Deja de buscar. Empieza a ver.",
+    "continueWithGoogle": "Continuar con Google",
+    "signUpFree": "Regístrate gratis",
+    "noAccountQ": "¿Aún no tienes cuenta?",
+    "browseAnonymously": "Solo explorar por ahora",
+    "createAccount": "Crear cuenta",
+    "signIn": "Iniciar sesión",
+    "signOut": "Cerrar sesión",
+    "haveAccount": "¿Ya tienes una cuenta?",
+    "email": "Correo",
+    "emailPlaceholder": "tu@ejemplo.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Tu contraseña",
+    "showPassword": "Mostrar",
+    "hidePassword": "Ocultar",
+    "confirmPassword": "Confirmar contraseña",
+    "forgotPassword": "¿Olvidaste la contraseña?",
+    "newPassword": "Nueva contraseña",
+    "confirmNewPassword": "Confirma la nueva contraseña",
+    "resetPasswordTitle": "Restablece tu contraseña",
+    "resetPasswordSubtitle": "Elige una nueva contraseña para este dispositivo. No se necesita correo: tus datos quedan en este teléfono.",
+    "resetPasswordCta": "Establecer nueva contraseña",
+    "resetPasswordSuccess": "Contraseña actualizada. Ya puedes iniciar sesión.",
+    "signUpTitle": "Crea tu cuenta de Flixy",
+    "signUpSubtitle": "Guarda tu watchlist y continúa en cualquier dispositivo.",
+    "signInTitle": "Bienvenido de vuelta",
+    "signInSubtitle": "Inicia sesión para sincronizar tu watchlist.",
+    "errors": {
+      "generic": "Algo salió mal. Inténtalo de nuevo.",
+      "invalidCredentials": "El correo o la contraseña son incorrectos.",
+      "network": "Sin conexión. Revisa tu red e inténtalo de nuevo.",
+      "oauth": "No se pudo iniciar sesión con Google. Inténtalo de nuevo."
+    }
+  },
+  "common": {
+    "back": "Atrás",
+    "continue": "Continuar",
+    "done": "Listo",
+    "getStarted": "Empezar",
+    "skip": "Omitir",
+    "save": "Guardar",
+    "loading": "Cargando…",
+    "retry": "Reintentar"
+  },
+  "deck": {
+    "title": "Descubrir",
+    "loadingTitle": "Buscando las opciones para esta noche",
+    "loadingHint": "Armando tu deck…",
+    "syncing": "Sincronizando {{count}} deslizamiento(s)…",
+    "readyStatus": "{{count}} opciones listas"
+  },
+  "watchlist": {
+    "title": "Watchlist",
+    "empty": "Tu watchlist te espera. Desliza a la derecha en las películas que quieras ver.",
+    "emptyTitle": "Tu watchlist te espera",
+    "emptyAll": "Desliza a la derecha en las películas que quieras ver. Aparecerán aquí.",
+    "emptyCtaLabel": "Ir a Descubrir para añadir títulos"
+  },
+  "search": {
+    "title": "Buscar",
+    "placeholder": "Buscar títulos…",
+    "placeholderLong": "Títulos, géneros, directores…",
+    "trendingNow": "Tendencia ahora",
+    "noResultsFor": "Sin resultados para «{{query}}»"
+  },
+  "profile": {
+    "title": "Perfil",
+    "changeAvatar": "Cambiar foto"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "account": "Cuenta",
+    "region": "Región",
+    "language": "Idioma",
+    "preferences": "Preferencias",
+    "services": "Servicios de streaming",
+    "genres": "Géneros",
+    "notifications": "Notificaciones",
+    "notificationsEnabled": "Notificaciones push",
+    "about": "Acerca de",
+    "version": "Versión de la app",
+    "privacy": "Privacidad",
+    "terms": "Términos"
+  },
+  "onboarding": {
+    "welcomeTitle": "Bienvenido a Flixy",
+    "welcomeSubtitle": "Unos toques rápidos y estarás deslizando.",
+    "notificationsTitle": "Mantente al día",
+    "notificationsSubtitle": "Recibe un aviso cuando algo de tu lista esté disponible."
+  },
+  "genres": {
+    "drama": "Drama",
+    "comedy": "Comedia",
+    "action": "Acción",
+    "thriller": "Suspense",
+    "horror": "Terror",
+    "sci_fi": "Ciencia ficción",
+    "fantasy": "Fantasía",
+    "romance": "Romance",
+    "mystery": "Misterio",
+    "crime": "Crimen",
+    "documentary": "Documental",
+    "animation": "Animación",
+    "family": "Familia",
+    "adventure": "Aventura",
+    "history": "Historia",
+    "music": "Música"
+  }
+}

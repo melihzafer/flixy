@@ -1,6 +1,8 @@
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useCallback } from 'react';
-import { Image, View } from 'react-native';
+import { Info } from 'lucide-react-native';
+import { useCallback, useMemo } from 'react';
+import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
@@ -13,18 +15,10 @@ import Animated, {
 
 import type { SwipeDirection, Title } from '@flixy/shared';
 
-import { ServiceBadge } from '../../components/ServiceBadge';
-import { SwipeStamp, stampColors } from '../../components/SwipeStamp';
+import { SwipeStamp } from '../../components/SwipeStamp';
 import { Text } from '../../components/Text';
+import { toTitleDisplay } from '../../features/catalogue/display';
 import { colors, fonts } from '../../theme/tokens';
-
-/**
- * SwipeCard - gesture + Reanimated v3 implementation per FSD section 4.4.2.
- *
- * Animations run on the UI thread (worklet-only); haptics + the JS-side
- * `onCommit` callback fire via `runOnJS`. This is the path to the 60fps budget
- * (NFR-PERF-002).
- */
 
 const HORIZONTAL_THRESHOLD_RATIO = 0.35;
 const VERTICAL_THRESHOLD = 120;
@@ -54,6 +48,8 @@ export function SwipeCard({
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const isCommitting = useSharedValue(false);
+
+  const display = useMemo(() => toTitleDisplay(title), [title]);
 
   const horizontalThreshold = cardWidth * HORIZONTAL_THRESHOLD_RATIO;
 
@@ -138,51 +134,102 @@ export function SwipeCard({
     opacity: interpolate(ty.value, [0, VERTICAL_THRESHOLD], [0, 1], 'clamp'),
   }));
 
-  const meta = [
-    title.releaseYear,
-    title.runtimeMinutes ? `${title.runtimeMinutes}m` : null,
-    title.kind === 'tv' ? 'Series' : 'Movie',
-  ]
-    .filter(Boolean)
-    .join('  \u00b7  ');
-
-  const services = Array.from(new Set(title.availability.map((a) => a.serviceId))).slice(0, 4);
+  const meta = [display.year, display.runtime, display.rating].filter(Boolean).join('  \u00b7  ');
 
   return (
     <GestureDetector gesture={composed}>
       <Animated.View
         accessibilityRole="adjustable"
-        accessibilityLabel={`${title.title}. Swipe right to add, left to pass, up to top, down to mark seen.`}
+        accessibilityLabel={`${display.title}. Swipe right to add, left to pass, up to top, down to mark seen.`}
         testID="swipe-card"
         style={[
           {
             position: 'absolute',
             width: cardWidth,
             height: cardHeight,
-            borderRadius: 20,
+            borderRadius: 24,
             overflow: 'hidden',
             backgroundColor: colors.surface,
+            borderWidth: 1,
+            borderColor: 'rgba(255,77,28,0.18)',
+            shadowColor: colors.accent,
+            shadowOpacity: 0.18,
+            shadowRadius: 24,
+            shadowOffset: { width: 0, height: 14 },
+            elevation: 10,
             zIndex,
           },
           cardStyle,
         ]}
       >
-        {title.posterUrl ? (
-          <Image source={{ uri: title.posterUrl }} style={{ width: '100%', height: '100%' }} />
-        ) : (
-          <View style={{ flex: 1, backgroundColor: colors.surface2 }} />
-        )}
+        <LinearGradient
+          colors={display.gradient as unknown as readonly [string, string, string, string]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
+        />
+
+        {display.posterUrl ? (
+          <Image
+            source={{ uri: display.posterUrl }}
+            contentFit="cover"
+            transition={180}
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              opacity: 0.9,
+            }}
+          />
+        ) : null}
 
         <LinearGradient
           colors={[
-            'transparent',
-            'rgba(10,10,11,0.0)',
-            'rgba(10,10,11,0.85)',
-            'rgba(10,10,11,0.97)',
+            'rgba(10,10,11,0.01)',
+            'rgba(10,10,11,0.1)',
+            'rgba(10,10,11,0.68)',
+            'rgba(10,10,11,0.98)',
           ]}
-          locations={[0, 0.45, 0.85, 1]}
-          style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }}
+          locations={[0, 0.34, 0.66, 1]}
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }}
         />
+
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '42%',
+            backgroundColor: 'rgba(255,77,28,0.035)',
+          }}
+        />
+
+        {/* Info button */}
+        {!disabled && (
+          <View
+            pointerEvents="none"
+            style={{
+              position: 'absolute',
+              top: 14,
+              right: 14,
+              width: 30,
+              height: 30,
+              borderRadius: 15,
+              backgroundColor: 'rgba(10,10,11,0.48)',
+              borderWidth: 1,
+              borderColor: 'rgba(245,245,240,0.16)',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 5,
+            }}
+          >
+            <Info size={16} color={colors.text} strokeWidth={2.1} />
+          </View>
+        )}
 
         <View
           style={{
@@ -190,53 +237,104 @@ export function SwipeCard({
             bottom: 0,
             left: 0,
             right: 0,
-            padding: 22,
-            gap: 8,
+            padding: 21,
+            gap: 5,
           }}
         >
-          {title.genres && title.genres.length > 0 ? (
-            <Text variant="overline" tone="accent" style={{ textTransform: 'uppercase' }}>
-              {title.genres[0]}
-            </Text>
-          ) : null}
+          <Text
+            style={{
+              fontSize: 10,
+              fontFamily: fonts.bodySemi,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+              color: 'rgba(255,120,77,0.78)',
+            }}
+          >
+            {display.hook}
+          </Text>
+
           <Text
             style={{
               color: colors.text,
               fontFamily: fonts.display,
-              fontSize: 28,
+              fontSize: 31,
               lineHeight: 32,
-              letterSpacing: -0.4,
+              letterSpacing: -0.7,
             }}
             numberOfLines={2}
           >
-            {title.title}
+            {display.title}
           </Text>
-          <Text variant="body-s" tone="muted">
+
+          <Text
+            style={{
+              fontSize: 11,
+              color: 'rgba(245,245,240,0.62)',
+              fontFamily: fonts.body,
+              marginBottom: 5,
+            }}
+          >
             {meta}
           </Text>
-          {services.length > 0 ? (
-            <View style={{ flexDirection: 'row', gap: 6, marginTop: 4 }}>
-              {services.map((s) => (
-                <ServiceBadge key={s} serviceId={s} size="sm" />
-              ))}
-            </View>
-          ) : null}
+
+          <View style={{ flexDirection: 'row', gap: 5, flexWrap: 'wrap' }}>
+            {display.services.slice(0, 2).map((s) => (
+              <View
+                key={s}
+                style={{
+                  height: 22,
+                  paddingHorizontal: 8,
+                  borderRadius: 7,
+                  backgroundColor: 'rgba(10,10,11,0.54)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,77,28,0.18)',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontFamily: fonts.bodyBold,
+                    letterSpacing: 0.3,
+                    color: 'rgba(245,245,240,0.85)',
+                  }}
+                >
+                  {s}
+                </Text>
+              </View>
+            ))}
+            {display.genres.slice(0, 1).map((g) => (
+              <View
+                key={g}
+                style={{
+                  height: 22,
+                  paddingHorizontal: 8,
+                  borderRadius: 5,
+                  backgroundColor: 'rgba(10,10,11,0.45)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(245,245,240,0.1)',
+                  justifyContent: 'center',
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: 9,
+                    fontFamily: fonts.bodyBold,
+                    letterSpacing: 0.3,
+                    color: 'rgba(245,245,240,0.45)',
+                  }}
+                >
+                  {g}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
 
-        <SwipeStamp
-          text="WATCHLIST"
-          color={stampColors.right}
-          align="left"
-          animatedStyle={stampWatchlist}
-        />
-        <SwipeStamp text="PASS" color={stampColors.left} align="right" animatedStyle={stampPass} />
-        <SwipeStamp text="TOP" color={stampColors.up} align="center-top" animatedStyle={stampTop} />
-        <SwipeStamp
-          text="SEEN"
-          color={stampColors.down}
-          align="center-bottom"
-          animatedStyle={stampSeen}
-        />
+        <SwipeStamp text="Watchlist" align="left" animatedStyle={stampWatchlist} />
+        <SwipeStamp text="Pass" align="right" animatedStyle={stampPass} />
+        <SwipeStamp text="Top Pick" align="center-top" animatedStyle={stampTop} />
+        <SwipeStamp text="Seen" align="center-bottom" animatedStyle={stampSeen} />
       </Animated.View>
     </GestureDetector>
   );

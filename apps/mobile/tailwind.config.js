@@ -23,6 +23,7 @@ module.exports = {
         },
         accent: {
           DEFAULT: '#FF4D1C',
+          on: '#170806',
           dim: 'rgba(255,77,28,0.18)',
         },
         swipe: {
@@ -37,10 +38,10 @@ module.exports = {
       },
       fontFamily: {
         display: ['Newsreader_700Italic', 'serif'],
-        body: ['SpaceGrotesk_400Regular', 'sans-serif'],
-        'body-medium': ['SpaceGrotesk_500Medium', 'sans-serif'],
-        'body-semibold': ['SpaceGrotesk_600SemiBold', 'sans-serif'],
-        'body-bold': ['SpaceGrotesk_700Bold', 'sans-serif'],
+        body: ['DMSans_400Regular', 'sans-serif'],
+        'body-medium': ['DMSans_500Medium', 'sans-serif'],
+        'body-semibold': ['DMSans_600SemiBold', 'sans-serif'],
+        'body-bold': ['DMSans_700Bold', 'sans-serif'],
       },
       fontSize: {
         'display-xl': ['48px', { lineHeight: '52px', letterSpacing: '-0.02em' }],

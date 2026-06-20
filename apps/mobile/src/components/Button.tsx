@@ -1,11 +1,5 @@
 import { forwardRef } from 'react';
-import {
-  ActivityIndicator,
-  Pressable,
-  type PressableProps,
-  StyleSheet,
-  type View,
-} from 'react-native';
+import { ActivityIndicator, Pressable, type PressableProps, StyleSheet, View } from 'react-native';
 
 import { colors, fonts } from '../theme/tokens';
 import { Text } from './Text';
@@ -20,12 +14,16 @@ type Props = Omit<PressableProps, 'children'> & {
 };
 
 const palette: Record<Variant, { bg: string; fg: string; border?: string }> = {
-  primary: { bg: colors.accent, fg: colors.text },
+  primary: { bg: colors.accent, fg: colors.onAccent },
   secondary: { bg: 'transparent', fg: colors.text, border: colors.border2 },
   ghost: { bg: 'transparent', fg: colors.text },
   destructive: { bg: colors.leftBg, fg: colors.left, border: colors.left },
 };
 
+// On Android, Pressable with accessibilityRole="button" maps to a native
+// android.widget.Button which ignores backgroundColor + flexDirection on its
+// children. We render the chrome on an inner View and keep the Pressable as a
+// transparent touch shell (see cerebrum entry 2026-05-02 + 2026-05-07).
 export const Button = forwardRef<View, Props>(function Button(
   { label, variant = 'primary', loading, disabled, fullWidth = true, style, ...rest },
   ref,
@@ -39,33 +37,41 @@ export const Button = forwardRef<View, Props>(function Button(
       accessibilityState={{ disabled: !!isDisabled, busy: !!loading }}
       disabled={isDisabled}
       style={(state) => [
-        styles.base,
-        {
-          backgroundColor: c.bg,
-          borderWidth: c.border ? 1.5 : 0,
-          borderColor: c.border ?? 'transparent',
-          opacity: isDisabled ? 0.5 : state.pressed ? 0.85 : 1,
-        },
         fullWidth && styles.fullWidth,
+        {
+          opacity: isDisabled ? 0.5 : state.pressed ? 0.85 : 1,
+          transform: [{ scale: state.pressed && !isDisabled ? 0.985 : 1 }],
+        },
         typeof style === 'function' ? style(state) : style,
       ]}
       {...rest}
     >
-      {loading ? (
-        <ActivityIndicator color={c.fg} />
-      ) : (
-        <Text variant="body-l" style={{ color: c.fg, fontFamily: fonts.bodySemi }}>
-          {label}
-        </Text>
-      )}
+      <View
+        style={[
+          styles.base,
+          {
+            backgroundColor: c.bg,
+            borderWidth: c.border ? 1.5 : 0,
+            borderColor: c.border ?? 'transparent',
+          },
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator color={c.fg} />
+        ) : (
+          <Text variant="body-l" style={{ color: c.fg, fontFamily: fonts.bodyBold }}>
+            {label}
+          </Text>
+        )}
+      </View>
     </Pressable>
   );
 });
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: 14,
-    paddingVertical: 14,
+    height: 54,
+    borderRadius: 15,
     paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',

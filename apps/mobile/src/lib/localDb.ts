@@ -1,0 +1,381 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Crypto from 'expo-crypto';
+
+export type LocalWatchlistItem = {
+  id: string;
+  user_id: string;
+  title_id: string;
+  priority: 'top' | 'normal';
+  position: number;
+  added_at: string;
+  watched_at: string | null;
+  removed_at: string | null;
+};
+
+export type LocalSwipe = {
+  event_id: string;
+  user_id: string;
+  title_id: string;
+  direction: string;
+  occurred_at: string;
+  session_id: string;
+  deck_position: number;
+  region: string;
+  filters_snapshot: Record<string, unknown>;
+  is_undone?: boolean;
+  genres?: string[];
+};
+
+export type LocalProfile = {
+  id: string;
+  region: string;
+  language: string;
+  name?: string;
+  handle?: string;
+  avatar_url?: string;
+  created_at?: string;
+};
+
+export type LocalPreferences = {
+  user_id: string;
+  selected_services: string[];
+  selected_genres: string[];
+  notifications_enabled: boolean;
+  onboarding_completed_at: string | null;
+  cold_start_completed_at: string | null;
+  updated_at: string;
+};
+
+export type LocalCredential = {
+  email: string;
+  passwordHash: string;
+  userId: string;
+  createdAt?: string;
+};
+
+const WATCHLIST_KEY = 'flixy.local_db.watchlist.v3';
+const SWIPES_KEY = 'flixy.local_db.swipes.v3';
+const PREFS_KEY = 'flixy.local_db.prefs.v3';
+const PROFILE_KEY = 'flixy.local_db.profile.v3';
+const CREDENTIALS_KEY = 'flixy.local_db.credentials.v3';
+
+export { CREDENTIALS_KEY };
+
+const SCHEMA_VERSION = 1;
+
+let watchlistCache: LocalWatchlistItem[] = [];
+let swipesCache: LocalSwipe[] = [];
+let prefsCache: Record<string, LocalPreferences> = {};
+let profileCache: Record<string, LocalProfile> = {};
+let credentialsCache: Record<string, LocalCredential> = {};
+let dbHydrated = false;
+
+// Migration shim for versioned AsyncStorage JSON structures
+function parseVersionedData<T>(rawJson: string, defaultValue: T): T {
+  try {
+    const parsed = JSON.parse(rawJson);
+    if (parsed && typeof parsed === 'object' && 'schema_version' in parsed) {
+      // Versioned format: run migrators if schema_version < SCHEMA_VERSION
+      return parsed.data as T;
+    }
+    // Legacy unversioned format
+    return parsed as T;
+  } catch (e) {
+    console.error('Failed to parse versioned data', e);
+    return defaultValue;
+  }
+}
+
+function wrapVersionedData<T>(data: T) {
+  return JSON.stringify({
+    schema_version: SCHEMA_VERSION,
+    data,
+  });
+}
+
+async function hydrateDb() {
+  if (dbHydrated) return;
+  try {
+    const wl = await AsyncStorage.getItem(WATCHLIST_KEY);
+    if (wl) watchlistCache = parseVersionedData<LocalWatchlistItem[]>(wl, []);
+
+    const sw = await AsyncStorage.getItem(SWIPES_KEY);
+    if (sw) swipesCache = parseVersionedData<LocalSwipe[]>(sw, []);
+
+    const pr = await AsyncStorage.getItem(PREFS_KEY);
+    if (pr) prefsCache = parseVersionedData<Record<string, LocalPreferences>>(pr, {});
+
+    const pf = await AsyncStorage.getItem(PROFILE_KEY);
+    if (pf) profileCache = parseVersionedData<Record<string, LocalProfile>>(pf, {});
+
+    const cr = await AsyncStorage.getItem(CREDENTIALS_KEY);
+    if (cr) credentialsCache = parseVersionedData<Record<string, LocalCredential>>(cr, {});
+
+    dbHydrated = true;
+  } catch (e) {
+    console.error('Failed to hydrate local db', e);
+  }
+}
+
+async function persistWatchlist() {
+  try {
+    await AsyncStorage.setItem(WATCHLIST_KEY, wrapVersionedData(watchlistCache));
+  } catch (e) {
+    console.error('Failed to persist watchlist', e);
+  }
+}
+
+async function persistSwipes() {
+  try {
+    await AsyncStorage.setItem(SWIPES_KEY, wrapVersionedData(swipesCache));
+  } catch (e) {
+    console.error('Failed to persist swipes', e);
+  }
+}
+
+async function persistPrefs() {
+  try {
+    await AsyncStorage.setItem(PREFS_KEY, wrapVersionedData(prefsCache));
+  } catch (e) {
+    console.error('Failed to persist preferences', e);
+  }
+}
+
+async function persistProfiles() {
+  try {
+    await AsyncStorage.setItem(PROFILE_KEY, wrapVersionedData(profileCache));
+  } catch (e) {
+    console.error('Failed to persist profiles', e);
+  }
+}
+
+async function persistCredentials() {
+  try {
+    await AsyncStorage.setItem(CREDENTIALS_KEY, wrapVersionedData(credentialsCache));
+  } catch (e) {
+    console.error('Failed to persist credentials', e);
+  }
+}
+
+export const localDb = {
+  // Clear in-memory caches to prevent session leakage on logout
+  async clearUserMemory(): Promise<void> {
+    watchlistCache = [];
+    swipesCache = [];
+    prefsCache = {};
+    profileCache = {};
+    dbHydrated = false;
+  },
+
+  /**
+   * Remove a specific user's data from storage and re-hydrate caches so
+   * the next user in the same session cannot read the previous one.
+   */
+  async clearUser(userId: string): Promise<void> {
+    await hydrateDb();
+    const nextWatchlist: LocalWatchlistItem[] = [];
+    for (const item of watchlistCache) {
+      if (item.user_id !== userId) nextWatchlist.push(item);
+    }
+    const nextSwipes: LocalSwipe[] = [];
+    for (const s of swipesCache) {
+      if (s.user_id !== userId) nextSwipes.push(s);
+    }
+    const nextPrefs: Record<string, LocalPreferences> = {};
+    for (const [id, prefs] of Object.entries(prefsCache)) {
+      if (id !== userId) nextPrefs[id] = prefs;
+    }
+    const nextProfiles: Record<string, LocalProfile> = {};
+    for (const [id, profile] of Object.entries(profileCache)) {
+      if (id !== userId) nextProfiles[id] = profile;
+    }
+
+    watchlistCache = nextWatchlist;
+    swipesCache = nextSwipes;
+    prefsCache = nextPrefs;
+    profileCache = nextProfiles;
+
+    await Promise.all([persistWatchlist(), persistSwipes(), persistPrefs(), persistProfiles()]);
+  },
+
+  async getSwipes(userId: string): Promise<LocalSwipe[]> {
+    await hydrateDb();
+    return swipesCache.filter((s) => s.user_id === userId);
+  },
+
+  async getWatchlist(userId: string): Promise<LocalWatchlistItem[]> {
+    await hydrateDb();
+    return watchlistCache.filter((item) => item.user_id === userId && !item.removed_at);
+  },
+
+  async upsertWatchlistItem(item: Omit<LocalWatchlistItem, 'id'>): Promise<LocalWatchlistItem> {
+    await hydrateDb();
+    const existingIndex = watchlistCache.findIndex(
+      (w) => w.user_id === item.user_id && w.title_id === item.title_id,
+    );
+
+    let result: LocalWatchlistItem;
+    if (existingIndex > -1) {
+      result = {
+        ...watchlistCache[existingIndex],
+        ...item,
+      } as LocalWatchlistItem;
+      watchlistCache[existingIndex] = result;
+    } else {
+      result = {
+        id: Crypto.randomUUID(),
+        ...item,
+      } as LocalWatchlistItem;
+      watchlistCache.push(result);
+    }
+    await persistWatchlist();
+    return result;
+  },
+
+  async updateWatchlistItem(id: string, updates: Partial<LocalWatchlistItem>): Promise<void> {
+    await hydrateDb();
+    const index = watchlistCache.findIndex((w) => w.id === id);
+    if (index > -1) {
+      watchlistCache[index] = {
+        ...watchlistCache[index],
+        ...updates,
+      } as LocalWatchlistItem;
+      await persistWatchlist();
+    }
+  },
+
+  async updateWatchlistItemByTitle(
+    userId: string,
+    titleId: string,
+    updates: Partial<LocalWatchlistItem>,
+  ): Promise<void> {
+    await hydrateDb();
+    const index = watchlistCache.findIndex((w) => w.user_id === userId && w.title_id === titleId);
+    if (index > -1) {
+      watchlistCache[index] = {
+        ...watchlistCache[index],
+        ...updates,
+      } as LocalWatchlistItem;
+      await persistWatchlist();
+    }
+  },
+
+  async insertSwipe(swipe: LocalSwipe): Promise<void> {
+    await hydrateDb();
+    const existingIndex = swipesCache.findIndex((s) => s.event_id === swipe.event_id);
+    if (existingIndex > -1) {
+      swipesCache[existingIndex] = swipe;
+    } else {
+      swipesCache.push(swipe);
+    }
+    await persistSwipes();
+  },
+
+  async updateSwipe(eventId: string, updates: Partial<LocalSwipe>): Promise<void> {
+    await hydrateDb();
+    const index = swipesCache.findIndex((s) => s.event_id === eventId);
+    if (index > -1) {
+      swipesCache[index] = {
+        ...swipesCache[index],
+        ...updates,
+      } as LocalSwipe;
+      await persistSwipes();
+    }
+  },
+
+  // Preferences
+  async getPreferences(userId: string): Promise<LocalPreferences | null> {
+    await hydrateDb();
+    return prefsCache[userId] || null;
+  },
+
+  async upsertPreferences(
+    userId: string,
+    updates: Partial<LocalPreferences>,
+  ): Promise<LocalPreferences> {
+    await hydrateDb();
+    const existing = prefsCache[userId] || {
+      user_id: userId,
+      selected_services: [],
+      selected_genres: [],
+      notifications_enabled: false,
+      onboarding_completed_at: null,
+      cold_start_completed_at: null,
+      updated_at: new Date().toISOString(),
+    };
+
+    const updated = {
+      ...existing,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    prefsCache[userId] = updated;
+    await persistPrefs();
+    return updated;
+  },
+
+  // Profiles
+  async getProfile(userId: string): Promise<LocalProfile | null> {
+    await hydrateDb();
+    return profileCache[userId] || null;
+  },
+
+  async isHandleTaken(handle: string, excludeUserId: string): Promise<boolean> {
+    await hydrateDb();
+    const normalized = handle.toLowerCase();
+    return Object.values(profileCache).some((p) => {
+      if (p.id === excludeUserId) return false;
+      const own = p.handle?.toLowerCase();
+      if (own === normalized) return true;
+      return p.name?.toLowerCase() === normalized;
+    });
+  },
+
+  async upsertProfile(userId: string, updates: Partial<LocalProfile>): Promise<LocalProfile> {
+    await hydrateDb();
+    const existing = profileCache[userId] || {
+      id: userId,
+      region: 'US',
+      language: 'en',
+      created_at: new Date().toISOString(),
+    };
+
+    const updated = {
+      ...existing,
+      ...updates,
+    };
+
+    profileCache[userId] = updated;
+    await persistProfiles();
+    return updated;
+  },
+
+  // Local Credentials (for honest password flows in MVP)
+  async getCredential(email: string): Promise<LocalCredential | null> {
+    await hydrateDb();
+    return credentialsCache[email.toLowerCase()] || null;
+  },
+
+  async saveCredential(email: string, passwordHash: string, userId: string): Promise<void> {
+    await hydrateDb();
+    const normalized = email.toLowerCase();
+    const existing = credentialsCache[normalized];
+    credentialsCache[normalized] = {
+      email: normalized,
+      passwordHash,
+      userId,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    };
+    await persistCredentials();
+  },
+
+  async updatePassword(email: string, newPasswordHash: string): Promise<void> {
+    await hydrateDb();
+    const cred = credentialsCache[email.toLowerCase()];
+    if (cred) {
+      cred.passwordHash = newPasswordHash;
+      await persistCredentials();
+    }
+  },
+};

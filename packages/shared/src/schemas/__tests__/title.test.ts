@@ -25,6 +25,23 @@ describe('TitleSchema', () => {
     expect(parsed.kind).toBe('movie');
   });
 
+  it('accepts optional authoritative metadata without requiring fabricated fields', () => {
+    const parsed = TitleSchema.parse({
+      ...base,
+      kind: 'tv',
+      contentRating: 'TV-MA',
+      criticScore: 94,
+      tagline: 'Winter is coming.',
+      directors: [],
+      creators: ['David Benioff', 'D. B. Weiss'],
+      cast: ['Emilia Clarke'],
+    });
+
+    expect(parsed.contentRating).toBe('TV-MA');
+    expect(parsed.criticScore).toBe(94);
+    expect(parsed.creators).toEqual(['David Benioff', 'D. B. Weiss']);
+  });
+
   it('rejects invalid kind', () => {
     expect(() => TitleSchema.parse({ ...base, kind: 'book' })).toThrow();
   });
