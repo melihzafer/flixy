@@ -417,3 +417,4 @@
 | 15:48 | Edited docs/HUMAN_BLOCKERS.md | modified Action() | ~540 |
 | 15:49 | Edited apps/mobile/app.config.ts | 5→3 lines | ~83 |
 | 16:10 | Diagnosed release-APK "couldn't connect to server": EAS builds shipped empty extra.tmdbApiKey/supabaseUrl because .env.local is gitignored and build profiles did not declare env vars. Added environment mapping to eas.json, build-time guard warn in app.config.ts, HB-009 doc with eas env:create commands. | apps/mobile/eas.json, apps/mobile/app.config.ts, docs/HUMAN_BLOCKERS.md | fixed (human must create EAS env vars + rebuild) | ~9k |
+| 15:51 | Session end: 4 writes across 3 files (eas.json, app.config.ts, HUMAN_BLOCKERS.md) | 7 reads | ~1317 tok |
