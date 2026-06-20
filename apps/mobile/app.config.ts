@@ -5,6 +5,7 @@ declare const process: { env: Record<string, string | undefined> };
 const config: ExpoConfig = {
   name: 'Flixy',
   slug: 'flixy',
+  owner: 'zwolfe',
   version: '0.1.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
@@ -65,7 +66,7 @@ const config: ExpoConfig = {
   ],
   experiments: { typedRoutes: true },
   extra: {
-    eas: { projectId: process.env.EXPO_PROJECT_ID ?? '' },
+    eas: { projectId: process.env.EXPO_PROJECT_ID ?? 'c279a523-ab5e-4627-93d6-c35a56798d4f' },
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     supabaseOAuthRedirectUri: process.env.EXPO_PUBLIC_SUPABASE_OAUTH_REDIRECT_URI,
