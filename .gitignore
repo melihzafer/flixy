@@ -49,3 +49,4 @@ coverage/
 for_ADMIN.txt
 *_SECRETS.*
 secrets.txt
+*.apk
