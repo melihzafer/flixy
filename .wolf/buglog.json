@@ -2457,6 +2457,45 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-06-20T11:22:45.254Z"
+    },
+    {
+      "id": "bug-135",
+      "timestamp": "2026-06-20T15:48:31.342Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/app.config.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T15:48:31.342Z"
+    },
+    {
+      "id": "bug-136",
+      "timestamp": "2026-06-20T16:10:00.000Z",
+      "error_message": "Installed release APK shows 'We couldn't connect to the server' and no catalogue data loads.",
+      "file": "apps/mobile/eas.json; apps/mobile/app.config.ts; docs/HUMAN_BLOCKERS.md",
+      "root_cause": "app.config.ts bakes TMDB + Supabase credentials into expoConfig.extra from process.env at BUILD time. EAS cloud builds never see the gitignored .env.local, and the preview/production build profiles did not declare these vars, so the APK shipped with empty extra.tmdbApiKey / extra.supabaseUrl. tmdb.ts then throws 'TMDB_API_KEY is not configured' (deck shows the 'couldn't connect to the server' fallback) and supabase.ts falls back to disabledClient().",
+      "fix": "Added `environment` (development/preview/production) to each eas.json build profile so EAS auto-injects environment-scoped variables at build time. Added a build-time guard in app.config.ts that console.warns in the EAS build log when a non-development build is missing TMDB_API_KEY / EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY. Documented the required `eas env:create` commands as HB-009. The human must still create the EAS env vars for each environment and rebuild.",
+      "tags": [
+        "eas",
+        "build",
+        "env",
+        "tmdb",
+        "supabase",
+        "release-apk",
+        "connection",
+        "config"
+      ],
+      "related_bugs": [
+        "bug-003"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-06-20T16:10:00.000Z"
     }
   ]
 }

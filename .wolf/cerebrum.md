@@ -62,11 +62,13 @@
 - [2026-06-20] Current mobile data target is Supabase Auth + Supabase `watchlist_items` only. Movie/TV catalogue metadata stays API-backed through `apps/mobile/src/lib/tmdb.ts`; mobile watchlist rows store deterministic TMDB UUIDs and must not require matching `titles` rows.
 - [2026-06-20] `apps/mobile/src/features/watchlist/store.ts` is the watchlist persistence seam: use it from hooks/deck/swipe paths so Supabase and local test fallback stay consistent.
 - [2026-06-20] Remote Supabase migration apply is blocked in this workspace until `SUPABASE_DB_PASSWORD` or linked project credentials are provided; Supabase CLI returns 401 without it.
+- [2026-06-20] Mobile runtime config flows: `app.config.ts` reads `process.env.*` at BUILD time and bakes TMDB (`tmdbApiKey`/`tmdbReadAccessToken`) + Supabase (`supabaseUrl`/`supabaseAnonKey`) into `expoConfig.extra`; `tmdb.ts` and `supabase.ts` read from `Constants.expoConfig.extra`, never `process.env` directly. So any var the release build needs must exist at EAS build time. `.env.local` is gitignored (`.env.*`) and is NOT uploaded to EAS cloud builds — declare vars per-environment via `eas env:create --environment <env>` and map build profiles with the `environment` field in eas.json.
 
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->
 <!-- Format: [YYYY-MM-DD] Description of what went wrong and what to do instead. -->
+- [2026-06-20] Do not assume a working dev app means the release APK works. If a release/preview build shows "couldn't connect to the server" / no data, the first suspect is missing build-time env vars: `app.config.ts` bakes TMDB/Supabase creds into `extra` from `process.env`, and EAS cloud builds never see gitignored `.env.local`. Fix = `environment` mapping in eas.json + `eas env:create` per environment, not app code.
 - [2026-06-20] Do not pass `undefined` for omitted fields into `localDb.upsertProfile` / `upsertPreferences` — the `{...existing, ...updates}` merge OVERWRITES existing values with undefined. Build the patch object from present keys only (see useUpdateProfile). Regression tests in localDb.test.ts guard this.
 - [2026-06-20] Do not build a settings subpage with a raw `Screen` + Newsreader italic header and raw `Pressable` save buttons. Use the shared `SettingsPage` shell + `Button` so every settings surface has the same back button, typography, and CTA. (settings-services and settings-genres were the offenders; now migrated.)
 - [2026-06-20] Do not add a sign-out surface that lacks `router.replace('/(auth)/welcome')` — it leaves the user on a dead page. Profile tab sign-out had this bug while settings.tsx/settings-account were already fixed.

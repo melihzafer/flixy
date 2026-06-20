@@ -72,6 +72,29 @@ eas secret:create --scope project --name RESEND_API_KEY --value <key>
 4. Confirm the Expo native identifiers still match `app.config.ts`: iOS bundle ID `app.flixy.mobile`, Android package `app.flixy.mobile`, scheme `flixy`.
 5. Verify on a preview build that Google returns to Flixy once. If the account picker reappears repeatedly, check exact redirect URI spelling in Google Cloud and Supabase before retrying.
 
+### HB-009 — Mobile runtime env vars missing from release/preview builds
+**Status:** Pending — this is why an installed APK shows "couldn't connect to the server" with no data
+**Blocks:** Any catalogue data (TMDB) and auth/watchlist (Supabase) in a preview or production build
+**Root cause:** `app.config.ts` bakes these values into `expoConfig.extra` at build time by
+reading `process.env`. EAS cloud builds never see the gitignored `.env.local`, and the build
+profiles did not declare these variables — so the APK shipped with empty credentials. `tmdb.ts`
+then throws `TMDB_API_KEY is not configured` and `supabase.ts` falls back to `disabledClient()`.
+**Fix applied in repo:** `eas.json` now maps each build profile to an EAS `environment`
+(`development`/`preview`/`production`), so EAS auto-injects environment-scoped variables at build
+time. A build-time guard in `app.config.ts` also warns in the EAS build log when these are missing.
+**Action (required before the next build):** create the variables in EAS for each environment you
+build. These are safe to mark `sensitive`; the Supabase URL/anon key are client-public by design,
+the TMDB token should be kept out of the repo. Run for `preview` and `production`:
+```
+eas env:create --environment preview --name TMDB_API_KEY --value <tmdb-v3-key> --visibility sensitive
+eas env:create --environment preview --name TMDB_READ_ACCESS_TOKEN --value <tmdb-v4-token> --visibility sensitive
+eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value https://<ref>.supabase.co
+eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value <anon-key>
+eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_OAUTH_REDIRECT_URI --value flixy:///auth/callback
+```
+Repeat with `--environment production`. Then rebuild: `eas build --profile preview --platform android`.
+Verify with `eas env:list --environment preview` and confirm the build log shows no `[flixy] WARNING`.
+
 ### HB-008 — Rotate Cloudflare R2 credentials shared in chat
 **Status:** Pending
 **Blocks:** Safe production R2 export automation
