@@ -2,12 +2,12 @@
   "version": 1,
   "created_at": "2026-04-26T21:43:58.350Z",
   "lifetime": {
-    "total_tokens_estimated": 1043518,
-    "total_reads": 736,
-    "total_writes": 766,
-    "total_sessions": 15,
+    "total_tokens_estimated": 1044835,
+    "total_reads": 743,
+    "total_writes": 770,
+    "total_sessions": 16,
     "anatomy_hits": 385,
-    "anatomy_misses": 349,
+    "anatomy_misses": 356,
     "repeated_reads_blocked": 176,
     "estimated_savings_vs_bare_cli": 349508
   },
@@ -9117,6 +9117,85 @@
         "writes_count": 16,
         "repeated_reads_blocked": 5,
         "anatomy_lookups": 7
+      }
+    },
+    {
+      "id": "session-2026-06-20-1545",
+      "started": "2026-06-20T15:45:06.331Z",
+      "ended": "2026-06-20T15:51:40.590Z",
+      "reads": [
+        {
+          "file": "/home/user/flixy/.env.example",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/user/flixy/apps/mobile/src/lib/tmdb.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/user/flixy/apps/mobile/app.config.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/user/flixy/apps/mobile/src/lib/supabase.ts",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/user/flixy/docs/HUMAN_BLOCKERS.md",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/user/flixy/apps/mobile/eas.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        },
+        {
+          "file": "/home/user/flixy/biome.json",
+          "tokens_estimated": 0,
+          "was_repeated": false,
+          "anatomy_had_description": false
+        }
+      ],
+      "writes": [
+        {
+          "file": "/home/user/flixy/apps/mobile/eas.json",
+          "tokens_estimated": 222,
+          "action": "edit"
+        },
+        {
+          "file": "/home/user/flixy/apps/mobile/app.config.ts",
+          "tokens_estimated": 434,
+          "action": "edit"
+        },
+        {
+          "file": "/home/user/flixy/docs/HUMAN_BLOCKERS.md",
+          "tokens_estimated": 578,
+          "action": "edit"
+        },
+        {
+          "file": "/home/user/flixy/apps/mobile/app.config.ts",
+          "tokens_estimated": 83,
+          "action": "edit"
+        }
+      ],
+      "totals": {
+        "input_tokens_estimated": 0,
+        "output_tokens_estimated": 1317,
+        "reads_count": 7,
+        "writes_count": 4,
+        "repeated_reads_blocked": 0,
+        "anatomy_lookups": 0
       }
     }
   ],

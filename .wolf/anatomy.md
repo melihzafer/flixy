@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-06-20T12:10:57.965Z
-> Files: 1 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-06-20T15:49:02.818Z
+> Files: 4 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -164,6 +164,8 @@
 
 ## apps/mobile/
 
+- `app.config.ts` — Declares process (~1074 tok)
+- `eas.json` (~338 tok)
 
 ## apps/mobile/.expo/
 
@@ -273,6 +275,7 @@
 
 ## docs/
 
+- `HUMAN_BLOCKERS.md` — Human Blockers (~1545 tok)
 
 ## packages/catalogue-ingest/
 
