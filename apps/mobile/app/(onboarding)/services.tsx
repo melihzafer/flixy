@@ -42,8 +42,8 @@ function Dots({ current, total }: { current: number; total: number }) {
 }
 
 export default function ServicesStep() {
-  const { data: profile } = useProfile();
-  const region = profile?.region ?? 'US';
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const region = profile?.region;
   const { data: services } = useStreamingServices(region);
   const update = useUpdatePreferences();
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -64,7 +64,8 @@ export default function ServicesStep() {
   };
 
   const serviceOptions =
-    services ?? FALLBACK_STREAMING_SERVICES.filter((service) => service.regions.includes(region));
+    services ??
+    FALLBACK_STREAMING_SERVICES.filter((service) => service.regions.includes(region ?? 'US'));
 
   return (
     <Screen scroll={false}>
@@ -94,69 +95,73 @@ export default function ServicesStep() {
           Pick every service you have access to.
         </Text>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            gap: 8,
-            marginBottom: 12,
-          }}
-        >
-          {serviceOptions.map((service) => {
-            const isOn = selected.has(service.id);
-            return (
-              <Pressable
-                key={service.id}
-                onPress={() => toggle(service.id)}
-                style={{
-                  width: '48%',
-                  minHeight: 54,
-                  borderRadius: 14,
-                  borderWidth: 1,
-                  borderColor: isOn ? colors.accentBorder : colors.border,
-                  backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'flex-start',
-                  gap: 8,
-                  paddingHorizontal: 12,
-                }}
-              >
-                <View
+        {isProfileLoading || !region ? (
+          <Text tone="muted">Loading services for your region…</Text>
+        ) : (
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 8,
+              marginBottom: 12,
+            }}
+          >
+            {serviceOptions.map((service) => {
+              const isOn = selected.has(service.id);
+              return (
+                <Pressable
+                  key={service.id}
+                  onPress={() => toggle(service.id)}
                   style={{
-                    width: 18,
-                    height: 18,
-                    borderRadius: 6,
+                    width: '48%',
+                    minHeight: 54,
+                    borderRadius: 14,
                     borderWidth: 1,
-                    borderColor: isOn ? colors.accent : colors.border2,
-                    backgroundColor: isOn ? colors.accent : 'transparent',
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    flexDirection: 'row',
                     alignItems: 'center',
-                    justifyContent: 'center',
+                    justifyContent: 'flex-start',
+                    gap: 8,
+                    paddingHorizontal: 12,
                   }}
                 >
-                  {isOn ? <Check size={12} color={colors.onAccent} strokeWidth={3} /> : null}
-                </View>
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontFamily: fonts.bodyMedium,
-                    color: isOn ? colors.text : colors.textMuted,
-                    flex: 1,
-                  }}
-                  numberOfLines={1}
-                >
-                  {service.name}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+                  <View
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: 6,
+                      borderWidth: 1,
+                      borderColor: isOn ? colors.accent : colors.border2,
+                      backgroundColor: isOn ? colors.accent : 'transparent',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {isOn ? <Check size={12} color={colors.onAccent} strokeWidth={3} /> : null}
+                  </View>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                      flex: 1,
+                    }}
+                    numberOfLines={1}
+                  >
+                    {service.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
       </View>
 
       <View style={{ paddingHorizontal: 20, paddingBottom: 32, marginTop: 'auto' }}>
         <Pressable
           onPress={onContinue}
-          disabled={selected.size === 0 || update.isPending}
+          disabled={selected.size === 0 || update.isPending || isProfileLoading || !region}
           style={{
             width: '100%',
             height: 54,
@@ -166,7 +171,8 @@ export default function ServicesStep() {
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            opacity: selected.size === 0 || update.isPending ? 0.3 : 1,
+            opacity:
+              selected.size === 0 || update.isPending || isProfileLoading || !region ? 0.3 : 1,
           }}
         >
           <Text

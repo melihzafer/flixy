@@ -19,8 +19,8 @@ export default function OnboardingWelcome() {
         }}
       >
         <View
-          pointerEvents="none"
           style={{
+            pointerEvents: 'none',
             position: 'absolute',
             width: 170,
             height: 230,

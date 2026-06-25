@@ -36,7 +36,16 @@ function readGoogleOAuthConfig(): GoogleOAuthConfig | null {
   };
   const clientId = extra.googleOAuthClientId?.trim();
   if (!clientId) return null;
-  const redirectUri = extra.googleOAuthRedirectUri?.trim() || 'flixy://oauth/google';
+
+  let redirectUri = extra.googleOAuthRedirectUri?.trim();
+  if (!redirectUri) {
+    const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
+    if (isWeb) {
+      redirectUri = Linking.createURL('auth/callback');
+    } else {
+      redirectUri = 'flixy://oauth/google';
+    }
+  }
   return { clientId, redirectUri };
 }
 

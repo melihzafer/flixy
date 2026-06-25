@@ -1,34 +1,40 @@
 # @flixy/web
 
-Static landing page for **flixy.app**, deployed on Vercel.
+Progressive Web App (PWA) + static legal pages for **flixy.app**, deployed on Vercel.
 
-## Pages
+It automatically builds and bundles the core swipe-based experience from `apps/mobile` for the web, injecting service-worker caching, metadata, and deep links to work as a standalone 1:1 match of the mobile experience.
 
-- `index.html` — hero with App Store / Play Store badges
-- `privacy.html` — privacy policy
-- `terms.html` — terms of service
+## Features
 
-## Local preview
+- **PWA Service Worker:** Caches all app assets, CSS, JS, and Google Fonts for fully offline loading.
+- **Offline Tolerance:** Matches the mobile app's database/state seams using AsyncStorage.
+- **1:1 Code Sharing:** Bundles the exact same features and layouts from `apps/mobile` via React Native Web.
+- **Dynamic Routing Fallbacks:** Set up on Vercel (`vercel.json`) to direct clean routes and dynamic segments (like `/title/:id`) to client-side routers.
 
-Open `apps/web/index.html` in a browser, or:
+## Build and Run
+
+To run a production-like preview of the PWA locally:
 
 ```bash
-npx serve apps/web
+# Build the PWA and service worker manifest
+pnpm build:web
+
+# Preview the built app locally on http://localhost:3000
+pnpm --filter @flixy/web preview
 ```
 
-## Deploy
+To run the web app in hot-reloading development mode:
 
-1. Create a Vercel project pointing at this repo.
+```bash
+pnpm --filter @flixy/web dev
+```
+
+## Production Deployment on Vercel
+
+1. Point your Vercel project at this repository.
 2. Set **Root Directory** to `apps/web`.
-3. **Framework preset:** Other (static).
-4. **Build command:** _(leave empty)_
-5. **Output directory:** `.`
+3. Set **Framework Preset** to `Other` (or static).
+4. Set **Build Command** to `pnpm build` (which runs `node scripts/build.js`).
+5. Set **Output Directory** to `dist`.
 
-Vercel headers / redirects are configured via `vercel.json`.
-
-## Why static, not Next.js?
-
-See `docs/DECISIONS.md` DEC-019. Short version: a static landing page costs
-nothing to host, has zero build time, and ships today. The moment we need a
-dynamic feature (waitlist form, blog, locale routing) we will upgrade in a
-single PR; nothing on this page locks us in.
+Vercel headers, redirects, and client-side SPA routing rewrites are configured via `vercel.json`.

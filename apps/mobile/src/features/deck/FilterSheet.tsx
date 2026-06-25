@@ -1,5 +1,6 @@
 import { Laugh, Search, Sofa } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
 
 import { Text } from '../../components/Text';
@@ -17,14 +18,19 @@ const MOODS = [
 ] as const;
 
 const TYPES = ['Movies', 'Series'] as const;
+const TYPE_I18N: Record<(typeof TYPES)[number], string> = {
+  Movies: 'filters.kinds.movie',
+  Series: 'filters.kinds.tv',
+};
 const YEAR_RANGES = [
-  { label: 'Any year', min: null, max: null },
-  { label: '2020s', min: 2020, max: null },
-  { label: '2010s', min: 2010, max: 2019 },
-  { label: 'Classics', min: null, max: 1999 },
+  { key: 'any', label: 'Any year', min: null, max: null },
+  { key: 'y2020s', label: '2020s', min: 2020, max: null },
+  { key: 'y2010s', label: '2010s', min: 2010, max: 2019 },
+  { key: 'classics', label: 'Classics', min: null, max: 1999 },
 ] as const;
 
 export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   const {
     mood,
     kinds,
@@ -57,9 +63,16 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
   const [yearRange, setYearRange] = useState<string>(() => `${minYear ?? ''}:${maxYear ?? ''}`);
   const [selServices, setSelServices] = useState<Set<string>>(new Set());
   const [selGenres, setSelGenres] = useState<Set<string>>(new Set());
+  const openHydratedRef = useRef(false);
 
   useEffect(() => {
-    if (!visible) return;
+    if (!visible) {
+      openHydratedRef.current = false;
+      return;
+    }
+    if (openHydratedRef.current) return;
+    if (!prefs && serviceIds == null && genres == null) return;
+
     setSelMood(mood);
     setTypes(
       new Set(
@@ -73,6 +86,7 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
     setYearRange(`${minYear ?? ''}:${maxYear ?? ''}`);
     setSelServices(new Set(serviceIds ?? prefs?.selected_services ?? []));
     setSelGenres(new Set(genres ?? prefs?.selected_genres ?? []));
+    openHydratedRef.current = true;
   }, [kinds, maxYear, minYear, mood, serviceIds, genres, prefs, visible]);
 
   const toggleType = (t: string) => {
@@ -181,10 +195,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
               paddingBottom: 14,
             }}
           >
-            What are you in the mood for?
+            {t('filters.sheetTitle', 'What are you in the mood for?')}
           </Text>
 
-          <SectionLabel>Mood presets</SectionLabel>
+          <SectionLabel>{t('filters.sectionMood', 'Mood presets')}</SectionLabel>
           <View
             style={{
               flexDirection: 'row',
@@ -228,14 +242,14 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                       color: isOn ? colors.text : colors.textMuted,
                     }}
                   >
-                    {m.label}
+                    {t(`filters.moods.${m.id}`, m.label)}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <SectionLabel>Content type</SectionLabel>
+          <SectionLabel>{t('filters.sectionType', 'Content type')}</SectionLabel>
           <View
             style={{
               flexDirection: 'row',
@@ -244,15 +258,15 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
               marginBottom: 18,
             }}
           >
-            {TYPES.map((t) => {
-              const isOn = types.has(t);
+            {TYPES.map((t_) => {
+              const isOn = types.has(t_);
               return (
                 <Pressable
-                  key={t}
-                  testID={`filter-type-${t.toLowerCase()}`}
+                  key={t_}
+                  testID={`filter-type-${t_.toLowerCase()}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isOn }}
-                  onPress={() => toggleType(t)}
+                  onPress={() => toggleType(t_)}
                   style={{
                     height: 32,
                     paddingHorizontal: 13,
@@ -270,14 +284,14 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                       color: isOn ? colors.text : colors.textMuted,
                     }}
                   >
-                    {t}
+                    {t(TYPE_I18N[t_], t_)}
                   </Text>
                 </Pressable>
               );
             })}
           </View>
 
-          <SectionLabel>Streaming Services</SectionLabel>
+          <SectionLabel>{t('filters.sectionServices', 'Streaming services')}</SectionLabel>
           <View
             style={{
               flexDirection: 'row',
@@ -319,7 +333,7 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
             })}
           </View>
 
-          <SectionLabel>Preferred Genres</SectionLabel>
+          <SectionLabel>{t('filters.sectionGenres', 'Preferred genres')}</SectionLabel>
           <View
             style={{
               flexDirection: 'row',
@@ -330,7 +344,7 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
           >
             {FALLBACK_GENRES_PARSED.map((g) => {
               const isOn = selGenres.has(g.id);
-              const label = g.id.replace(/_/g, ' ');
+              const label = t(`genres.${g.id}`, g.id.replace(/_/g, ' '));
               return (
                 <Pressable
                   key={g.id}
@@ -363,7 +377,7 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
             })}
           </View>
 
-          <SectionLabel>Release window</SectionLabel>
+          <SectionLabel>{t('filters.sectionYears', 'Release window')}</SectionLabel>
           <View
             style={{
               flexDirection: 'row',
@@ -399,7 +413,7 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                       color: isOn ? colors.text : colors.textMuted,
                     }}
                   >
-                    {range.label}
+                    {t(`filters.yearRanges.${range.key}`, range.label)}
                   </Text>
                 </Pressable>
               );
@@ -428,7 +442,7 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                 color: colors.onAccent,
               }}
             >
-              Apply filters
+              {t('filters.applyButton', 'Apply filters')}
             </Text>
           </Pressable>
           <Pressable
@@ -444,7 +458,7 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
             }}
           >
             <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, color: colors.textMuted }}>
-              Reset filters
+              {t('filters.resetButton', 'Reset filters')}
             </Text>
           </Pressable>
         </ScrollView>

@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { MoodPreset, TasteSignal } from '@flixy/shared';
+import type { MoodPreset, TasteSignal, Title } from '@flixy/shared';
 import { type ComposeOptions, type ComposeResult, composeDeck, moodToFilter } from '@flixy/shared';
 
 import { normalizeGenreId, normalizeServiceId } from '../../lib/fallbackCatalogue';
@@ -24,7 +24,7 @@ import { useDeckFilters } from './filterStore';
 
 export type RecommendationItem = {
   titleId: string;
-  type: 'vector' | 'collab';
+  type: 'vector' | 'collab' | 'community';
   score: number;
 };
 
@@ -47,6 +47,11 @@ export function useDeckRecommendations() {
         // Fetch Collaborative recommendations
         const { data: collabData, error: collabError } = await supabase.rpc(
           'get_collaborative_recommendations',
+          { p_user_id: userId, p_limit: 15 },
+        );
+
+        const { data: communityData, error: communityError } = await supabase.rpc(
+          'get_top_favorite_cards',
           { p_user_id: userId, p_limit: 15 },
         );
 
@@ -94,6 +99,26 @@ export function useDeckRecommendations() {
           });
         }
 
+        if (!communityError && Array.isArray(communityData)) {
+          for (const row of communityData) {
+            const id = String(row.title_id);
+            const existing = recommendationsMap.get(id);
+            const saves = Number(row.save_count ?? 1);
+            const tops = Number(row.top_count ?? 0);
+            const communityScore = Math.min(0.88, 0.25 + saves * 0.04 + tops * 0.08);
+
+            recommendationsMap.set(id, {
+              titleId: id,
+              type: existing?.type ?? 'community',
+              score: Math.min(1, Math.max(existing?.score ?? 0, communityScore)),
+            });
+          }
+        } else if (communityError) {
+          logger.warn('Supabase get_top_favorite_cards rpc failed', {
+            error: communityError,
+          });
+        }
+
         return Array.from(recommendationsMap.values());
       } catch (e) {
         logger.warn('Failed to fetch remote recommendations from Supabase', { error: String(e) });
@@ -110,6 +135,7 @@ export function useDeckRecommendations() {
  */
 const DECK_REFILL_THRESHOLD = 5;
 const MAX_PAGES_PER_SESSION = 5;
+const DECK_PAGE_SIZE = 20;
 
 /**
  * Deck queries (FSD section 3.5). Wraps the catalogue query with the on-device
@@ -122,10 +148,10 @@ const EMPTY_TASTE: TasteSignal = {
   totalSwipes: 0,
 };
 
-function useTasteSignal(): TasteSignal {
+function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['taste_signal', userId],
     enabled: !!userId,
     queryFn: async (): Promise<TasteSignal> => {
@@ -161,13 +187,13 @@ function useTasteSignal(): TasteSignal {
       };
     },
   });
-  return data ?? EMPTY_TASTE;
+  return { taste: data ?? EMPTY_TASTE, isLoading: !!userId && isLoading };
 }
 
 function useDeckExclusions() {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['deck_exclusions', userId],
     enabled: !!userId,
     queryFn: async () => {
@@ -210,13 +236,14 @@ function useDeckExclusions() {
     },
   });
 
-  return (
-    data ?? {
+  return {
+    exclusions: data ?? {
       excludeIds: new Set<string>(),
       passedRecently: new Set<string>(),
       shownLast7d: new Set<string>(),
-    }
-  );
+    },
+    isLoading: !!userId && isLoading,
+  };
 }
 
 export type UseDeckOptions = {
@@ -290,11 +317,25 @@ function enrichDeckDiagnostics(input: {
   };
 }
 
+function appendUniqueTitles(existing: Title[], next: Title[]): Title[] {
+  if (next.length === 0) return existing;
+  const seen = new Set(existing.map((title) => title.id));
+  const merged = [...existing];
+  for (const title of next) {
+    if (seen.has(title.id)) continue;
+    seen.add(title.id);
+    merged.push(title);
+  }
+  return merged;
+}
+
 export function useDeck(options: UseDeckOptions = {}) {
-  const { data: prefs } = useUserPreferences();
-  const { data: profile } = useProfile();
-  const taste = useTasteSignal();
-  const exclusions = useDeckExclusions();
+  const { data: session, isLoading: isSessionLoading } = useSession();
+  const userId = session?.user?.id ?? null;
+  const { data: prefs, isLoading: isPrefsLoading } = useUserPreferences();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
+  const { taste, isLoading: isTasteLoading } = useTasteSignal();
+  const { exclusions, isLoading: isExclusionsLoading } = useDeckExclusions();
   const moodFilter = moodToFilter(options.mood ?? null);
   const [refillPage, setRefillPage] = useState(1);
   const filterServices = useDeckFilters((s) => s.serviceIds);
@@ -316,8 +357,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       genres: moodFilter.genres ?? selectedGenres,
       minYear: moodFilter.minYear,
       maxYear: moodFilter.maxYear,
-      limit: 80,
-      page: refillPage,
+      limit: DECK_PAGE_SIZE,
       ...options.extraFilter,
     }),
     [
@@ -327,19 +367,45 @@ export function useDeck(options: UseDeckOptions = {}) {
       moodFilter.genres,
       moodFilter.minYear,
       moodFilter.maxYear,
-      refillPage,
       options.extraFilter,
     ],
   );
 
-  const candidatesQuery = useTitlesQuery(baseFilter);
+  const filterKey = useMemo(() => JSON.stringify(baseFilter), [baseFilter]);
+  const pagedFilter = useMemo(
+    () => ({
+      ...baseFilter,
+      page: refillPage,
+    }),
+    [baseFilter, refillPage],
+  );
+
+  const candidatesQuery = useTitlesQuery(pagedFilter);
   const hasStrictFilters = hasRestrictiveFilter(baseFilter, moodFilter.maxRuntime);
   const relaxedFilter = useMemo(() => makeRelaxedFilter(baseFilter), [baseFilter]);
-  const relaxedCandidatesQuery = useTitlesQuery(relaxedFilter, { enabled: hasStrictFilters });
+  const relaxedPagedFilter = useMemo(
+    () => ({
+      ...relaxedFilter,
+      page: refillPage,
+    }),
+    [relaxedFilter, refillPage],
+  );
+  const relaxedCandidatesQuery = useTitlesQuery(relaxedPagedFilter, { enabled: hasStrictFilters });
+
+  const [candidatePool, setCandidatePool] = useState<Title[]>([]);
+  const [relaxedCandidatePool, setRelaxedCandidatePool] = useState<Title[]>([]);
+  const [candidatePoolKey, setCandidatePoolKey] = useState(filterKey);
+  const appendedPrimaryPagesRef = useRef<Set<string>>(new Set());
+  const appendedRelaxedPagesRef = useRef<Set<string>>(new Set());
+  const lastRefillTriggerRef = useRef<number>(0);
 
   const recoQuery = useDeckRecommendations();
   const recoIds = useMemo(() => recoQuery.data?.map((r) => r.titleId) ?? [], [recoQuery.data]);
   const recoTitlesQuery = useTitlesByIds(recoIds);
+  const isRecommendationsLoading =
+    isSupabaseConfigured &&
+    !!userId &&
+    (recoQuery.isLoading || (recoIds.length > 0 && recoTitlesQuery.isLoading));
 
   const recommendationScores = useMemo(() => {
     const scores: Record<string, number> = {};
@@ -360,13 +426,16 @@ export function useDeck(options: UseDeckOptions = {}) {
       excludeIds: exclusions.excludeIds,
       targetSize: 50,
       recommendationScores,
+      userSeed: userId,
     }),
-    [taste, selectedServices, exclusions, recommendationScores],
+    [taste, selectedServices, exclusions, recommendationScores, userId],
   );
 
   const primaryDeck = useMemo(() => {
-    if (!candidatesQuery.data) return null;
-    let candidates = candidatesQuery.data.titles ?? [];
+    const pooledCandidates = candidatePoolKey === filterKey ? candidatePool : [];
+    const firstPageCandidates = candidatesQuery.data?.titles ?? [];
+    if (pooledCandidates.length === 0 && firstPageCandidates.length === 0) return null;
+    let candidates = pooledCandidates.length > 0 ? pooledCandidates : firstPageCandidates;
 
     // Merge remote recommendations if present
     const recommendedTitles = recoTitlesQuery.data ?? [];
@@ -382,12 +451,21 @@ export function useDeck(options: UseDeckOptions = {}) {
       candidates = merged;
     }
 
-    // Strict genre filter: only allow candidates whose genres are a subset of selectedGenres
+    // Inclusive genre filter: keep candidates that match AT LEAST ONE selected
+    // genre. Subset matching (`every`) silently dropped any title carrying an
+    // extra genre, which made filtering work for some titles but not others.
     if (selectedGenres && selectedGenres.length > 0) {
       const selectedSet = new Set(selectedGenres);
       candidates = candidates.filter((t) =>
-        t.genres.every((g) => selectedSet.has(normalizeGenreId(g))),
+        t.genres.some((g) => selectedSet.has(normalizeGenreId(g))),
       );
+    }
+
+    // Content-type filter (movie/tv). Recommendations are merged in unfiltered,
+    // so enforce the kind here too when the user narrowed to a single type.
+    const kinds = baseFilter.kinds;
+    if (kinds && kinds.length > 0 && kinds.length < 2) {
+      candidates = candidates.filter((t) => kinds.includes(t.kind));
     }
 
     if (moodFilter.maxRuntime != null) {
@@ -399,30 +477,49 @@ export function useDeck(options: UseDeckOptions = {}) {
     }
     return composeDeck({ ...composeOpts, candidates });
   }, [
+    candidatePool,
+    candidatePoolKey,
     candidatesQuery.data,
+    filterKey,
     recoTitlesQuery.data,
     composeOpts,
     moodFilter.maxRuntime,
     selectedGenres,
+    baseFilter.kinds,
   ]);
 
   const relaxedDeck = useMemo(() => {
-    if (!relaxedCandidatesQuery.data) return null;
-    let candidates = relaxedCandidatesQuery.data.titles ?? [];
+    const pooledCandidates = candidatePoolKey === filterKey ? relaxedCandidatePool : [];
+    const firstPageCandidates = relaxedCandidatesQuery.data?.titles ?? [];
+    if (pooledCandidates.length === 0 && firstPageCandidates.length === 0) return null;
+    let candidates = pooledCandidates.length > 0 ? pooledCandidates : firstPageCandidates;
 
-    // Strict genre filter: only allow candidates whose genres are a subset of selectedGenres
+    // Inclusive genre filter (match at least one selected genre) — see primaryDeck.
     if (selectedGenres && selectedGenres.length > 0) {
       const selectedSet = new Set(selectedGenres);
       candidates = candidates.filter((t) =>
-        t.genres.every((g) => selectedSet.has(normalizeGenreId(g))),
+        t.genres.some((g) => selectedSet.has(normalizeGenreId(g))),
       );
+    }
+
+    const kinds = baseFilter.kinds;
+    if (kinds && kinds.length > 0 && kinds.length < 2) {
+      candidates = candidates.filter((t) => kinds.includes(t.kind));
     }
 
     return composeDeck({
       ...composeOpts,
       candidates,
     });
-  }, [relaxedCandidatesQuery.data, composeOpts, selectedGenres]);
+  }, [
+    candidatePoolKey,
+    composeOpts,
+    filterKey,
+    relaxedCandidatePool,
+    relaxedCandidatesQuery.data,
+    selectedGenres,
+    baseFilter.kinds,
+  ]);
 
   const useRelaxedDeck =
     Boolean(hasStrictFilters) &&
@@ -453,16 +550,38 @@ export function useDeck(options: UseDeckOptions = {}) {
     ],
   );
 
-  // Reset the page counter whenever the underlying filter inputs change so a
-  // region/service/genre switch does not leak the previous page number.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger on filter identity; setRefillPage is stable from useState.
+  // Reset lazy-loaded pages whenever the real filter changes. Page changes are
+  // not part of this key, otherwise refills would erase the accumulated pool.
   useEffect(() => {
+    setCandidatePool([]);
+    setRelaxedCandidatePool([]);
+    setCandidatePoolKey(filterKey);
+    appendedPrimaryPagesRef.current = new Set();
+    appendedRelaxedPagesRef.current = new Set();
+    lastRefillTriggerRef.current = 0;
     setRefillPage(1);
-  }, [baseFilter]);
+  }, [filterKey]);
+
+  useEffect(() => {
+    const page = candidatesQuery.data;
+    if (!page || candidatePoolKey !== filterKey) return;
+    const pageKey = `${filterKey}:primary:${refillPage}`;
+    if (appendedPrimaryPagesRef.current.has(pageKey)) return;
+    appendedPrimaryPagesRef.current.add(pageKey);
+    setCandidatePool((prev) => appendUniqueTitles(prev, page.titles));
+  }, [candidatePoolKey, candidatesQuery.data, filterKey, refillPage]);
+
+  useEffect(() => {
+    const page = relaxedCandidatesQuery.data;
+    if (!page || candidatePoolKey !== filterKey) return;
+    const pageKey = `${filterKey}:relaxed:${refillPage}`;
+    if (appendedRelaxedPagesRef.current.has(pageKey)) return;
+    appendedRelaxedPagesRef.current.add(pageKey);
+    setRelaxedCandidatePool((prev) => appendUniqueTitles(prev, page.titles));
+  }, [candidatePoolKey, filterKey, refillPage, relaxedCandidatesQuery.data]);
 
   // Deck refill: when the visible deck drops below the threshold, fetch the
   // next TMDB page. Bounded by MAX_PAGES_PER_SESSION so we never loop forever.
-  const lastRefillTriggerRef = useRef<number>(0);
   useEffect(() => {
     const remaining = deck?.cards.length ?? 0;
     if (
@@ -500,6 +619,12 @@ export function useDeck(options: UseDeckOptions = {}) {
     deck,
     diagnostics,
     isLoading:
+      isSessionLoading ||
+      isPrefsLoading ||
+      isProfileLoading ||
+      isTasteLoading ||
+      isExclusionsLoading ||
+      isRecommendationsLoading ||
       candidatesQuery.isLoading ||
       (hasStrictFilters &&
         (primaryDeck?.cards.length ?? 0) === 0 &&

@@ -1,77 +1,677 @@
 {
-  "session_id": "session-2026-06-20-1545",
-  "started": "2026-06-20T15:45:06.331Z",
+  "session_id": "session-2026-06-25-1626",
+  "started": "2026-06-25T13:26:08.933Z",
   "files_read": {
-    "/home/user/flixy/.env.example": {
+    "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/deck.tsx": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-06-20T15:45:52.356Z"
+      "first_read": "2026-06-25T13:28:08.404Z"
     },
-    "/home/user/flixy/apps/mobile/src/lib/tmdb.ts": {
+    "D:/Projects/Flixy/apps/mobile/src/features/deck/hooks.ts": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-06-20T15:46:08.642Z"
+      "first_read": "2026-06-25T13:28:08.721Z"
     },
-    "/home/user/flixy/apps/mobile/app.config.ts": {
+    "D:/Projects/Flixy/apps/mobile/src/features/swipe/hooks.ts": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-06-20T15:46:12.793Z"
+      "first_read": "2026-06-25T13:28:17.002Z"
     },
-    "/home/user/flixy/apps/mobile/src/lib/supabase.ts": {
+    "D:/Projects/Flixy/apps/mobile/src/features/deck/filterStore.ts": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-06-20T15:46:48.683Z"
+      "first_read": "2026-06-25T13:28:17.473Z"
     },
-    "/home/user/flixy/docs/HUMAN_BLOCKERS.md": {
+    "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-06-20T15:47:24.419Z"
+      "first_read": "2026-06-25T13:28:17.593Z"
     },
-    "/home/user/flixy/apps/mobile/eas.json": {
+    "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-06-20T15:47:54.506Z"
+      "first_read": "2026-06-25T13:28:44.908Z"
     },
-    "/home/user/flixy/biome.json": {
+    "D:/Projects/Flixy/apps/mobile/src/features/catalogue/display.ts": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-06-20T15:48:19.078Z"
+      "first_read": "2026-06-25T13:28:45.341Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/features/swipe/SwipeCard.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:28:45.587Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/features/catalogue/hooks.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:29:27.135Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/i18n/index.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:29:27.372Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/components/Screen.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:29:42.745Z"
+    },
+    "D:/Projects/Flixy/packages/shared/src/schemas/title.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:30:02.048Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/_layout.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:30:02.287Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/lib/tmdb.ts": {
+      "count": 4,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:30:02.865Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/features/watchlist/hooks.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:31:42.726Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/components/CustomTabBar.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:31:43.115Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app.config.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:31:56.224Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/i18n/locales/en.json": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:32:17.546Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/i18n/locales/tr.json": {
+      "count": 2,
+      "tokens": 2401,
+      "first_read": "2026-06-25T13:32:17.614Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/(app)/title/[id].tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:33:31.936Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/_layout.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:34:52.048Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/features/auth/useI18nLanguage.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:35:14.620Z"
+    },
+    "C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/MEMORY.md": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:50:16.428Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/(app)/settings-language.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:55:04.035Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/index.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:55:11.902Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/(app)/_layout.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:55:12.451Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/(auth)/_layout.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:55:12.726Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/features/auth/useSession.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:55:26.570Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/src/lib/query.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:55:49.253Z"
+    },
+    "D:/Projects/Flixy/apps/mobile/app/(onboarding)/region.tsx": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-06-25T13:56:54.210Z"
     }
   },
   "files_written": [
     {
-      "file": "/home/user/flixy/apps/mobile/eas.json",
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/hooks.ts",
       "action": "edit",
-      "tokens": 222,
-      "at": "2026-06-20T15:48:01.508Z"
+      "tokens": 382,
+      "at": "2026-06-25T13:33:55.287Z"
     },
     {
-      "file": "/home/user/flixy/apps/mobile/app.config.ts",
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/hooks.ts",
       "action": "edit",
-      "tokens": 434,
-      "at": "2026-06-20T15:48:31.340Z"
+      "tokens": 208,
+      "at": "2026-06-25T13:34:04.964Z"
     },
     {
-      "file": "/home/user/flixy/docs/HUMAN_BLOCKERS.md",
+      "file": "D:/Projects/Flixy/apps/mobile/src/lib/tmdb.ts",
       "action": "edit",
-      "tokens": 578,
-      "at": "2026-06-20T15:48:44.341Z"
+      "tokens": 115,
+      "at": "2026-06-25T13:34:15.333Z"
     },
     {
-      "file": "/home/user/flixy/apps/mobile/app.config.ts",
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/swipe/hooks.ts",
       "action": "edit",
-      "tokens": 83,
-      "at": "2026-06-20T15:49:02.827Z"
+      "tokens": 448,
+      "at": "2026-06-25T13:34:30.717Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app.config.ts",
+      "action": "edit",
+      "tokens": 72,
+      "at": "2026-06-25T13:34:37.587Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/_layout.tsx",
+      "action": "edit",
+      "tokens": 64,
+      "at": "2026-06-25T13:35:02.953Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/_layout.tsx",
+      "action": "edit",
+      "tokens": 116,
+      "at": "2026-06-25T13:35:10.009Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/lib/tmdb.ts",
+      "action": "edit",
+      "tokens": 234,
+      "at": "2026-06-25T13:35:29.117Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/lib/tmdb.ts",
+      "action": "edit",
+      "tokens": 34,
+      "at": "2026-06-25T13:35:35.168Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/index.ts",
+      "action": "edit",
+      "tokens": 51,
+      "at": "2026-06-25T13:35:40.899Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/index.ts",
+      "action": "edit",
+      "tokens": 140,
+      "at": "2026-06-25T13:35:52.715Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/catalogue/hooks.ts",
+      "action": "edit",
+      "tokens": 38,
+      "at": "2026-06-25T13:36:00.014Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/catalogue/hooks.ts",
+      "action": "edit",
+      "tokens": 23,
+      "at": "2026-06-25T13:36:04.864Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/catalogue/hooks.ts",
+      "action": "edit",
+      "tokens": 30,
+      "at": "2026-06-25T13:36:09.999Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/catalogue/hooks.ts",
+      "action": "edit",
+      "tokens": 30,
+      "at": "2026-06-25T13:36:15.644Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/packages/shared/src/schemas/title.ts",
+      "action": "edit",
+      "tokens": 67,
+      "at": "2026-06-25T13:36:22.365Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/lib/tmdb.ts",
+      "action": "edit",
+      "tokens": 32,
+      "at": "2026-06-25T13:36:33.003Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/lib/tmdb.ts",
+      "action": "edit",
+      "tokens": 77,
+      "at": "2026-06-25T13:36:38.255Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/catalogue/display.ts",
+      "action": "edit",
+      "tokens": 60,
+      "at": "2026-06-25T13:36:43.696Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/catalogue/display.ts",
+      "action": "edit",
+      "tokens": 52,
+      "at": "2026-06-25T13:36:48.797Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/en.json",
+      "action": "edit",
+      "tokens": 108,
+      "at": "2026-06-25T13:37:15.202Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/en.json",
+      "action": "edit",
+      "tokens": 388,
+      "at": "2026-06-25T13:37:27.161Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/en.json",
+      "action": "edit",
+      "tokens": 272,
+      "at": "2026-06-25T13:37:36.677Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/en.json",
+      "action": "edit",
+      "tokens": 229,
+      "at": "2026-06-25T13:37:45.718Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/tr.json",
+      "action": "edit",
+      "tokens": 52,
+      "at": "2026-06-25T13:38:01.117Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/tr.json",
+      "action": "edit",
+      "tokens": 224,
+      "at": "2026-06-25T13:39:14.207Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/tr.json",
+      "action": "edit",
+      "tokens": 220,
+      "at": "2026-06-25T13:39:37.161Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/tr.json",
+      "action": "edit",
+      "tokens": 163,
+      "at": "2026-06-25T13:39:49.206Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 78,
+      "at": "2026-06-25T13:40:05.276Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 186,
+      "at": "2026-06-25T13:40:18.080Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 40,
+      "at": "2026-06-25T13:40:24.258Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 115,
+      "at": "2026-06-25T13:40:31.135Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 96,
+      "at": "2026-06-25T13:40:37.746Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 24,
+      "at": "2026-06-25T13:40:42.973Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 92,
+      "at": "2026-06-25T13:40:50.819Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 104,
+      "at": "2026-06-25T13:41:02.945Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 26,
+      "at": "2026-06-25T13:41:08.468Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 25,
+      "at": "2026-06-25T13:41:15.700Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 49,
+      "at": "2026-06-25T13:41:21.927Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 24,
+      "at": "2026-06-25T13:41:27.018Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 100,
+      "at": "2026-06-25T13:41:33.100Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 76,
+      "at": "2026-06-25T13:41:39.815Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/deck/FilterSheet.tsx",
+      "action": "edit",
+      "tokens": 50,
+      "at": "2026-06-25T13:41:47.717Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 376,
+      "at": "2026-06-25T13:42:17.415Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 66,
+      "at": "2026-06-25T13:42:24.251Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 319,
+      "at": "2026-06-25T13:42:49.067Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 48,
+      "at": "2026-06-25T13:42:56.507Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 50,
+      "at": "2026-06-25T13:43:12.587Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 144,
+      "at": "2026-06-25T13:43:24.999Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 34,
+      "at": "2026-06-25T13:43:30.898Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 242,
+      "at": "2026-06-25T13:43:39.082Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 216,
+      "at": "2026-06-25T13:44:02.777Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 80,
+      "at": "2026-06-25T13:44:09.420Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 87,
+      "at": "2026-06-25T13:44:15.521Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 472,
+      "at": "2026-06-25T13:44:27.668Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 67,
+      "at": "2026-06-25T13:44:37.583Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 71,
+      "at": "2026-06-25T13:44:45.442Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 46,
+      "at": "2026-06-25T13:44:50.472Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 165,
+      "at": "2026-06-25T13:45:07.094Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 203,
+      "at": "2026-06-25T13:45:15.563Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 98,
+      "at": "2026-06-25T13:45:26.459Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 669,
+      "at": "2026-06-25T13:45:41.424Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 160,
+      "at": "2026-06-25T13:45:51.085Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "action": "edit",
+      "tokens": 236,
+      "at": "2026-06-25T13:46:04.079Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/title/[id].tsx",
+      "action": "edit",
+      "tokens": 299,
+      "at": "2026-06-25T13:46:24.611Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/en.json",
+      "action": "edit",
+      "tokens": 45,
+      "at": "2026-06-25T13:46:30.613Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/locales/tr.json",
+      "action": "edit",
+      "tokens": 43,
+      "at": "2026-06-25T13:46:35.649Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/lib/tmdb.ts",
+      "action": "edit",
+      "tokens": 70,
+      "at": "2026-06-25T13:47:17.801Z"
+    },
+    {
+      "file": "C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/project_flixy_localization.md",
+      "action": "create",
+      "tokens": 446,
+      "at": "2026-06-25T13:50:11.869Z"
+    },
+    {
+      "file": "C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/MEMORY.md",
+      "action": "edit",
+      "tokens": 92,
+      "at": "2026-06-25T13:50:22.832Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/src/i18n/index.ts",
+      "action": "edit",
+      "tokens": 233,
+      "at": "2026-06-25T13:57:12.493Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/settings-language.tsx",
+      "action": "edit",
+      "tokens": 180,
+      "at": "2026-06-25T13:57:24.665Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/settings-language.tsx",
+      "action": "edit",
+      "tokens": 246,
+      "at": "2026-06-25T13:57:38.505Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(onboarding)/region.tsx",
+      "action": "edit",
+      "tokens": 85,
+      "at": "2026-06-25T13:57:53.093Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(onboarding)/region.tsx",
+      "action": "edit",
+      "tokens": 110,
+      "at": "2026-06-25T13:57:59.458Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(onboarding)/region.tsx",
+      "action": "edit",
+      "tokens": 319,
+      "at": "2026-06-25T13:58:09.352Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/_layout.tsx",
+      "action": "edit",
+      "tokens": 54,
+      "at": "2026-06-25T13:59:00.885Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/_layout.tsx",
+      "action": "edit",
+      "tokens": 96,
+      "at": "2026-06-25T13:59:07.456Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/_layout.tsx",
+      "action": "edit",
+      "tokens": 277,
+      "at": "2026-06-25T13:59:19.160Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/_layout.tsx",
+      "action": "edit",
+      "tokens": 252,
+      "at": "2026-06-25T13:59:31.898Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 123,
+      "at": "2026-06-25T13:59:57.473Z"
+    },
+    {
+      "file": "D:/Projects/Flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 79,
+      "at": "2026-06-25T14:00:04.503Z"
     }
   ],
   "edit_counts": {
-    "apps/mobile/eas.json": 1,
-    "apps/mobile/app.config.ts": 2,
-    "docs/HUMAN_BLOCKERS.md": 1
+    "apps/mobile/src/features/deck/hooks.ts": 2,
+    "apps/mobile/src/lib/tmdb.ts": 6,
+    "apps/mobile/src/features/swipe/hooks.ts": 1,
+    "apps/mobile/app.config.ts": 1,
+    "apps/mobile/app/_layout.tsx": 6,
+    "apps/mobile/src/i18n/index.ts": 3,
+    "apps/mobile/src/features/catalogue/hooks.ts": 4,
+    "packages/shared/src/schemas/title.ts": 1,
+    "apps/mobile/src/features/catalogue/display.ts": 2,
+    "apps/mobile/src/i18n/locales/en.json": 5,
+    "apps/mobile/src/i18n/locales/tr.json": 5,
+    "apps/mobile/src/features/deck/FilterSheet.tsx": 15,
+    "apps/mobile/app/(app)/(tabs)/deck.tsx": 6,
+    "apps/mobile/src/features/swipe/SwipeCard.tsx": 4,
+    "apps/mobile/app/(app)/(tabs)/watchlist.tsx": 13,
+    "apps/mobile/app/(app)/title/[id].tsx": 1,
+    "C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/project_flixy_localization.md": 1,
+    "C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/MEMORY.md": 1,
+    "apps/mobile/app/(app)/settings-language.tsx": 2,
+    "apps/mobile/app/(onboarding)/region.tsx": 3
   },
   "anatomy_hits": 0,
-  "anatomy_misses": 7,
-  "repeated_reads_warned": 0,
+  "anatomy_misses": 30,
+  "repeated_reads_warned": 4,
   "cerebrum_warnings": 0,
-  "stop_count": 1
+  "stop_count": 0
 }

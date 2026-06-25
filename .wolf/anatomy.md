@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-06-20T15:49:02.818Z
-> Files: 4 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-06-25T14:00:04.489Z
+> Files: 20 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -153,6 +153,11 @@
 ## C:/Users/melih/.claude/plans/
 
 
+## C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/
+
+- `MEMORY.md` (~152 tok)
+- `project_flixy_localization.md` (~410 tok)
+
 ## UI_UX_Claude_Design/
 
 
@@ -164,8 +169,7 @@
 
 ## apps/mobile/
 
-- `app.config.ts` — Declares process (~1074 tok)
-- `eas.json` (~338 tok)
+- `app.config.ts` — Declares process (~1142 tok)
 
 ## apps/mobile/.expo/
 
@@ -175,19 +179,27 @@
 
 ## apps/mobile/app/
 
+- `_layout.tsx` — Holds the native splash screen until the auth session has actually resolved, (~1300 tok)
 
 ## apps/mobile/app/(app)/
 
+- `settings-language.tsx` — LANGUAGES (~629 tok)
+
+## apps/mobile/app/(app)/(tabs)/
+
+- `deck.tsx` — DeckScreen (~9012 tok)
+- `watchlist.tsx` — FILTERS (~6472 tok)
 
 ## apps/mobile/app/(app)/title/
 
-- `[id].tsx` — TitleDetail (~4769 tok)
+- `[id].tsx` — TitleDetail (~5523 tok)
 
 ## apps/mobile/app/(auth)/
 
 
 ## apps/mobile/app/(onboarding)/
 
+- `region.tsx` — REGIONS (~2012 tok)
 
 ## apps/mobile/e2e/
 
@@ -209,12 +221,16 @@
 
 ## apps/mobile/src/features/catalogue/
 
+- `display.ts` — Exports TitleDisplay, toTitleDisplay (~676 tok)
+- `hooks.ts` — Exports CatalogueFallbackReason, CatalogueDiagnostics, TitleQueryResult, TITLE_QUERY_RESULT_SHAPE_VE (~3092 tok)
 
 ## apps/mobile/src/features/catalogue/__tests__/
 
 
 ## apps/mobile/src/features/deck/
 
+- `FilterSheet.tsx` — MOODS — renders modal (~4610 tok)
+- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~6184 tok)
 
 ## apps/mobile/src/features/notifications/
 
@@ -236,6 +252,8 @@
 
 ## apps/mobile/src/features/swipe/
 
+- `hooks.ts` — High-level swipe API consumed by the deck screen. Wraps queue + haptics + (~3161 tok)
+- `SwipeCard.tsx` — HORIZONTAL_THRESHOLD_RATIO (~3243 tok)
 
 ## apps/mobile/src/features/telemetry/
 
@@ -248,12 +266,16 @@
 
 ## apps/mobile/src/i18n/
 
+- `index.ts` — Exports ENABLED_LANGUAGES, EnabledLanguage, isLanguageEnabled (~562 tok)
 
 ## apps/mobile/src/i18n/locales/
 
+- `en.json` (~4953 tok)
+- `tr.json` (~2943 tok)
 
 ## apps/mobile/src/lib/
 
+- `tmdb.ts` — Returns the current TMDB language tag (e.g. "tr-TR"). (~4414 tok)
 
 ## apps/mobile/src/lib/__tests__/
 
@@ -275,7 +297,6 @@
 
 ## docs/
 
-- `HUMAN_BLOCKERS.md` — Human Blockers (~1545 tok)
 
 ## packages/catalogue-ingest/
 
@@ -297,6 +318,7 @@
 
 ## packages/shared/src/schemas/
 
+- `title.ts` — Zod schemas: TitleKindSchema, OfferTypeSchema, TitleAvailabilitySchema, TitleSchema (~502 tok)
 
 ## packages/shared/src/schemas/__tests__/
 

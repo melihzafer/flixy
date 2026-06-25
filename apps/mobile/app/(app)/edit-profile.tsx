@@ -230,7 +230,7 @@ export default function EditProfile() {
       <Input
         label={t('settingsPages.editProfile.handle', 'Handle')}
         value={handle}
-        onChangeText={(value) => setHandle(value.toLowerCase().trim())}
+        onChangeText={(value) => setHandle(value.toLowerCase())}
         autoCapitalize="none"
         autoCorrect={false}
         helperText={

@@ -2496,6 +2496,278 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-06-20T16:10:00.000Z"
+    },
+    {
+      "id": "bug-137",
+      "timestamp": "2026-06-25T13:33:55.293Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 26→36 lines (2 removed) | Also: // Strict genre filter: only allow candidates whos; t.genres.every((g) => selectedSet.has(normalizeGen | Also: if (isSupabaseConfigured) {; return (data ?? [])",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-06-25T13:34:30.722Z"
+    },
+    {
+      "id": "bug-138",
+      "timestamp": "2026-06-25T13:34:15.337Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/src/lib/tmdb.ts",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 16→8 lines (10 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:34:15.337Z"
+    },
+    {
+      "id": "bug-139",
+      "timestamp": "2026-06-25T13:35:29.120Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/src/lib/tmdb.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: numberOfSeasons: type === 'tv' ? (tmdbData.number_of_seasons; numberOfEpisodes: type === 'tv' ? (tmdbData.number_of_episod",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-25T13:36:38.258Z"
+    },
+    {
+      "id": "bug-140",
+      "timestamp": "2026-06-25T13:36:15.647Z",
+      "error_message": "Wrong reference: key should be getTmdbLanguage",
+      "file": "apps/mobile/src/features/catalogue/hooks.ts",
+      "root_cause": "Used \"key\" instead of \"getTmdbLanguage\"",
+      "fix": "Changed key → getTmdbLanguage",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:36:15.647Z"
+    },
+    {
+      "id": "bug-141",
+      "timestamp": "2026-06-25T13:36:48.801Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/src/features/catalogue/display.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:36:48.801Z"
+    },
+    {
+      "id": "bug-142",
+      "timestamp": "2026-06-25T13:40:18.084Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/src/features/deck/FilterSheet.tsx",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 13→17 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:40:18.084Z"
+    },
+    {
+      "id": "bug-143",
+      "timestamp": "2026-06-25T13:42:17.418Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "root_cause": "10 lines replaced/restructured",
+      "fix": "Rewrote 30→36 lines (10 removed) | Also: Card limit reached; You get {CARD_LIMITS.hourly} cards per hour and {C",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-25T13:42:49.072Z"
+    },
+    {
+      "id": "bug-144",
+      "timestamp": "2026-06-25T13:43:30.902Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:43:30.902Z"
+    },
+    {
+      "id": "bug-145",
+      "timestamp": "2026-06-25T13:44:02.781Z",
+      "error_message": "CSS fix: id",
+      "file": "apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "root_cause": "id: 'watched', label: 'watchlist.filter.watched' → 'tv', label: 'watchlist.filter.series'",
+      "fix": "Changed id: 'watched', label: 'watchlist.filter.watched' → 'tv', label: 'watchlist.filter.series'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-06-25T13:46:04.089Z"
+    },
+    {
+      "id": "bug-146",
+      "timestamp": "2026-06-25T13:44:09.423Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "root_cause": "3 lines replaced/restructured",
+      "fix": "Rewrote 4→4 lines (3 removed) | Also: accessibilityLabel=\"Dismiss action sheet\"; backgroundColor: 'rgba(0,0,0,0.55)',",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-06-25T13:45:41.429Z"
+    },
+    {
+      "id": "bug-147",
+      "timestamp": "2026-06-25T13:45:15.568Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/app/(app)/(tabs)/watchlist.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:45:15.568Z"
+    },
+    {
+      "id": "bug-148",
+      "timestamp": "2026-06-25T13:46:24.618Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(app)/title/[id].tsx",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 10→27 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:46:24.618Z"
+    },
+    {
+      "id": "bug-149",
+      "timestamp": "2026-06-25T13:57:12.497Z",
+      "error_message": "Type error",
+      "file": "apps/mobile/src/i18n/index.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:57:12.497Z"
+    },
+    {
+      "id": "bug-150",
+      "timestamp": "2026-06-25T13:57:38.509Z",
+      "error_message": "Missing guard clause",
+      "file": "apps/mobile/app/(app)/settings-language.tsx",
+      "root_cause": "No early return/throw for edge case: !enabled",
+      "fix": "Added guard clause: if (!enabled)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:57:38.509Z"
+    },
+    {
+      "id": "bug-151",
+      "timestamp": "2026-06-25T13:57:59.462Z",
+      "error_message": "CSS fix: language",
+      "file": "apps/mobile/app/(onboarding)/region.tsx",
+      "root_cause": "language: LanguageCodeSchema.safeParse(language).success ? language : 'en', → isLanguageEnabled(validLanguage) ? validLanguage : 'en',",
+      "fix": "Changed language: LanguageCodeSchema.safeParse(language).success ? language : 'en', → isLanguageEnabled(validLanguage) ? validLanguage : 'en',",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:57:59.462Z"
+    },
+    {
+      "id": "bug-152",
+      "timestamp": "2026-06-25T13:59:00.890Z",
+      "error_message": "Incorrect value in code",
+      "file": "apps/mobile/app/_layout.tsx",
+      "root_cause": "Had '@tanstack/react-query-persist-client'",
+      "fix": "Changed to '@tanstack/react-query'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:59:00.890Z"
+    },
+    {
+      "id": "bug-153",
+      "timestamp": "2026-06-25T13:59:31.902Z",
+      "error_message": "Wrong operator: || should be !==",
+      "file": "apps/mobile/app/_layout.tsx",
+      "root_cause": "Used \"||\" instead of \"!==\"",
+      "fix": "Changed operator || → !==",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-06-25T13:59:31.902Z"
     }
   ]
 }

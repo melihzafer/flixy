@@ -29,7 +29,6 @@ export default function SettingsNotifications() {
           'New availability and watchlist reminders.',
         )}
         accessibilityLabel={t('settingsPages.notifications.push', 'Push notifications')}
-        onPress={() => update.mutate({ notifications_enabled: !pushEnabled })}
         trailing={
           <Switch
             value={pushEnabled}

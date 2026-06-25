@@ -70,13 +70,14 @@ function ProviderMark({
 
 const styles = StyleSheet.create({
   base: {
-    height: 54,
+    minHeight: 58,
     borderRadius: radii.md + 2,
     borderWidth: 1.5,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
     paddingHorizontal: spacing[12],
+    paddingVertical: spacing[3],
     position: 'relative',
   },
   mark: {

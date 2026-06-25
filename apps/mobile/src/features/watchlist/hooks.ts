@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type { Title, WatchlistItem, WatchlistPriority } from '@flixy/shared';
 
@@ -26,21 +26,15 @@ export function useWatchlist(filter: WatchlistFilter = 'all') {
   const userId = session?.user?.id;
 
   const itemsQuery = useQuery({
-    queryKey: ['watchlist', userId, filter],
+    queryKey: ['watchlist', userId],
     enabled: !!userId,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       if (!userId) return [] as WatchlistItem[];
       const data = await watchlistStore.getWatchlist(userId);
 
-      let filtered = data;
-      if (filter === 'top') {
-        filtered = filtered.filter((i) => i.priority === 'top');
-      } else if (filter === 'watched') {
-        filtered = filtered.filter((i) => i.watched_at !== null);
-      }
-
       // Sort by priority (top first), then position
-      const sorted = [...filtered].sort((a, b) => {
+      const sorted = [...data].sort((a, b) => {
         if (a.priority === 'top' && b.priority !== 'top') return -1;
         if (a.priority !== 'top' && b.priority === 'top') return 1;
         return a.position - b.position;
@@ -50,20 +44,26 @@ export function useWatchlist(filter: WatchlistFilter = 'all') {
     },
   });
 
-  const titleIds = (itemsQuery.data ?? []).map((i) => i.titleId);
+  const allItems = itemsQuery.data ?? [];
+  const filteredItems = allItems.filter((item) => {
+    if (filter === 'top') return item.priority === 'top';
+    if (filter === 'watched') return !!item.watchedAt;
+    return true;
+  });
+  const titleIds = allItems.map((i) => i.titleId);
   const titlesQuery = useTitlesByIds(titleIds);
 
   const titlesById = new Map<string, Title>();
   for (const t of titlesQuery.data ?? []) titlesById.set(t.id, t);
 
-  const entries: WatchlistEntry[] = (itemsQuery.data ?? []).map((item) => ({
+  const entries: WatchlistEntry[] = filteredItems.map((item) => ({
     item,
     title: titlesById.get(item.titleId),
   }));
 
   return {
     entries,
-    isLoading: itemsQuery.isLoading || titlesQuery.isLoading,
+    isLoading: itemsQuery.isLoading || (titleIds.length > 0 && titlesQuery.isLoading),
     isError: itemsQuery.isError || titlesQuery.isError,
     refetch: itemsQuery.refetch,
   };

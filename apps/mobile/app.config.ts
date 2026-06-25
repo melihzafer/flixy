@@ -36,6 +36,11 @@ const config: ExpoConfig = {
   icon: './assets/icon.png',
   scheme: 'flixy',
   userInterfaceStyle: 'dark',
+  backgroundColor: '#0A0A0B',
+  androidNavigationBar: {
+    barStyle: 'light-content',
+    backgroundColor: '#0A0A0B',
+  },
   newArchEnabled: true,
   splash: {
     image: './assets/splash.png',

@@ -19,5 +19,12 @@
       ]
     }
   ],
-  "redirects": [{ "source": "/index", "destination": "/", "permanent": true }]
+  "redirects": [{ "source": "/index", "destination": "/", "permanent": true }],
+  "rewrites": [
+    { "source": "/title/:id", "destination": "/title/[id].html" },
+    {
+      "source": "/:path((?!_expo/|assets/|sw.js|manifest.webmanifest|favicon.ico|apple-touch-icon.png|icon-)[^/.]+)",
+      "destination": "/index.html"
+    }
+  ]
 }

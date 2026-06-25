@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 
 import { SelectOption, SettingsPage } from '../../src/components/SettingsPage';
+import { Text } from '../../src/components/Text';
 import { useUpdateProfileRegion } from '../../src/features/onboarding/hooks';
 import { useProfile } from '../../src/features/profile/hooks';
 
@@ -17,10 +18,10 @@ const REGIONS = [
 
 export default function SettingsRegion() {
   const { t } = useTranslation();
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading } = useProfile();
   const update = useUpdateProfileRegion();
-  const currentRegion = profile?.region ?? 'US';
-  const currentLanguage = profile?.language ?? 'en';
+  const currentRegion = profile?.region;
+  const currentLanguage = profile?.language;
 
   return (
     <SettingsPage
@@ -30,21 +31,25 @@ export default function SettingsRegion() {
         'Used for streaming availability and catalogue relevance.',
       )}
     >
-      {REGIONS.map((region) => (
-        <SelectOption
-          key={region.code}
-          label={region.label}
-          description={region.code}
-          selected={region.code === currentRegion}
-          disabled={update.isPending}
-          onPress={() =>
-            update.mutate(
-              { region: region.code, language: currentLanguage },
-              { onSuccess: () => router.back() },
-            )
-          }
-        />
-      ))}
+      {isLoading || !currentRegion || !currentLanguage ? (
+        <Text tone="muted">{t('common.loading')}</Text>
+      ) : (
+        REGIONS.map((region) => (
+          <SelectOption
+            key={region.code}
+            label={region.label}
+            description={region.code}
+            selected={region.code === currentRegion}
+            disabled={update.isPending}
+            onPress={() =>
+              update.mutate(
+                { region: region.code, language: currentLanguage },
+                { onSuccess: () => router.back() },
+              )
+            }
+          />
+        ))
+      )}
     </SettingsPage>
   );
 }

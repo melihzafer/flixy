@@ -43,9 +43,11 @@ function isAllowedOAuthCallbackUrl(url: string) {
       const cleanPath = fullPath.startsWith('/') ? fullPath : `/${fullPath}`;
       return OAUTH_CALLBACK_PATHS.has(cleanPath);
     }
-    if (parsed.protocol === 'https:') {
+    if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
       const path = parsed.pathname || '';
-      return parsed.hostname === OAUTH_UNIVERSAL_LINK_HOST && OAUTH_CALLBACK_PATHS.has(path);
+      const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+      const isAllowedHost = parsed.hostname === OAUTH_UNIVERSAL_LINK_HOST || isLocalhost;
+      return isAllowedHost && OAUTH_CALLBACK_PATHS.has(path);
     }
     if (
       typeof __DEV__ !== 'undefined' &&

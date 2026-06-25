@@ -407,6 +407,7 @@
 | 15:10 | Edited apps/mobile/app/(app)/title/[id].tsx | inline fix | ~23 |
 | 15:10 | Edited apps/mobile/app/(app)/title/[id].tsx | 2→1 lines | ~16 |
 | 15:10 | Edited apps/mobile/app/(app)/title/[id].tsx | 2→1 lines | ~10 |
+<<<<<<< Updated upstream
 
 ## Session: 2026-06-20 15:45
 
@@ -418,3 +419,111 @@
 | 15:49 | Edited apps/mobile/app.config.ts | 5→3 lines | ~83 |
 | 16:10 | Diagnosed release-APK "couldn't connect to server": EAS builds shipped empty extra.tmdbApiKey/supabaseUrl because .env.local is gitignored and build profiles did not declare env vars. Added environment mapping to eas.json, build-time guard warn in app.config.ts, HB-009 doc with eas env:create commands. | apps/mobile/eas.json, apps/mobile/app.config.ts, docs/HUMAN_BLOCKERS.md | fixed (human must create EAS env vars + rebuild) | ~9k |
 | 15:51 | Session end: 4 writes across 3 files (eas.json, app.config.ts, HUMAN_BLOCKERS.md) | 7 reads | ~1317 tok |
+=======
+| 15:13 | Session end: 19 writes across 9 files (0018_recommendations.sql, embeddings.ts, index.ts, deno.json, README.md) | 40 reads | ~32577 tok |
+| 15:19 | Edited apps/mobile/app.config.ts | removed 3 lines | ~7 |
+| 15:21 | Edited apps/mobile/app.config.ts | 3→4 lines | ~21 |
+| 15:21 | Edited apps/mobile/app.config.ts | inline fix | ~27 |
+| 15:24 | Session end: 22 writes across 10 files (0018_recommendations.sql, embeddings.ts, index.ts, deno.json, README.md) | 41 reads | ~33306 tok |
+| 15:26 | Session end: 22 writes across 10 files (0018_recommendations.sql, embeddings.ts, index.ts, deno.json, README.md) | 41 reads | ~33306 tok |
+| 15:37 | Edited apps/mobile/eas.json | 7→8 lines | ~56 |
+| 15:38 | Session end: 23 writes across 11 files (0018_recommendations.sql, embeddings.ts, index.ts, deno.json, README.md) | 41 reads | ~33362 tok |
+| 16:00 | Session end: 23 writes across 11 files (0018_recommendations.sql, embeddings.ts, index.ts, deno.json, README.md) | 41 reads | ~33362 tok |
+>>>>>>> Stashed changes
+
+## Session: 2026-06-20 19:23
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-06-25 15:01
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-06-25 16:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 16:33 | Edited apps/mobile/src/features/deck/hooks.ts | added 1 condition(s) | ~382 |
+| 16:34 | Edited apps/mobile/src/features/deck/hooks.ts | added 1 condition(s) | ~208 |
+| 16:34 | Edited apps/mobile/src/lib/tmdb.ts | modified if() | ~115 |
+| 16:34 | Edited apps/mobile/src/features/swipe/hooks.ts | modified getQuotaSwipeTimes() | ~448 |
+| 16:34 | Edited apps/mobile/app.config.ts | 5→10 lines | ~72 |
+| 16:35 | Edited apps/mobile/app/_layout.tsx | added 1 import(s) | ~64 |
+| 16:35 | Edited apps/mobile/app/_layout.tsx | modified AppSideEffects() | ~116 |
+| 16:35 | Edited apps/mobile/src/lib/tmdb.ts | added nullish coalescing | ~234 |
+| 16:35 | Edited apps/mobile/src/lib/tmdb.ts | 4→5 lines | ~34 |
+| 16:35 | Edited apps/mobile/src/i18n/index.ts | added 1 import(s) | ~51 |
+| 16:35 | Edited apps/mobile/src/i18n/index.ts | 11→16 lines | ~140 |
+| 16:36 | Edited apps/mobile/src/features/catalogue/hooks.ts | 6→7 lines | ~38 |
+| 16:36 | Edited apps/mobile/src/features/catalogue/hooks.ts | inline fix | ~23 |
+| 16:36 | Edited apps/mobile/src/features/catalogue/hooks.ts | inline fix | ~30 |
+| 16:36 | Edited apps/mobile/src/features/catalogue/hooks.ts | inline fix | ~30 |
+| 16:36 | Edited packages/shared/src/schemas/title.ts | 3→5 lines | ~67 |
+| 16:36 | Edited apps/mobile/src/lib/tmdb.ts | 2→4 lines | ~32 |
+| 16:36 | Edited apps/mobile/src/lib/tmdb.ts | added nullish coalescing | ~77 |
+| 16:36 | Edited apps/mobile/src/features/catalogue/display.ts | 5→7 lines | ~60 |
+| 16:36 | Edited apps/mobile/src/features/catalogue/display.ts | added nullish coalescing | ~52 |
+| 16:37 | Edited apps/mobile/src/i18n/locales/en.json | 14→16 lines | ~108 |
+| 16:37 | Edited apps/mobile/src/i18n/locales/en.json | expanded (+9 lines) | ~388 |
+| 16:37 | Edited apps/mobile/src/i18n/locales/en.json | expanded (+19 lines) | ~272 |
+| 16:37 | Edited apps/mobile/src/i18n/locales/en.json | expanded (+14 lines) | ~229 |
+| 16:38 | Edited apps/mobile/src/i18n/locales/tr.json | 5→7 lines | ~52 |
+| 16:39 | Edited apps/mobile/src/i18n/locales/tr.json | expanded (+17 lines) | ~224 |
+| 16:39 | Edited apps/mobile/src/i18n/locales/tr.json | expanded (+19 lines) | ~220 |
+| 16:39 | Edited apps/mobile/src/i18n/locales/tr.json | expanded (+14 lines) | ~163 |
+| 16:40 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | added 1 import(s) | ~78 |
+| 16:40 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 13→17 lines | ~186 |
+| 16:40 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | modified FilterSheet() | ~40 |
+| 16:40 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 13→13 lines | ~115 |
+| 16:40 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 9→9 lines | ~96 |
+| 16:40 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | inline fix | ~24 |
+| 16:40 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 9→9 lines | ~92 |
+| 16:41 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 9→9 lines | ~104 |
+| 16:41 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | inline fix | ~26 |
+| 16:41 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | inline fix | ~25 |
+| 16:41 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 3→3 lines | ~49 |
+| 16:41 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | inline fix | ~24 |
+| 16:41 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 9→9 lines | ~100 |
+| 16:41 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 9→9 lines | ~76 |
+| 16:41 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | 3→3 lines | ~50 |
+| 16:42 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | expanded (+6 lines) | ~376 |
+| 16:42 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | modified toLocaleTimeString() | ~66 |
+| 16:42 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | CSS: hourly, daily, time | ~319 |
+| 16:42 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | 3→3 lines | ~48 |
+| 16:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | added 1 import(s) | ~50 |
+| 16:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | CSS: count | ~144 |
+| 16:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | added nullish coalescing | ~34 |
+| 16:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | expanded (+23 lines) | ~242 |
+| 16:44 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | CSS: TYPE_FILTERS | ~216 |
+| 16:44 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | modified filter() | ~80 |
+| 16:44 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | CSS: count | ~87 |
+| 16:44 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | expanded (+38 lines) | ~472 |
+| 16:44 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | 6→6 lines | ~67 |
+| 16:44 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | modified t() | ~71 |
+| 16:44 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | 6→6 lines | ~46 |
+| 16:45 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | CSS: count | ~165 |
+| 16:45 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | added nullish coalescing | ~203 |
+| 16:45 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | CSS: title | ~98 |
+| 16:45 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | modified t() | ~669 |
+| 16:45 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | 18→18 lines | ~160 |
+| 16:46 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | CSS: textTransform, letterSpacing, 3 | ~236 |
+| 16:46 | Edited apps/mobile/app/(app)/title/[id].tsx | modified t() | ~299 |
+| 16:46 | Edited apps/mobile/src/i18n/locales/en.json | 3→5 lines | ~45 |
+| 16:46 | Edited apps/mobile/src/i18n/locales/tr.json | 3→5 lines | ~43 |
+| 16:47 | Edited apps/mobile/src/lib/tmdb.ts | modified setTmdbLanguage() | ~70 |
+| 16:50 | Created C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/project_flixy_localization.md | — | ~416 |
+| 16:50 | Edited C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/MEMORY.md | 1→2 lines | ~86 |
+| 16:57 | Edited apps/mobile/src/i18n/index.ts | modified isLanguageEnabled() | ~233 |
+| 16:57 | Edited apps/mobile/app/(app)/settings-language.tsx | 15→15 lines | ~180 |
+| 16:57 | Edited apps/mobile/app/(app)/settings-language.tsx | CSS: code | ~246 |
+| 16:57 | Edited apps/mobile/app/(onboarding)/region.tsx | 5→5 lines | ~85 |
+| 16:57 | Edited apps/mobile/app/(onboarding)/region.tsx | CSS: validLanguage | ~110 |
+| 16:58 | Edited apps/mobile/app/(onboarding)/region.tsx | CSS: opacity, 1 | ~319 |
+| 16:59 | Edited apps/mobile/app/_layout.tsx | added 1 import(s) | ~54 |
+| 16:59 | Edited apps/mobile/app/_layout.tsx | added 1 import(s) | ~96 |
+| 16:59 | Edited apps/mobile/app/_layout.tsx | CSS: isLoading | ~277 |
+| 16:59 | Edited apps/mobile/app/_layout.tsx | CSS: dehydrateOptions, session, shouldDehydrateQuery | ~252 |
+| 16:59 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | 4→8 lines | ~123 |
+| 17:00 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | modified if() | ~79 |

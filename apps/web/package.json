@@ -4,7 +4,13 @@
   "private": true,
   "description": "Static landing page for Flixy at flixy.app",
   "scripts": {
-    "typecheck": "echo \"@flixy/web: static site, no typecheck needed\" && exit 0",
+    "build": "node scripts/build.js",
+    "dev": "pnpm --filter @flixy/mobile web",
+    "preview": "sirv dist --single --port 3000",
+    "typecheck": "echo \"@flixy/web: no typecheck needed\" && exit 0",
     "test": "echo \"@flixy/web: no tests\" && exit 0"
+  },
+  "devDependencies": {
+    "sirv-cli": "^3.0.0"
   }
 }

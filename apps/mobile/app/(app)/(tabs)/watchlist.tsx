@@ -27,9 +27,17 @@ const FILTERS: { id: WatchlistFilter; label: string }[] = [
   { id: 'watched', label: 'watchlist.filter.watched' },
 ];
 
+type TypeFilter = 'all' | 'movie' | 'tv';
+const TYPE_FILTERS: { id: TypeFilter; label: string }[] = [
+  { id: 'all', label: 'watchlist.filter.all' },
+  { id: 'movie', label: 'watchlist.filter.movies' },
+  { id: 'tv', label: 'watchlist.filter.series' },
+];
+
 export default function WatchlistScreen() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<WatchlistFilter>('all');
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const { entries, isLoading, isError, refetch } = useWatchlist(filter);
   const markWatched = useMarkWatched();
   const unmarkWatched = useUnmarkWatched();
@@ -81,9 +89,9 @@ export default function WatchlistScreen() {
     );
   }
 
-  const validEntries = entries.filter(
-    (e): e is typeof e & { title: NonNullable<typeof e.title> } => !!e.title,
-  );
+  const validEntries = entries
+    .filter((e): e is typeof e & { title: NonNullable<typeof e.title> } => !!e.title)
+    .filter((e) => typeFilter === 'all' || e.title.kind === typeFilter);
   const top = validEntries.filter((e) => e.item.priority === 'top' && !e.item.watchedAt);
   const norm = validEntries.filter((e) => e.item.priority !== 'top' && !e.item.watchedAt);
   const watched = validEntries.filter((e) => !!e.item.watchedAt);
@@ -108,7 +116,7 @@ export default function WatchlistScreen() {
                 fontFamily: fonts.bodySemi,
               }}
             >
-              {entries.length} titles
+              {t('watchlist.titlesCount', '{{count}} titles', { count: entries.length })}
             </Text>
           </View>
         }
@@ -150,6 +158,42 @@ export default function WatchlistScreen() {
         })}
       </View>
 
+      <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingBottom: 4 }}>
+        {TYPE_FILTERS.map((it) => {
+          const active = typeFilter === it.id;
+          return (
+            <Pressable
+              key={it.id}
+              testID={`watchlist-type-${it.id}`}
+              accessibilityRole="button"
+              accessibilityLabel={t(it.label)}
+              accessibilityState={{ selected: active }}
+              onPress={() => setTypeFilter(it.id)}
+              style={{
+                minHeight: 32,
+                paddingHorizontal: 12,
+                borderRadius: 999,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: active ? 'rgba(255,77,28,0.16)' : 'rgba(245,245,240,0.04)',
+                borderWidth: 1,
+                borderColor: active ? colors.accentBorder : colors.border,
+              }}
+            >
+              <Text
+                style={{
+                  fontFamily: fonts.bodySemi,
+                  fontSize: 11,
+                  color: active ? colors.text : colors.textMuted,
+                }}
+              >
+                {t(it.label)}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       {top.length > 0 && (
         <>
           <View
@@ -171,7 +215,7 @@ export default function WatchlistScreen() {
                 color: 'rgba(245,245,240,0.28)',
               }}
             >
-              Top Picks
+              {t('watchlist.sectionTop', 'Top Picks')}
             </Text>
             <Star size={12} color="rgba(245,200,66,0.54)" strokeWidth={2.1} />
           </View>
@@ -214,7 +258,9 @@ export default function WatchlistScreen() {
               marginBottom: 6,
             }}
           >
-            {top.length > 0 ? 'Watchlist' : 'Saved'}
+            {top.length > 0
+              ? t('watchlist.sectionWatchlist', 'Watchlist')
+              : t('watchlist.sectionSaved', 'Saved')}
           </Text>
           {norm.map((entry) => (
             <WatchlistRow
@@ -255,7 +301,7 @@ export default function WatchlistScreen() {
               marginBottom: 6,
             }}
           >
-            Watched
+            {t('watchlist.sectionWatched', 'Watched')}
           </Text>
           {watched.map((entry) => (
             <WatchlistRow
@@ -387,9 +433,17 @@ function WatchlistRow({
   onTogglePriority: () => void;
   onRemove: () => void;
 }) {
+  const { t } = useTranslation();
   const display = toTitleDisplay(entry.title);
   const watched = !!entry.item.watchedAt;
-  const primaryService = display.services[0] ?? 'Availability unknown';
+  const primaryService =
+    display.services[0] ?? t('watchlist.availabilityUnknown', 'Availability unknown');
+  const isSeries = display.kind === 'tv';
+  const typeLabel = isSeries ? t('detail.series', 'Series') : t('detail.movie', 'Movie');
+  const seasonsLabel =
+    isSeries && display.numberOfSeasons
+      ? t('detail.seasons', '{{count}} seasons', { count: display.numberOfSeasons })
+      : null;
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const fire = (action: 'mark_watched' | 'mark_top' | 'remove' | 'pass') => {
@@ -466,17 +520,22 @@ function WatchlistRow({
               }}
               numberOfLines={1}
             >
-              {[display.year, display.runtime].filter(Boolean).join(' · ')}
+              {[display.year, seasonsLabel ?? display.runtime].filter(Boolean).join(' · ')}
             </Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              <Badge label={watched ? 'Watched' : primaryService} />
-              {entry.item.priority === 'top' && <Badge label="Top pick" />}
+              <Badge label={typeLabel} accent />
+              <Badge label={watched ? t('watchlist.badgeWatched', 'Watched') : primaryService} />
+              {entry.item.priority === 'top' && (
+                <Badge label={t('watchlist.badgeTop', 'Top pick')} />
+              )}
             </View>
           </View>
 
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Open actions for ${display.title}`}
+            accessibilityLabel={t('watchlist.openActions', 'Open actions for {{title}}', {
+              title: display.title,
+            })}
             hitSlop={10}
             onPress={(e) => {
               e.stopPropagation();
@@ -503,11 +562,11 @@ function WatchlistRow({
         onRequestClose={() => setSheetOpen(false)}
       >
         <Pressable
-          accessibilityLabel="Dismiss action sheet"
+          accessibilityLabel={t('common.back', 'Dismiss')}
           onPress={() => setSheetOpen(false)}
           style={{
             flex: 1,
-            backgroundColor: 'rgba(0,0,0,0.55)',
+            backgroundColor: 'rgba(0,0,0,0.6)',
             justifyContent: 'flex-end',
           }}
         >
@@ -515,35 +574,64 @@ function WatchlistRow({
             onPress={(e) => e.stopPropagation()}
             style={{
               backgroundColor: colors.surface,
-              borderTopLeftRadius: 22,
-              borderTopRightRadius: 22,
-              padding: 16,
-              paddingBottom: 28,
-              gap: 6,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              borderWidth: 1,
+              borderColor: 'rgba(255,77,28,0.12)',
+              paddingHorizontal: 16,
+              paddingTop: 10,
+              paddingBottom: 34,
+              gap: 8,
             }}
           >
+            <View
+              style={{
+                alignSelf: 'center',
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                marginBottom: 6,
+              }}
+            />
             <Text
               style={{
-                fontFamily: fonts.bodySemi,
-                fontSize: 13,
-                color: colors.textMuted,
+                fontFamily: fonts.display,
+                fontSize: 19,
+                color: colors.text,
                 textAlign: 'center',
-                paddingVertical: 8,
+                paddingBottom: 10,
               }}
               numberOfLines={1}
             >
               {display.title}
             </Text>
             <SheetAction
-              label={watched ? 'Mark unwatched' : 'Mark watched'}
+              label={
+                watched
+                  ? t('watchlist.sheet.markUnwatched', 'Mark unwatched')
+                  : t('watchlist.sheet.markWatched', 'Mark watched')
+              }
               onPress={() => fire('mark_watched')}
             />
             <SheetAction
-              label={entry.item.priority === 'top' ? 'Remove top pick' : 'Mark as top pick'}
+              label={
+                entry.item.priority === 'top'
+                  ? t('watchlist.sheet.removeTop', 'Remove top pick')
+                  : t('watchlist.sheet.markTop', 'Mark as top pick')
+              }
               onPress={() => fire('mark_top')}
             />
-            <SheetAction label="Remove from watchlist" onPress={() => fire('remove')} danger />
-            <SheetAction label="Cancel" onPress={() => fire('pass')} subtle />
+            <SheetAction
+              label={t('watchlist.sheet.remove', 'Remove from watchlist')}
+              onPress={() => fire('remove')}
+              danger
+            />
+            <SheetAction
+              label={t('watchlist.sheet.cancel', 'Cancel')}
+              onPress={() => fire('pass')}
+              subtle
+            />
           </Pressable>
         </Pressable>
       </Modal>
@@ -568,11 +656,11 @@ function SheetAction({
       accessibilityLabel={label}
       onPress={onPress}
       style={({ pressed }) => ({
-        minHeight: 50,
-        borderRadius: 14,
+        minHeight: 58,
+        borderRadius: 16,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: pressed ? 'rgba(255,255,255,0.08)' : 'rgba(245,245,240,0.04)',
+        backgroundColor: pressed ? 'rgba(255,255,255,0.08)' : 'rgba(245,245,240,0.05)',
         borderWidth: 1,
         borderColor: danger ? 'rgba(224,92,75,0.34)' : colors.border,
       })}
@@ -580,7 +668,7 @@ function SheetAction({
       <Text
         style={{
           fontFamily: fonts.bodySemi,
-          fontSize: 14,
+          fontSize: 16,
           color: danger ? colors.left : subtle ? colors.textMuted : colors.text,
         }}
       >
@@ -590,25 +678,27 @@ function SheetAction({
   );
 }
 
-function Badge({ label }: { label: string }) {
+function Badge({ label, accent = false }: { label: string; accent?: boolean }) {
   return (
     <View
       style={{
         alignSelf: 'flex-start',
-        backgroundColor: 'rgba(255,255,255,0.07)',
+        backgroundColor: accent ? 'rgba(255,77,28,0.16)' : 'rgba(255,255,255,0.07)',
         paddingHorizontal: 7,
         paddingVertical: 2,
         borderRadius: 6,
         borderWidth: 1,
-        borderColor: 'rgba(245,245,240,0.08)',
+        borderColor: accent ? 'rgba(255,77,28,0.32)' : 'rgba(245,245,240,0.08)',
       }}
     >
       <Text
         style={{
           fontSize: 9,
           fontFamily: fonts.bodySemi,
-          color: 'rgba(245,245,240,0.5)',
+          color: accent ? 'rgba(255,150,120,0.95)' : 'rgba(245,245,240,0.5)',
           maxWidth: 180,
+          textTransform: accent ? 'uppercase' : 'none',
+          letterSpacing: accent ? 0.3 : 0,
         }}
         numberOfLines={1}
       >

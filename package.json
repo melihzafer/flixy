@@ -5,9 +5,11 @@
   "description": "Flixy — swipe-based movie & TV discovery app",
   "scripts": {
     "mobile": "pnpm --filter @flixy/mobile",
+    "web": "pnpm --filter @flixy/web",
     "start": "pnpm --filter @flixy/mobile start",
     "android": "pnpm --filter @flixy/mobile android",
     "ios": "pnpm --filter @flixy/mobile ios",
+    "build:web": "pnpm --filter @flixy/web build",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",

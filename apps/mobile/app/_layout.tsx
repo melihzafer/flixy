@@ -16,11 +16,13 @@ import {
   Newsreader_800ExtraBold_Italic,
 } from '@expo-google-fonts/newsreader';
 import { PlayfairDisplay_900Black_Italic } from '@expo-google-fonts/playfair-display';
+import { defaultShouldDehydrateQuery } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import * as SystemUI from 'expo-system-ui';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
 import { LogBox } from 'react-native';
@@ -33,6 +35,7 @@ import '../src/theme/global.css';
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
 import { useAuthDeepLink } from '../src/features/auth/useAuthDeepLink';
 import { useI18nLanguage } from '../src/features/auth/useI18nLanguage';
+import { useSession } from '../src/features/auth/useSession';
 import { queryClient, queryPersister } from '../src/lib/query';
 import { initSentry } from '../src/lib/sentry';
 import { colors } from '../src/theme/tokens';
@@ -49,6 +52,29 @@ LogBox.ignoreLogs([
 function AppSideEffects() {
   useAuthDeepLink();
   useI18nLanguage();
+  useEffect(() => {
+    // Paint the root window (the area behind the system bars / gesture nav) dark
+    // so the bottom never flashes white on Android. Config sets this for fresh
+    // installs; this covers the running app without a native rebuild.
+    void SystemUI.setBackgroundColorAsync('#0A0A0B');
+  }, []);
+  return null;
+}
+
+/**
+ * Holds the native splash screen until the auth session has actually resolved,
+ * so the user never sees the auth screen flash before being redirected home
+ * (or vice-versa). A timeout guarantees the splash never gets stuck.
+ */
+function SplashGate() {
+  const { isLoading: sessionLoading } = useSession();
+  useEffect(() => {
+    if (!sessionLoading) void SplashScreen.hideAsync();
+  }, [sessionLoading]);
+  useEffect(() => {
+    const id = setTimeout(() => void SplashScreen.hideAsync(), 2500);
+    return () => clearTimeout(id);
+  }, []);
   return null;
 }
 
@@ -68,12 +94,6 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
 
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      void SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
-
   if (!fontsLoaded && !fontError) {
     return null;
   }
@@ -83,9 +103,20 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <PersistQueryClientProvider
           client={queryClient}
-          persistOptions={{ persister: queryPersister, maxAge: 1000 * 60 * 60 * 24 * 7 }}
+          persistOptions={{
+            persister: queryPersister,
+            maxAge: 1000 * 60 * 60 * 24 * 7,
+            dehydrateOptions: {
+              // Never persist the auth session: a stale cached value would flash
+              // the wrong screen (auth ⇄ home) on launch before the live session
+              // resolves. It must be re-derived fresh every cold start.
+              shouldDehydrateQuery: (query) =>
+                query.queryKey[0] !== 'auth' && defaultShouldDehydrateQuery(query),
+            },
+          }}
         >
           <AppSideEffects />
+          <SplashGate />
           <StatusBar style="light" />
           <ErrorBoundary>
             <Stack

@@ -42,9 +42,9 @@ export function SwipeStamp({
 }) {
   return (
     <Animated.View
-      pointerEvents="none"
       style={[
         {
+          pointerEvents: 'none',
           position: 'absolute',
           paddingHorizontal: 12,
           paddingVertical: 5,

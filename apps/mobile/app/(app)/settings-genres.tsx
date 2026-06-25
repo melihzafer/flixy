@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -22,10 +22,13 @@ export default function EditGenresScreen() {
   const { data: prefs } = useUserPreferences();
   const update = useUpdatePreferences();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
+    if (!prefs || hydratedRef.current) return;
     setSelected(new Set(prefs?.selected_genres ?? []));
-  }, [prefs?.selected_genres]);
+    hydratedRef.current = true;
+  }, [prefs]);
 
   const toggle = (id: string) => {
     setSelected((current) => {

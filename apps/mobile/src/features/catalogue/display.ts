@@ -19,6 +19,8 @@ export type TitleDisplay = {
   cast: string[];
   gradient: readonly [string, string, string, string];
   kind: 'movie' | 'tv';
+  numberOfSeasons: number | null;
+  numberOfEpisodes: number | null;
   posterUrl: string | null;
   backdropUrl: string | null;
 };
@@ -74,6 +76,8 @@ export function toTitleDisplay(t: Title): TitleDisplay {
     cast: t.cast ?? [],
     gradient: getTitleGradient(t.id),
     kind: t.kind,
+    numberOfSeasons: t.numberOfSeasons ?? null,
+    numberOfEpisodes: t.numberOfEpisodes ?? null,
     posterUrl: t.posterUrl,
     backdropUrl: t.backdropUrl,
   };

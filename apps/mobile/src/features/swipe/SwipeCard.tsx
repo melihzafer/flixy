@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Info } from 'lucide-react-native';
 import { useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -45,11 +46,18 @@ export function SwipeCard({
   zIndex = 0,
   disabled = false,
 }: SwipeCardProps) {
+  const { t } = useTranslation();
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const isCommitting = useSharedValue(false);
 
   const display = useMemo(() => toTitleDisplay(title), [title]);
+  const isSeries = display.kind === 'tv';
+  const typeLabel = isSeries ? t('detail.series', 'Series') : t('detail.movie', 'Movie');
+  const seasonsLabel =
+    isSeries && display.numberOfSeasons
+      ? t('detail.seasons', '{{count}} seasons', { count: display.numberOfSeasons })
+      : null;
 
   const horizontalThreshold = cardWidth * HORIZONTAL_THRESHOLD_RATIO;
 
@@ -134,7 +142,9 @@ export function SwipeCard({
     opacity: interpolate(ty.value, [0, VERTICAL_THRESHOLD], [0, 1], 'clamp'),
   }));
 
-  const meta = [display.year, display.runtime, display.rating].filter(Boolean).join('  \u00b7  ');
+  const meta = [display.year, seasonsLabel ?? display.runtime, display.rating]
+    .filter(Boolean)
+    .join('  \u00b7  ');
 
   return (
     <GestureDetector gesture={composed}>
@@ -197,8 +207,8 @@ export function SwipeCard({
         />
 
         <View
-          pointerEvents="none"
           style={{
+            pointerEvents: 'none',
             position: 'absolute',
             top: 0,
             left: 0,
@@ -211,8 +221,8 @@ export function SwipeCard({
         {/* Info button */}
         {!disabled && (
           <View
-            pointerEvents="none"
             style={{
+              pointerEvents: 'none',
               position: 'absolute',
               top: 14,
               right: 14,
@@ -278,6 +288,29 @@ export function SwipeCard({
           </Text>
 
           <View style={{ flexDirection: 'row', gap: 5, flexWrap: 'wrap' }}>
+            <View
+              style={{
+                height: 22,
+                paddingHorizontal: 8,
+                borderRadius: 7,
+                backgroundColor: 'rgba(255,77,28,0.16)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,77,28,0.32)',
+                justifyContent: 'center',
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 9,
+                  fontFamily: fonts.bodyBold,
+                  letterSpacing: 0.3,
+                  textTransform: 'uppercase',
+                  color: 'rgba(255,150,120,0.95)',
+                }}
+              >
+                {typeLabel}
+              </Text>
+            </View>
             {display.services.slice(0, 2).map((s) => (
               <View
                 key={s}

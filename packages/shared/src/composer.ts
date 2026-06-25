@@ -23,6 +23,7 @@ export type ComposeOptions = {
   targetSize?: number;
   now?: Date;
   recommendationScores?: Record<string, number>;
+  userSeed?: string | null;
 };
 
 export type ComposeResult = {
@@ -160,6 +161,20 @@ function primaryGenre(t: Title): string {
   return t.genres[0] ?? 'unknown';
 }
 
+function hashString(input: string): number {
+  let hash = 2166136261;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function userJitter(titleId: string, userSeed?: string | null): number {
+  if (!userSeed) return 0;
+  return (hashString(`${userSeed}:${titleId}`) / 0xffffffff) * 0.015;
+}
+
 export function composeDeck(opts: ComposeOptions): ComposeResult {
   const candidates = candidateArray(opts.candidates);
   const taste = safeTasteSignal(opts.taste);
@@ -170,6 +185,7 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   const targetSize = opts.targetSize ?? DEFAULT_TARGET_SIZE;
   const now = opts.now ?? new Date();
   const recommendationScores = opts.recommendationScores ?? {};
+  const userSeed = typeof opts.userSeed === 'string' ? opts.userSeed : null;
 
   // Hard exclude (Layer 1 residue): seen, watchlist, recent passes' hard list.
   const eligible = candidates.filter((t) => !excludeIds.has(t.id));
@@ -193,7 +209,8 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
       wPopularity * popularity +
       wAvailability * availability +
       wFreshness * freshness +
-      wCooldown * cooldown;
+      wCooldown * cooldown +
+      userJitter(t.id, userSeed);
     return {
       title: t,
       trace: {

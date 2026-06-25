@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View } from 'react-native';
 
@@ -17,20 +17,24 @@ import { colors, fonts } from '../../src/theme/tokens';
 
 export default function EditServicesScreen() {
   const { t } = useTranslation();
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: isProfileLoading } = useProfile();
   const { data: prefs } = useUserPreferences();
-  const region = profile?.region ?? 'US';
+  const region = profile?.region;
   const { data: services } = useStreamingServices(region);
   const update = useUpdatePreferences();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const hydratedRef = useRef(false);
 
   useEffect(() => {
+    if (!prefs || hydratedRef.current) return;
     setSelected(new Set(prefs?.selected_services ?? []));
-  }, [prefs?.selected_services]);
+    hydratedRef.current = true;
+  }, [prefs]);
 
   const serviceOptions = useMemo(
     () =>
-      services ?? FALLBACK_STREAMING_SERVICES.filter((service) => service.regions.includes(region)),
+      services ??
+      FALLBACK_STREAMING_SERVICES.filter((service) => service.regions.includes(region ?? 'US')),
     [region, services],
   );
 
@@ -55,44 +59,48 @@ export default function EditServicesScreen() {
         'Keep this current so Discover only recommends titles you can actually play.',
       )}
     >
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-        {serviceOptions.map((service) => {
-          const active = selected.has(service.id);
-          return (
-            <Pressable
-              key={service.id}
-              testID={`settings-service-${service.id}`}
-              accessibilityRole="button"
-              accessibilityState={{ selected: active }}
-              accessibilityLabel={`${service.name}${active ? ', selected' : ''}`}
-              onPress={() => toggle(service.id)}
-              style={{
-                width: '48%',
-                minHeight: 52,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor: active ? colors.accentBorder : colors.border,
-                backgroundColor: active ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                paddingHorizontal: 10,
-              }}
-            >
-              <Text
+      {isProfileLoading || !region ? (
+        <Text tone="muted">{t('common.loading')}</Text>
+      ) : (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+          {serviceOptions.map((service) => {
+            const active = selected.has(service.id);
+            return (
+              <Pressable
+                key={service.id}
+                testID={`settings-service-${service.id}`}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                accessibilityLabel={`${service.name}${active ? ', selected' : ''}`}
+                onPress={() => toggle(service.id)}
                 style={{
-                  fontFamily: fonts.bodySemi,
-                  fontSize: 13,
-                  color: active ? colors.text : colors.textMuted,
-                  textAlign: 'center',
+                  width: '48%',
+                  minHeight: 52,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: active ? colors.accentBorder : colors.border,
+                  backgroundColor: active ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  paddingHorizontal: 10,
                 }}
-                numberOfLines={2}
               >
-                {service.name}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Text
+                  style={{
+                    fontFamily: fonts.bodySemi,
+                    fontSize: 13,
+                    color: active ? colors.text : colors.textMuted,
+                    textAlign: 'center',
+                  }}
+                  numberOfLines={2}
+                >
+                  {service.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <View style={{ gap: 8 }}>
         <Button
@@ -100,7 +108,7 @@ export default function EditServicesScreen() {
           label={t('settingsPages.services.save', 'Save services')}
           onPress={save}
           loading={update.isPending}
-          disabled={selected.size === 0}
+          disabled={selected.size === 0 || isProfileLoading || !region}
         />
         <Button
           label={t('settingsPages.services.cancel', 'Cancel')}

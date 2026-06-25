@@ -19,30 +19,47 @@ import { colors, fonts } from '../../../src/theme/tokens';
 export default function SearchScreen() {
   const { t } = useTranslation();
   const [q, setQ] = useState('');
-  const { data, isFetching, isError, refetch } = useSearchTitles(q);
-  const { data: trending, refetch: refetchTrending } = useTitlesQuery({ limit: 12 });
+  const debouncedQuery = useDebouncedValue(q, 260);
+  const isTypingSearch =
+    q.trim().length >= 2 && debouncedQuery.trim().toLowerCase() !== q.trim().toLowerCase();
+  const { data, isFetching, isError, refetch } = useSearchTitles(debouncedQuery);
+  const {
+    data: trending,
+    isLoading: isTrendingLoading,
+    refetch: refetchTrending,
+  } = useTitlesQuery({
+    limit: 12,
+  });
 
   useEffect(() => {
-    if (q.trim().length >= 2 && data && !isFetching) {
-      events.searchSubmitted(q.trim(), data.titles.length);
+    if (debouncedQuery.trim().length >= 2 && data && !isFetching && !isTypingSearch) {
+      events.searchSubmitted(debouncedQuery.trim(), data.titles.length);
       events.searchQuery({
-        queryLength: q.trim().length,
+        queryLength: debouncedQuery.trim().length,
         resultCount: data.titles.length,
         isFallback: data.diagnostics.isFallback,
       });
       if (data.titles.length === 0) {
         events.searchNoResult({
-          queryLength: q.trim().length,
+          queryLength: debouncedQuery.trim().length,
           isFallback: data.diagnostics.isFallback,
         });
       }
     }
-  }, [q, data, isFetching]);
+  }, [debouncedQuery, data, isFetching, isTypingSearch]);
 
   const showTrending = q.trim().length < 2;
-  const searchState = getSearchUiState({ query: q, isFetching, result: data });
+  const searchState = getSearchUiState({
+    query: q,
+    isFetching: isFetching || isTypingSearch,
+    result: isTypingSearch ? null : data,
+  });
   const activeDiagnostics = showTrending ? trending?.diagnostics : data?.diagnostics;
-  const results = showTrending ? (trending?.titles ?? []) : (data?.titles ?? []);
+  const results = showTrending
+    ? (trending?.titles ?? [])
+    : isTypingSearch
+      ? []
+      : (data?.titles ?? []);
   // D4: only surface degraded copy when offline (unconfigured) or query failed.
   // `live_empty` is a clean miss — show the "no results" empty state instead.
   const degradedLabel =
@@ -144,6 +161,8 @@ export default function SearchScreen() {
         </View>
       ) : searchState === 'searching' ? (
         <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} />
+      ) : showTrending && isTrendingLoading ? (
+        <SearchSkeletonList title={t('search.trendingNow', 'Trending now')} />
       ) : showTrending ? (
         <FlatList
           data={results.slice(0, 12)}
@@ -204,6 +223,70 @@ export default function SearchScreen() {
     </Screen>
   );
 }
+
+function useDebouncedValue(value: string, delayMs: number) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(id);
+  }, [value, delayMs]);
+
+  return debounced;
+}
+
+function SearchSkeletonList({ title }: { title: string }) {
+  return (
+    <View style={{ paddingTop: 2 }}>
+      <SearchListHeader title={title} degradedLabel={null} />
+      {SKELETON_ROWS.map((key) => (
+        <View
+          key={key}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 11,
+            paddingVertical: 7,
+            paddingHorizontal: 20,
+          }}
+        >
+          <View
+            style={{
+              width: 36,
+              height: 50,
+              borderRadius: 6,
+              backgroundColor: colors.surface2,
+            }}
+          />
+          <View style={{ flex: 1, gap: 7 }}>
+            <View
+              style={{
+                width: '62%',
+                height: 13,
+                borderRadius: 7,
+                backgroundColor: colors.surface3,
+              }}
+            />
+            <View
+              style={{ width: '36%', height: 9, borderRadius: 5, backgroundColor: colors.surface2 }}
+            />
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+const SKELETON_ROWS = [
+  'search-skeleton-1',
+  'search-skeleton-2',
+  'search-skeleton-3',
+  'search-skeleton-4',
+  'search-skeleton-5',
+  'search-skeleton-6',
+  'search-skeleton-7',
+  'search-skeleton-8',
+] as const;
 
 function SearchListHeader({
   title,

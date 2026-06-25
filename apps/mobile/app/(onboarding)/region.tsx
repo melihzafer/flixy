@@ -9,7 +9,7 @@ import { LanguageCodeSchema, RegionCodeSchema } from '@flixy/shared';
 import { Screen } from '../../src/components/Screen';
 import { Text } from '../../src/components/Text';
 import { useUpdateProfileRegion } from '../../src/features/onboarding/hooks';
-import i18n from '../../src/i18n';
+import i18n, { isLanguageEnabled } from '../../src/i18n';
 import { colors, fonts } from '../../src/theme/tokens';
 
 const REGIONS = ['US', 'TR', 'BG', 'ES', 'DE', 'FR', 'BR'] as const;
@@ -59,9 +59,11 @@ export default function RegionStep() {
     const loc = Localization.getLocales()[0];
     const region = (loc?.regionCode ?? 'US').toUpperCase();
     const language = loc?.languageCode ?? 'en';
+    const validLanguage = LanguageCodeSchema.safeParse(language).success ? language : 'en';
     return {
       region: RegionCodeSchema.safeParse(region).success ? region : 'US',
-      language: LanguageCodeSchema.safeParse(language).success ? language : 'en',
+      // Only land on a language the user can actually use today.
+      language: isLanguageEnabled(validLanguage) ? validLanguage : 'en',
     };
   }, []);
 
@@ -167,10 +169,12 @@ export default function RegionStep() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {LANGUAGES.map((l) => {
             const isOn = l.code === language;
+            const enabled = isLanguageEnabled(l.code);
             return (
               <Pressable
                 key={l.code}
-                onPress={() => setLanguage(l.code)}
+                disabled={!enabled}
+                onPress={() => enabled && setLanguage(l.code)}
                 style={{
                   height: 44,
                   paddingHorizontal: 16,
@@ -179,6 +183,7 @@ export default function RegionStep() {
                   borderColor: isOn ? colors.accentBorder : colors.border,
                   backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
                   justifyContent: 'center',
+                  opacity: enabled ? 1 : 0.4,
                 }}
               >
                 <Text

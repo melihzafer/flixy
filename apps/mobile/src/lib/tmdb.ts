@@ -13,6 +13,32 @@ const TMDB_READ_ACCESS_TOKEN = extra.tmdbReadAccessToken || '';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
 
+// TMDB returns localized titles/overviews when given a `language` param. We keep
+// it in sync with the app language so movies AND series show up translated.
+const TMDB_LANGUAGE_MAP: Record<string, string> = {
+  en: 'en-US',
+  tr: 'tr-TR',
+  bg: 'bg-BG',
+  de: 'de-DE',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  'pt-BR': 'pt-BR',
+};
+
+let tmdbLanguage = 'en-US';
+
+/** Returns the current TMDB language tag (e.g. "tr-TR"). */
+export function getTmdbLanguage(): string {
+  return tmdbLanguage;
+}
+
+/** Sets the TMDB content language from an app locale code (e.g. "tr"). */
+export function setTmdbLanguage(appLocale: string | null | undefined): void {
+  if (!appLocale) return;
+  const base = appLocale.split('-')[0] ?? appLocale;
+  tmdbLanguage = TMDB_LANGUAGE_MAP[appLocale] ?? TMDB_LANGUAGE_MAP[base] ?? 'en-US';
+}
+
 // Minimal TMDB response shapes. The final Title output is validated by
 // TitleSchema.parse, so these only describe what the mapping reads.
 type TmdbVideo = { type: string; site: string; key: string };
@@ -41,6 +67,8 @@ type TmdbTitle = {
   first_air_date?: string;
   runtime?: number;
   episode_run_time?: number[];
+  number_of_seasons?: number;
+  number_of_episodes?: number;
   genres?: { id: number }[];
   genre_ids?: number[];
   credits?: { crew?: { job?: string; name: string }[]; cast?: { name: string }[] };
@@ -174,6 +202,7 @@ async function callTmdb(endpoint: string, params: Record<string, string> = {}): 
     throw new Error('TMDB_API_KEY is not configured.');
   }
   const queryParams = new URLSearchParams({
+    language: tmdbLanguage,
     ...params,
     api_key: TMDB_API_KEY,
   });
@@ -339,6 +368,8 @@ export function mapTmdbToTitle(
     criticScore: null,
     popularity: tmdbData.popularity || 0,
     genres,
+    numberOfSeasons: type === 'tv' ? (tmdbData.number_of_seasons ?? null) : null,
+    numberOfEpisodes: type === 'tv' ? (tmdbData.number_of_episodes ?? null) : null,
     language: tmdbData.original_language || null,
     tagline: tmdbData.tagline || null,
     directors,
@@ -421,19 +452,11 @@ export async function discoverTmdbTitles(filter: TmdbDiscoverFilter): Promise<Ti
         .map((g) => (kind === 'movie' ? FLIXY_TO_TMDB_MOVIE_GENRE[g] : FLIXY_TO_TMDB_TV_GENRE[g]))
         .filter(Boolean);
       if (genreIds.length > 0) {
+        // OR-match on the selected genres. We deliberately do NOT add
+        // `without_genres` here: excluding every non-selected genre forced an
+        // exact-subset match, which starved the deck and made filtering feel
+        // broken (most titles carry a secondary genre the user didn't pick).
         params.with_genres = genreIds.join('|');
-      }
-
-      // Add without_genres to exclude any genres the user did NOT select
-      const allFlixyGenres = Object.keys(
-        kind === 'movie' ? FLIXY_TO_TMDB_MOVIE_GENRE : FLIXY_TO_TMDB_TV_GENRE,
-      );
-      const excludedFlixyGenres = allFlixyGenres.filter((g) => !filter.genres?.includes(g));
-      const excludedGenreIds = excludedFlixyGenres
-        .map((g) => (kind === 'movie' ? FLIXY_TO_TMDB_MOVIE_GENRE[g] : FLIXY_TO_TMDB_TV_GENRE[g]))
-        .filter(Boolean);
-      if (excludedGenreIds.length > 0) {
-        params.without_genres = excludedGenreIds.join(',');
       }
     }
 

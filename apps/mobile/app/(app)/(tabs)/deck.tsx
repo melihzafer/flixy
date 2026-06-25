@@ -10,7 +10,7 @@ import {
   Star,
   X,
 } from 'lucide-react-native';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,6 +29,8 @@ import { type DeckDiagnostics, useDeck } from '../../../src/features/deck/hooks'
 import { useUserPreferences } from '../../../src/features/onboarding/hooks';
 import { SwipeCard } from '../../../src/features/swipe/SwipeCard';
 import {
+  CARD_LIMITS,
+  useCardQuota,
   useFlushOnReconnect,
   useRecordSwipe,
   useSwipeQueueBoot,
@@ -71,6 +73,7 @@ export default function DeckScreen() {
   const recordSwipe = useRecordSwipe();
   const undoSwipe = useUndoSwipe();
   const stats = useSwipeStats();
+  const { data: quota } = useCardQuota();
   const [showFilters, setShowFilters] = useState(false);
 
   useSwipeQueueBoot();
@@ -91,16 +94,52 @@ export default function DeckScreen() {
   const dismissAnonPrompt = useAnonSwipeStore((s) => s.dismissPrompt);
 
   const cards: DeckCard[] = deck?.cards ?? [];
-  const remaining = useMemo(
-    () => cards.filter((c) => !swipedSet.has(c.title.id)),
-    [cards, swipedSet],
+  const [cardQueueIds, setCardQueueIds] = useState<string[]>([]);
+  useEffect(() => {
+    if (cards.length === 0) {
+      setCardQueueIds((prev) => (prev.length === 0 ? prev : []));
+      return;
+    }
+
+    setCardQueueIds((prev) => {
+      const availableIds = new Set(cards.map((card) => card.title.id));
+      const kept = prev.filter((id) => availableIds.has(id));
+      const queued = new Set(kept);
+      const appended = cards
+        .map((card) => card.title.id)
+        .filter((id) => {
+          if (queued.has(id)) return false;
+          queued.add(id);
+          return true;
+        });
+      const next = [...kept, ...appended];
+      return sameStringArray(prev, next) ? prev : next;
+    });
+  }, [cards]);
+
+  const cardById = useMemo(() => new Map(cards.map((card) => [card.title.id, card])), [cards]);
+  const queuedCards = useMemo(
+    () => cardQueueIds.map((id) => cardById.get(id)).filter((card): card is DeckCard => !!card),
+    [cardById, cardQueueIds],
   );
-  const visible = useMemo(() => remaining.slice(0, 3), [remaining]);
+  const remaining = useMemo(
+    () => queuedCards.filter((c) => !swipedSet.has(c.title.id)),
+    [queuedCards, swipedSet],
+  );
+  const quotaRemaining = quota?.remaining ?? CARD_LIMITS.hourly;
+  const visible = useMemo(
+    () => remaining.slice(0, Math.min(3, quotaRemaining)),
+    [remaining, quotaRemaining],
+  );
+  // Cards have arrived from the query but the local display queue (built in an
+  // effect) hasn't synced yet. Without this guard the empty state flashes for a
+  // frame before the cards mount — the "no cards then cards" glitch.
+  const isHydratingQueue = cards.length > 0 && cardQueueIds.length === 0;
 
   const handleCommit = useCallback(
     async (dir: SwipeDirection) => {
       const card = remaining[0];
-      if (!card) return;
+      if (!card || quotaRemaining <= 0) return;
       const swipeIndex = swipedIds.length;
       try {
         const ev = await recordSwipe.mutateAsync({
@@ -139,6 +178,7 @@ export default function DeckScreen() {
       isPreviewUser,
       recordSwipe,
       remaining,
+      quotaRemaining,
       shouldPromptAnonUpgrade,
       swipedIds.length,
     ],
@@ -152,7 +192,7 @@ export default function DeckScreen() {
     setSwipedIds((prev) => prev.slice(0, -1));
   }, [swipedIds.length, undoSwipe]);
 
-  if (isLoading) {
+  if (isLoading || isHydratingQueue) {
     return (
       <Screen scroll={false}>
         <DeckLoadingState
@@ -229,6 +269,17 @@ export default function DeckScreen() {
             </Text>
           </Pressable>
         </View>
+      </Screen>
+    );
+  }
+
+  if (quota?.isLimited) {
+    return (
+      <Screen scroll={false}>
+        <DeckLimitState
+          quota={quota}
+          onOpenWatchlist={() => router.push('/(app)/(tabs)/watchlist')}
+        />
       </Screen>
     );
   }
@@ -495,8 +546,8 @@ export default function DeckScreen() {
                   bottom: 0,
                   transform: [{ scale }, { translateY }],
                   zIndex: 10 - depth,
+                  pointerEvents: isTop ? 'auto' : 'none',
                 }}
-                pointerEvents={isTop ? 'auto' : 'none'}
               >
                 <SwipeCard
                   title={card.title}
@@ -528,34 +579,46 @@ export default function DeckScreen() {
         }}
       >
         {position > 0 && (
-          <Pressable
-            onPress={handleUndo}
-            testID="deck-undo-button"
-            accessibilityRole="button"
-            accessibilityLabel={t('deck.undoA11y', 'Undo last swipe')}
+          <View
             style={{
+              pointerEvents: 'box-none',
               position: 'absolute',
-              right: 20,
-              top: -22,
-              minHeight: 34,
-              paddingHorizontal: 10,
-              borderRadius: 18,
-              flexDirection: 'row',
+              top: -24,
+              left: 0,
+              right: 0,
               alignItems: 'center',
-              gap: 5,
             }}
           >
-            <RotateCcw size={13} color="rgba(245,245,240,0.36)" strokeWidth={2.1} />
-            <Text
-              style={{
-                fontSize: 11,
-                fontFamily: fonts.bodySemi,
-                color: 'rgba(245,245,240,0.3)',
-              }}
+            <Pressable
+              onPress={handleUndo}
+              testID="deck-undo-button"
+              accessibilityRole="button"
+              accessibilityLabel={t('deck.undoA11y', 'Undo last swipe')}
+              hitSlop={8}
+              style={({ pressed }) => ({
+                height: 40,
+                paddingHorizontal: 18,
+                borderRadius: 20,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 7,
+                backgroundColor: pressed ? 'rgba(255,77,28,0.16)' : 'rgba(245,245,240,0.06)',
+                borderWidth: 1,
+                borderColor: pressed ? colors.accentBorder : 'rgba(245,245,240,0.12)',
+              })}
             >
-              {t('deck.undo', 'Undo')}
-            </Text>
-          </Pressable>
+              <RotateCcw size={16} color={colors.accent} strokeWidth={2.3} />
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontFamily: fonts.bodySemi,
+                  color: 'rgba(245,245,240,0.82)',
+                }}
+              >
+                {t('deck.undo', 'Undo')}
+              </Text>
+            </Pressable>
+          </View>
         )}
 
         <ActionButton
@@ -770,4 +833,155 @@ function DeckLoadingState({ title, hint }: { title: string; hint: string }) {
       </View>
     </View>
   );
+}
+
+function DeckLimitState({
+  quota,
+  onOpenWatchlist,
+}: {
+  quota: {
+    hourlyUsed: number;
+    dailyUsed: number;
+    hourlyRemaining: number;
+    dailyRemaining: number;
+    nextResetAt: string | null;
+  };
+  onOpenWatchlist: () => void;
+}) {
+  const { t } = useTranslation();
+  const resetLabel = quota.nextResetAt
+    ? new Date(quota.nextResetAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : null;
+
+  return (
+    <View
+      style={{
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        paddingHorizontal: 28,
+      }}
+    >
+      <View
+        style={{
+          width: 78,
+          height: 102,
+          borderRadius: 22,
+          backgroundColor: colors.accentDim,
+          borderWidth: 1,
+          borderColor: colors.accentBorder,
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: [{ rotate: '-3deg' }],
+        }}
+      >
+        <Text
+          allowFontScaling={false}
+          style={{ fontFamily: fonts.display, fontSize: 42, color: colors.accent }}
+        >
+          F
+        </Text>
+      </View>
+      <Text
+        style={{
+          fontFamily: fonts.display,
+          fontSize: 30,
+          lineHeight: 34,
+          color: colors.text,
+          textAlign: 'center',
+        }}
+      >
+        {t('deck.limit.title', 'Card limit reached')}
+      </Text>
+      <Text
+        style={{
+          maxWidth: 300,
+          color: colors.textMuted,
+          fontFamily: fonts.body,
+          fontSize: 13,
+          lineHeight: 20,
+          textAlign: 'center',
+        }}
+      >
+        {`${t('deck.limit.body', 'You get {{hourly}} cards per hour and {{daily}} cards per day.', {
+          hourly: CARD_LIMITS.hourly,
+          daily: CARD_LIMITS.daily,
+        })} ${
+          resetLabel
+            ? t('deck.limit.resetAround', 'Come back around {{time}} for a fresh stack.', {
+                time: resetLabel,
+              })
+            : t('deck.limit.resetSoon', 'Come back soon for a fresh stack.')
+        }`}
+      </Text>
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
+        <LimitPill
+          label={t('deck.limit.thisHour', 'This hour')}
+          value={`${quota.hourlyUsed}/${CARD_LIMITS.hourly}`}
+        />
+        <LimitPill
+          label={t('deck.limit.today', 'Today')}
+          value={`${quota.dailyUsed}/${CARD_LIMITS.daily}`}
+        />
+      </View>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Open your watchlist"
+        onPress={onOpenWatchlist}
+        style={({ pressed }) => ({
+          marginTop: 10,
+          height: 46,
+          paddingHorizontal: 22,
+          borderRadius: 14,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: pressed ? '#E84618' : colors.accent,
+        })}
+      >
+        <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold, fontSize: 14 }}>
+          {t('deck.limit.openWatchlist', 'Open watchlist')}
+        </Text>
+      </Pressable>
+    </View>
+  );
+}
+
+function LimitPill({ label, value }: { label: string; value: string }) {
+  return (
+    <View
+      style={{
+        minWidth: 104,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: 'rgba(245,245,240,0.045)',
+        paddingHorizontal: 12,
+        paddingVertical: 9,
+        alignItems: 'center',
+      }}
+    >
+      <Text style={{ color: colors.text, fontFamily: fonts.bodyBold, fontSize: 14 }}>{value}</Text>
+      <Text
+        style={{
+          marginTop: 2,
+          color: colors.textDim,
+          fontFamily: fonts.bodyMedium,
+          fontSize: 10,
+          textTransform: 'uppercase',
+          letterSpacing: 0.5,
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
+}
+
+function sameStringArray(left: string[], right: string[]) {
+  if (left.length !== right.length) return false;
+  for (let i = 0; i < left.length; i++) {
+    if (left[i] !== right[i]) return false;
+  }
+  return true;
 }

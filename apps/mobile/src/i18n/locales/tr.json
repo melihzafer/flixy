@@ -79,7 +79,24 @@
     "actionAdd": "Ekle",
     "actionTop": "Öncelikli",
     "actionSeen": "Gördüm",
-    "undo": "Geri al"
+    "undo": "Geri al",
+    "actionSave": "Kaydet",
+    "actionInfo": "Bilgi",
+    "undoA11y": "Son kaydırmayı geri al",
+    "openFilters": "Filtreleri aç",
+    "readyStatus": "{{count}} öneri hazır",
+    "relaxedStatus": "Daha fazla öneri için filtreler genişletildi",
+    "degradedStatus": "Sınırlı çevrimdışı öneriler",
+    "syncIssue": "Çevrimdışı kaydedildi. Eşitleme yeniden deneniyor…",
+    "limit": {
+      "title": "Kart limitine ulaşıldı",
+      "body": "Saatte {{hourly}} kart, günde {{daily}} kart hakkın var.",
+      "resetAround": "Yeni bir deste için {{time}} civarı tekrar gel.",
+      "resetSoon": "Yeni bir deste için yakında tekrar gel.",
+      "thisHour": "Bu saat",
+      "today": "Bugün",
+      "openWatchlist": "İzleme listesini aç"
+    }
   },
   "watchlist": {
     "title": "İzleme listesi",
@@ -99,16 +116,39 @@
     "markWatched": "İzlendi",
     "unwatch": "Geri al",
     "remove": "Sil",
+    "titlesCount": "{{count}} başlık",
+    "sectionTop": "Öne çıkanlar",
+    "sectionWatchlist": "İzleme listesi",
+    "sectionSaved": "Kaydedilenler",
+    "sectionWatched": "İzlenenler",
+    "badgeWatched": "İzlendi",
+    "badgeTop": "Öne çıkan",
+    "availabilityUnknown": "Uygunluk bilinmiyor",
+    "openActions": "{{title}} için işlemleri aç",
+    "sheet": {
+      "markWatched": "İzlendi işaretle",
+      "markUnwatched": "İzlenmedi işaretle",
+      "markTop": "Öne çıkan yap",
+      "removeTop": "Öne çıkanı kaldır",
+      "remove": "İzleme listesinden kaldır",
+      "cancel": "İptal"
+    },
     "filter": {
       "all": "Tümü",
       "top": "Önce",
-      "watched": "İzlenen"
+      "watched": "İzlenen",
+      "movies": "Filmler",
+      "series": "Diziler"
     }
   },
   "detail": {
     "notFound": "Bulunamadı",
     "movie": "Film",
     "series": "Dizi",
+    "seasons": "{{count}} sezon",
+    "episodes": "{{count}} bölüm",
+    "createdBy": "Yaratan",
+    "directedBy": "Yön.",
     "trailer": "Fragman",
     "overview": "Özet",
     "availability": "Nereden izlenir",
@@ -131,6 +171,20 @@
     "classics": "2000 öncesi",
     "reset": "Sıfırla",
     "apply": "Uygula",
+    "sheetTitle": "Ne izlemek istersin?",
+    "sectionMood": "Ruh hali",
+    "sectionType": "İçerik türü",
+    "sectionServices": "Yayın servisleri",
+    "sectionGenres": "Tercih edilen türler",
+    "sectionYears": "Çıkış aralığı",
+    "applyButton": "Filtreleri uygula",
+    "resetButton": "Filtreleri sıfırla",
+    "yearRanges": {
+      "any": "Tüm yıllar",
+      "y2020s": "2020'ler",
+      "y2010s": "2010'lar",
+      "classics": "Klasikler"
+    },
     "kinds": {
       "movie": "Filmler",
       "tv": "Diziler"

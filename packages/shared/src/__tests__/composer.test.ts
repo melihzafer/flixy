@@ -248,4 +248,29 @@ describe('composeDeck', () => {
     });
     expect(deckWith.cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000002');
   });
+
+  it('uses userSeed to vary otherwise tied card order', () => {
+    const candidates = Array.from({ length: 8 }, (_, i) =>
+      mkTitle({
+        id: `00000000-0000-0000-0000-00000000010${i}`,
+        popularity: 500,
+        genres: ['drama'],
+      }),
+    );
+
+    const base = {
+      candidates,
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set<string>(),
+      shownLast7d: new Set<string>(),
+      excludeIds: new Set<string>(),
+      targetSize: 8,
+    };
+
+    const first = composeDeck({ ...base, userSeed: 'user-a' }).cards.map((c) => c.title.id);
+    const second = composeDeck({ ...base, userSeed: 'user-b' }).cards.map((c) => c.title.id);
+
+    expect(first).not.toEqual(second);
+  });
 });

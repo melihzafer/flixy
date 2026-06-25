@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
 import { type Title, TitleAvailabilitySchema, TitleSchema } from '@flixy/shared';
 
@@ -8,6 +8,7 @@ import {
   discoverTmdbTitles,
   fetchTmdbTitle,
   fetchTmdbTitlesByIds,
+  getTmdbLanguage,
   uuidToTmdbId,
 } from '../../lib/tmdb';
 
@@ -135,8 +136,9 @@ function applyFallbackFilter(filter: TitleQueryFilter): Title[] {
 
 export function useTitle(id: string | null | undefined) {
   return useQuery({
-    queryKey: ['title', TITLE_QUERY_CACHE_VERSION_KEY, id],
+    queryKey: ['title', TITLE_QUERY_CACHE_VERSION_KEY, getTmdbLanguage(), id],
     enabled: !!id,
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 60 * 24, // 24 hours
     queryFn: async () => {
       if (!id) return null;
@@ -159,8 +161,15 @@ export function useTitle(id: string | null | undefined) {
 export function useTitlesByIds(ids: string[]) {
   const sorted = [...ids].sort();
   return useQuery({
-    queryKey: ['titles', 'byIds', TITLE_QUERY_CACHE_VERSION_KEY, sorted.join(',')],
+    queryKey: [
+      'titles',
+      'byIds',
+      TITLE_QUERY_CACHE_VERSION_KEY,
+      getTmdbLanguage(),
+      sorted.join(','),
+    ],
     enabled: sorted.length > 0,
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 60 * 12, // 12 hours
     queryFn: async () => {
       try {
@@ -198,8 +207,15 @@ export type TitleQueryFilter = {
 export function useTitlesQuery(filter: TitleQueryFilter, options: TitlesQueryOptions = {}) {
   const key = JSON.stringify(filter);
   return useQuery({
-    queryKey: ['titles', 'query', `shape-v${TITLE_QUERY_RESULT_SHAPE_VERSION}`, key],
+    queryKey: [
+      'titles',
+      'query',
+      `shape-v${TITLE_QUERY_RESULT_SHAPE_VERSION}`,
+      getTmdbLanguage(),
+      key,
+    ],
     enabled: options.enabled ?? true,
+    placeholderData: keepPreviousData,
     staleTime: 1000 * 60 * 60, // 1 hour
     queryFn: async () => {
       try {

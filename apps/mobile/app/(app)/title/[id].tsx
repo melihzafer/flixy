@@ -1,10 +1,11 @@
+import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Check, ChevronLeft, Heart, Play, Star, X } from 'lucide-react-native';
-import { useEffect } from 'react';
+import { Check, ChevronLeft, Heart, Play, Share2, Star, X } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Linking, Pressable, ScrollView, StatusBar, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, Share, StatusBar, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ActionButton } from '../../../src/components/ActionButton';
@@ -25,6 +26,7 @@ export default function TitleDetail() {
   const { data: title, isLoading, isError, refetch } = useTitle(id ?? null);
   const recordSwipe = useRecordSwipe();
   const { data: profile } = useProfile();
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     if (id) events.detailViewed(id);
@@ -95,15 +97,32 @@ export default function TitleDetail() {
   }
 
   const display = toTitleDisplay(title);
+  const isSeries = title.kind === 'tv';
+  const typeLabel = isSeries ? t('detail.series', 'Series') : t('detail.movie', 'Movie');
+  const seasonsLabel =
+    isSeries && display.numberOfSeasons
+      ? t('detail.seasons', '{{count}} seasons', { count: display.numberOfSeasons })
+      : null;
+  const episodesLabel =
+    isSeries && display.numberOfEpisodes
+      ? t('detail.episodes', '{{count}} episodes', { count: display.numberOfEpisodes })
+      : null;
   const creditNames =
     title.kind === 'tv' ? display.creators : display.director ? [display.director] : [];
   const creditLabel =
     creditNames.length > 0
-      ? `${title.kind === 'tv' ? 'Created by' : 'Dir.'} ${creditNames.join(', ')}`
+      ? `${
+          isSeries ? t('detail.createdBy', 'Created by') : t('detail.directedBy', 'Dir.')
+        } ${creditNames.join(', ')}`
       : null;
-  const metaParts = [display.year?.toString(), display.runtime, display.rating, creditLabel].filter(
-    (part): part is string => !!part,
-  );
+  const metaParts = [
+    typeLabel,
+    display.year?.toString(),
+    isSeries ? seasonsLabel : display.runtime,
+    isSeries ? episodesLabel : null,
+    display.rating,
+    creditLabel,
+  ].filter((part): part is string => !!part);
   const serviceNameById = new Map(
     FALLBACK_STREAMING_SERVICES.map((service) => [service.id, service.name]),
   );
@@ -157,6 +176,37 @@ export default function TitleDetail() {
       offerType: offer.offerType,
     });
     await Linking.openURL(offer.deepLink);
+  };
+
+  const shareTitle = async () => {
+    if (sharing) return;
+    setSharing(true);
+    try {
+      const posterUri = display.posterUrl ?? display.backdropUrl;
+      let localPosterUri: string | undefined;
+
+      if (posterUri) {
+        const extension = posterUri.includes('.png') ? 'png' : 'jpg';
+        const safeName = display.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+        const destination = `${FileSystem.cacheDirectory}flixy-${safeName || title.id}.${extension}`;
+        const result = await FileSystem.downloadAsync(posterUri, destination);
+        localPosterUri = result.uri;
+      }
+
+      events.titleShared({ titleId: title.id, hasImage: !!localPosterUri });
+      await Share.share({
+        title: `Flixy: ${display.title}`,
+        message: `Flixy pick: ${display.title}${display.year ? ` (${display.year})` : ''}`,
+        url: localPosterUri,
+      });
+    } catch {
+      Alert.alert(
+        t('detail.shareErrorTitle', 'Share failed'),
+        t('detail.shareErrorBody', 'The share image could not be prepared. Please try again.'),
+      );
+    } finally {
+      setSharing(false);
+    }
   };
 
   return (
@@ -450,6 +500,46 @@ export default function TitleDetail() {
         accessibilityLabel={t('common.back', 'Back')}
       >
         <ChevronLeft size={20} color={colors.text} strokeWidth={2.2} />
+      </Pressable>
+
+      <Pressable
+        onPress={shareTitle}
+        disabled={sharing}
+        style={({ pressed }) => ({
+          position: 'absolute',
+          top: Math.max(16, insets.top, StatusBar.currentHeight ?? 0) + 12,
+          right: 16,
+          zIndex: 99,
+          minWidth: 54,
+          height: 44,
+          borderRadius: 22,
+          backgroundColor: pressed ? 'rgba(255,77,28,0.9)' : colors.accent,
+          borderWidth: 1.5,
+          borderColor: colors.accentBorder,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'row',
+          gap: 5,
+          opacity: sharing ? 0.58 : 1,
+          paddingHorizontal: 11,
+        })}
+        accessibilityRole="button"
+        accessibilityLabel={t('detail.share', 'Share this title with Flixy')}
+        accessibilityState={{ busy: sharing, disabled: sharing }}
+      >
+        <Text
+          allowFontScaling={false}
+          style={{
+            color: colors.onAccent,
+            fontFamily: fonts.display,
+            fontSize: 18,
+            lineHeight: 22,
+            includeFontPadding: false,
+          }}
+        >
+          F
+        </Text>
+        <Share2 size={16} color={colors.onAccent} strokeWidth={2.4} />
       </Pressable>
     </View>
   );

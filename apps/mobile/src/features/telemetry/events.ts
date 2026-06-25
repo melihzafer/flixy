@@ -44,6 +44,7 @@ export const events = {
     track('watchlist_priority_changed', { titleId, priority }),
 
   detailViewed: (titleId: string) => track('detail_viewed', { titleId }),
+  titleShared: (props: { titleId: string; hasImage: boolean }) => track('title_shared', props),
   detailTrailerMissing: (props: { titleId: string; tmdbId: number; kind: string }) =>
     track('detail_trailer_missing', props),
   trailerOpened: (titleId: string) => track('trailer_opened', { titleId }),

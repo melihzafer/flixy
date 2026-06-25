@@ -29,6 +29,8 @@ export const TitleSchema = z.object({
   criticScore: z.number().int().min(0).max(100).nullable().optional(),
   popularity: z.number(),
   genres: z.array(z.string()),
+  numberOfSeasons: z.number().int().positive().nullable().optional(),
+  numberOfEpisodes: z.number().int().positive().nullable().optional(),
   language: z.string().nullable(),
   tagline: z.string().min(1).nullable().optional(),
   directors: z.array(z.string().min(1)).optional(),

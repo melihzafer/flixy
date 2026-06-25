@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, type TextInputProps, View } from 'react-native';
 
 import { colors, fonts, radii, spacing } from '../theme/tokens';
@@ -24,6 +24,8 @@ export const Input = forwardRef<TextInput, Props>(function Input(
     accessibilityLabel,
     placeholderTextColor,
     selectionColor,
+    value,
+    onChangeText,
     showPasswordLabel = 'Show password',
     hidePasswordLabel = 'Hide password',
     editable = true,
@@ -33,8 +35,17 @@ export const Input = forwardRef<TextInput, Props>(function Input(
 ) {
   const [focused, setFocused] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
+  const [draftValue, setDraftValue] = useState(value ?? '');
+  const lastSyncedValue = useRef(value);
   const hasSecureToggle = !!secureTextEntry;
   const help = error ?? helperText;
+
+  useEffect(() => {
+    if (value !== lastSyncedValue.current) {
+      lastSyncedValue.current = value;
+      setDraftValue(value ?? '');
+    }
+  }, [value]);
 
   return (
     <View style={styles.wrap}>
@@ -60,6 +71,11 @@ export const Input = forwardRef<TextInput, Props>(function Input(
           accessibilityLabel={accessibilityLabel ?? label}
           secureTextEntry={hasSecureToggle && !passwordVisible}
           editable={editable}
+          value={value == null ? undefined : draftValue}
+          onChangeText={(nextValue) => {
+            setDraftValue(nextValue);
+            onChangeText?.(nextValue);
+          }}
           onFocus={(e) => {
             setFocused(true);
             onFocus?.(e);

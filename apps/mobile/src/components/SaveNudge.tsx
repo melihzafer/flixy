@@ -16,8 +16,10 @@ export function SaveNudge({
 }) {
   return (
     <View
-      pointerEvents={visible ? 'box-none' : 'none'}
-      style={[StyleSheet.absoluteFillObject, { display: visible ? 'flex' : 'none' }]}
+      style={[
+        StyleSheet.absoluteFillObject,
+        { display: visible ? 'flex' : 'none', pointerEvents: visible ? 'box-none' : 'none' },
+      ]}
     >
       <View
         style={{

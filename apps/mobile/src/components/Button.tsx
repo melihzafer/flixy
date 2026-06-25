@@ -70,9 +70,10 @@ export const Button = forwardRef<View, Props>(function Button(
 
 const styles = StyleSheet.create({
   base: {
-    height: 54,
+    minHeight: 58,
     borderRadius: 15,
     paddingHorizontal: 20,
+    paddingVertical: 15,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -225,8 +225,8 @@ export default function ColdStartStep() {
                     bottom: 0,
                     transform: [{ scale }, { translateY }],
                     zIndex: 10 - depth,
+                    pointerEvents: isTop ? 'auto' : 'none',
                   }}
-                  pointerEvents={isTop ? 'auto' : 'none'}
                 >
                   <SwipeCard
                     title={title}

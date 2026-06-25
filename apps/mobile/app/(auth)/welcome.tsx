@@ -36,8 +36,8 @@ export default function Welcome() {
         }}
       >
         <View
-          pointerEvents="none"
           style={{
+            pointerEvents: 'none',
             position: 'absolute',
             width: 170,
             height: 230,
@@ -92,7 +92,7 @@ export default function Welcome() {
         style={{
           paddingHorizontal: 20,
           paddingBottom: insets.bottom + 16,
-          gap: 12,
+          gap: 16,
         }}
       >
         <Button
@@ -120,15 +120,18 @@ export default function Welcome() {
             {t('auth.errors.oauth')}
           </Text>
         ) : null}
-        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginTop: 4 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 22, marginTop: 4 }}>
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('auth.browseAnonymously')}
             onPress={handleAnon}
             disabled={anon.isPending}
-            hitSlop={8}
+            hitSlop={10}
             style={({ pressed }) => ({
-              paddingVertical: 8,
+              minHeight: 48,
+              paddingHorizontal: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
               opacity: anon.isPending ? 0.5 : pressed ? 0.6 : 1,
             })}
           >
@@ -143,15 +146,18 @@ export default function Welcome() {
             </Text>
           </Pressable>
           <View
-            style={{ width: 1, backgroundColor: 'rgba(245,245,240,0.14)', marginVertical: 8 }}
+            style={{ width: 1, backgroundColor: 'rgba(245,245,240,0.14)', marginVertical: 10 }}
           />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('auth.signIn')}
             onPress={() => router.push('/(auth)/sign-in')}
-            hitSlop={8}
+            hitSlop={10}
             style={({ pressed }) => ({
-              paddingVertical: 8,
+              minHeight: 48,
+              paddingHorizontal: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
               opacity: pressed ? 0.6 : 1,
             })}
           >

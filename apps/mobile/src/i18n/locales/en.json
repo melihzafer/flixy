@@ -121,6 +121,15 @@
       "clearFilters": "Clear filters",
       "filters": "Filters",
       "reset": "Reset"
+    },
+    "limit": {
+      "title": "Card limit reached",
+      "body": "You get {{hourly}} cards per hour and {{daily}} cards per day.",
+      "resetAround": "Come back around {{time}} for a fresh stack.",
+      "resetSoon": "Come back soon for a fresh stack.",
+      "thisHour": "This hour",
+      "today": "Today",
+      "openWatchlist": "Open watchlist"
     }
   },
   "watchlist": {
@@ -141,16 +150,39 @@
     "markWatched": "Watched",
     "unwatch": "Unwatch",
     "remove": "Remove",
+    "titlesCount": "{{count}} titles",
+    "sectionTop": "Top Picks",
+    "sectionWatchlist": "Watchlist",
+    "sectionSaved": "Saved",
+    "sectionWatched": "Watched",
+    "badgeWatched": "Watched",
+    "badgeTop": "Top pick",
+    "availabilityUnknown": "Availability unknown",
+    "openActions": "Open actions for {{title}}",
+    "sheet": {
+      "markWatched": "Mark watched",
+      "markUnwatched": "Mark unwatched",
+      "markTop": "Mark as top pick",
+      "removeTop": "Remove top pick",
+      "remove": "Remove from watchlist",
+      "cancel": "Cancel"
+    },
     "filter": {
       "all": "All",
       "top": "Top",
-      "watched": "Watched"
+      "watched": "Watched",
+      "movies": "Movies",
+      "series": "Series"
     }
   },
   "detail": {
     "notFound": "Not found",
     "movie": "Movie",
     "series": "Series",
+    "seasons": "{{count}} seasons",
+    "episodes": "{{count}} episodes",
+    "createdBy": "Created by",
+    "directedBy": "Dir.",
     "trailer": "Trailer",
     "overview": "Overview",
     "availability": "Where to watch",
@@ -173,6 +205,20 @@
     "classics": "Pre-2000",
     "reset": "Reset",
     "apply": "Apply",
+    "sheetTitle": "What are you in the mood for?",
+    "sectionMood": "Mood presets",
+    "sectionType": "Content type",
+    "sectionServices": "Streaming services",
+    "sectionGenres": "Preferred genres",
+    "sectionYears": "Release window",
+    "applyButton": "Apply filters",
+    "resetButton": "Reset filters",
+    "yearRanges": {
+      "any": "Any year",
+      "y2020s": "2020s",
+      "y2010s": "2010s",
+      "classics": "Classics"
+    },
     "kinds": {
       "movie": "Movies",
       "tv": "Series"
