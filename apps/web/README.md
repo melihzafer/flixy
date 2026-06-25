@@ -38,3 +38,15 @@ pnpm --filter @flixy/web dev
 5. Set **Output Directory** to `dist`.
 
 Vercel headers, redirects, and client-side SPA routing rewrites are configured via `vercel.json`.
+
+## Monorepo Ignored Build Step (Important)
+
+By default, Vercel might cancel builds if it detects no changes were made directly in `apps/web`. Since the PWA compiles source files from `apps/mobile` and `packages/shared`, you must configure Vercel to build when these dependencies change.
+
+In your **Vercel Project Settings** → **Git** → **Ignored Build Step**:
+1. Select **Custom Command**.
+2. Enter the following command:
+   ```bash
+   git diff --quiet HEAD^ HEAD -- ../mobile ../../packages/shared .
+   ```
+   *(This tells Vercel to trigger a build whenever changes occur in the mobile app, shared package, or web folder).*
