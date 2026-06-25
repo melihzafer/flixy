@@ -53,6 +53,15 @@ describe('parseOAuthCallbackUrl', () => {
     });
   });
 
+  it('parses vercel preview app link auth callbacks', () => {
+    expect(
+      parseOAuthCallbackUrl('https://flixy-web.vercel.app/auth/callback?code=auth-code'),
+    ).toEqual({
+      type: 'code',
+      code: 'auth-code',
+    });
+  });
+
   it('parses OAuth error callbacks', () => {
     expect(
       parseOAuthCallbackUrl('flixy:///?error=access_denied&error_description=User%20cancelled'),

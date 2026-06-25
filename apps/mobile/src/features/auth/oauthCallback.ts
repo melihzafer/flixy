@@ -46,7 +46,12 @@ function isAllowedOAuthCallbackUrl(url: string) {
     if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
       const path = parsed.pathname || '';
       const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
-      const isAllowedHost = parsed.hostname === OAUTH_UNIVERSAL_LINK_HOST || isLocalhost;
+      const isVercel = parsed.hostname.endsWith('.vercel.app');
+      const isAllowedHost =
+        parsed.hostname === OAUTH_UNIVERSAL_LINK_HOST ||
+        isLocalhost ||
+        isVercel ||
+        (typeof window !== 'undefined' && parsed.hostname === window.location.hostname);
       return isAllowedHost && OAUTH_CALLBACK_PATHS.has(path);
     }
     if (
