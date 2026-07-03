@@ -67,6 +67,9 @@ export const events = {
 
   filterApplied: (props: {
     mood: string | null;
+    vibes: string[] | null;
+    country: string | null;
+    forYou: boolean;
     kinds: string[];
     minYear: number | null;
     maxYear: number | null;

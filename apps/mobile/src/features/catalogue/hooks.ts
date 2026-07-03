@@ -90,6 +90,15 @@ function withDiagnostics(
 function applyFallbackFilter(filter: TitleQueryFilter): Title[] {
   const serviceIds = new Set((filter.serviceIds ?? []).map(normalizeServiceId));
   const genres = new Set((filter.genres ?? []).map(normalizeGenreId));
+  const vibeGenres = new Set((filter.vibeGenres ?? []).map(normalizeGenreId));
+  const effectiveGenres = new Set<string>([...genres, ...vibeGenres]);
+  // Country filter uses the title `language` field as a coarse proxy: TMDB
+  // populates `original_language` (e.g. "tr", "en", "ko"), which is the closest
+  // fallback catalog has to origin country.
+  const countryLang = filter.originCountry
+    ? COUNTRY_LANGUAGE_MAP[filter.originCountry.toUpperCase()]
+    : null;
+
   return FALLBACK_TITLES.map((title) => ({
     ...title,
     availability: filter.region
@@ -100,11 +109,13 @@ function applyFallbackFilter(filter: TitleQueryFilter): Title[] {
       if (filter.kinds && filter.kinds.length > 0 && !filter.kinds.includes(title.kind)) {
         return false;
       }
-      if (genres.size > 0) {
-        const hasMatch = title.genres.some((genre) => genres.has(normalizeGenreId(genre)));
+      if (effectiveGenres.size > 0) {
+        const hasMatch = title.genres.some((genre) => effectiveGenres.has(normalizeGenreId(genre)));
         if (!hasMatch) return false;
 
-        const hasExcluded = title.genres.some((genre) => !genres.has(normalizeGenreId(genre)));
+        const hasExcluded = title.genres.some(
+          (genre) => !effectiveGenres.has(normalizeGenreId(genre)),
+        );
         if (hasExcluded) return false;
       }
       if (
@@ -117,6 +128,9 @@ function applyFallbackFilter(filter: TitleQueryFilter): Title[] {
         filter.maxYear != null &&
         (title.releaseYear == null || title.releaseYear > filter.maxYear)
       ) {
+        return false;
+      }
+      if (countryLang && !(title.language ?? '').toLowerCase().startsWith(countryLang)) {
         return false;
       }
       if (filter.region && title.availability.length === 0) {
@@ -133,6 +147,21 @@ function applyFallbackFilter(filter: TitleQueryFilter): Title[] {
     .sort((a, b) => b.popularity - a.popularity)
     .slice(0, filter.limit ?? 60);
 }
+
+const COUNTRY_LANGUAGE_MAP: Record<string, string> = {
+  US: 'en',
+  GB: 'en',
+  TR: 'tr',
+  KR: 'ko',
+  JP: 'ja',
+  IN: 'hi',
+  DE: 'de',
+  ES: 'es',
+  FR: 'fr',
+  IT: 'it',
+  BR: 'pt',
+  MX: 'es',
+};
 
 export function useTitle(id: string | null | undefined) {
   return useQuery({
@@ -200,6 +229,13 @@ export type TitleQueryFilter = {
   kinds?: ('movie' | 'tv')[];
   minYear?: number;
   maxYear?: number;
+  /** Origin country ISO-3166 alpha-2 filter (e.g. "TR", "US", "KR"). */
+  originCountry?: string;
+  /**
+   * Vibe genres: a flat OR-list of genres derived from selected vibe presets.
+   * Merged into the TMDB `with_genres` OR-match alongside user genre filters.
+   */
+  vibeGenres?: string[];
   limit?: number;
   page?: number;
 };
@@ -226,6 +262,8 @@ export function useTitlesQuery(filter: TitleQueryFilter, options: TitlesQueryOpt
           kinds: filter.kinds,
           minYear: filter.minYear,
           maxYear: filter.maxYear,
+          originCountry: filter.originCountry,
+          vibeGenres: filter.vibeGenres,
           limit: filter.limit,
           page: filter.page,
         });

@@ -1,7 +1,22 @@
-import { Laugh, Search, Sofa } from 'lucide-react-native';
+import {
+  Brain,
+  Flame,
+  Heart,
+  Laugh,
+  Moon,
+  Rocket,
+  Search,
+  Sofa,
+  Sparkles,
+  Timer,
+  Trophy,
+  Waves,
+} from 'lucide-react-native';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, View } from 'react-native';
+
+import type { MoodPreset } from '@flixy/shared';
 
 import { Text } from '../../components/Text';
 import { useDeckFilters } from '../../features/deck/filterStore';
@@ -15,6 +30,28 @@ const MOODS = [
   { id: 'feel_good', label: 'Quick laugh', Icon: Laugh },
   { id: 'edge_of_seat', label: 'Edge of seat', Icon: Search },
   { id: 'cozy', label: 'Comfort watch', Icon: Sofa },
+  { id: 'mind_bender', label: 'Mind bender', Icon: Brain },
+  { id: 'short_pick', label: 'Short pick', Icon: Timer },
+  { id: 'classic', label: 'Classic', Icon: Trophy },
+  { id: 'dark', label: 'Dark', Icon: Moon },
+  { id: 'romantic', label: 'Romantic', Icon: Heart },
+  { id: 'epic', label: 'Epic', Icon: Rocket },
+  { id: 'chill', label: 'Chill', Icon: Waves },
+] as const;
+
+const VIBES = [
+  { id: 'feel_good', label: 'Feel good', Icon: Sparkles },
+  { id: 'dark', label: 'Dark', Icon: Moon },
+  { id: 'wholesome', label: 'Wholesome', Icon: Heart },
+  { id: 'intense', label: 'Intense', Icon: Flame },
+  { id: 'slow_burn', label: 'Slow burn', Icon: Timer },
+  { id: 'mind_bending', label: 'Mind bending', Icon: Brain },
+  { id: 'nostalgic', label: 'Nostalgic', Icon: Trophy },
+  { id: 'epic', label: 'Epic', Icon: Rocket },
+  { id: 'offbeat', label: 'Offbeat', Icon: Waves },
+  { id: 'emotional', label: 'Emotional', Icon: Heart },
+  { id: 'funny', label: 'Funny', Icon: Laugh },
+  { id: 'surreal', label: 'Surreal', Icon: Rocket },
 ] as const;
 
 const TYPES = ['Movies', 'Series'] as const;
@@ -22,23 +59,50 @@ const TYPE_I18N: Record<(typeof TYPES)[number], string> = {
   Movies: 'filters.kinds.movie',
   Series: 'filters.kinds.tv',
 };
+
 const YEAR_RANGES = [
   { key: 'any', label: 'Any year', min: null, max: null },
+  { key: 'thisYear', label: 'This year', min: new Date().getFullYear(), max: null },
+  { key: 'last5', label: 'Last 5 years', min: new Date().getFullYear() - 4, max: null },
   { key: 'y2020s', label: '2020s', min: 2020, max: null },
   { key: 'y2010s', label: '2010s', min: 2010, max: 2019 },
-  { key: 'classics', label: 'Classics', min: null, max: 1999 },
+  { key: 'y2000s', label: '2000s', min: 2000, max: 2009 },
+  { key: 'y1990s', label: '1990s', min: 1990, max: 1999 },
+  { key: 'y1980s', label: '1980s', min: 1980, max: 1989 },
+  { key: 'classics', label: 'Classics', min: null, max: 1979 },
+] as const;
+
+const COUNTRIES = [
+  { id: 'US', label: 'filters.countries.US' },
+  { id: 'GB', label: 'filters.countries.GB' },
+  { id: 'TR', label: 'filters.countries.TR' },
+  { id: 'KR', label: 'filters.countries.KR' },
+  { id: 'JP', label: 'filters.countries.JP' },
+  { id: 'IN', label: 'filters.countries.IN' },
+  { id: 'DE', label: 'filters.countries.DE' },
+  { id: 'ES', label: 'filters.countries.ES' },
+  { id: 'FR', label: 'filters.countries.FR' },
+  { id: 'IT', label: 'filters.countries.IT' },
+  { id: 'BR', label: 'filters.countries.BR' },
+  { id: 'MX', label: 'filters.countries.MX' },
 ] as const;
 
 export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const {
+    forYou,
     mood,
+    vibes,
+    country,
     kinds,
     minYear,
     maxYear,
     serviceIds,
     genres,
+    setForYou,
     setMood,
+    setVibes,
+    setCountry,
     toggleKind,
     setYears,
     setServices,
@@ -51,6 +115,9 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
   const region = profile?.region ?? 'US';
 
   const [selMood, setSelMood] = useState<string | null>(mood);
+  const [selVibes, setSelVibes] = useState<Set<string>>(new Set(vibes ?? []));
+  const [selCountry, setSelCountry] = useState<string | null>(country);
+  const [selForYou, setSelForYou] = useState<boolean>(forYou);
   const [types, setTypes] = useState<Set<string>>(
     new Set(
       TYPES.filter((t) => {
@@ -74,6 +141,9 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
     if (!prefs && serviceIds == null && genres == null) return;
 
     setSelMood(mood);
+    setSelVibes(new Set(vibes ?? []));
+    setSelCountry(country);
+    setSelForYou(forYou);
     setTypes(
       new Set(
         TYPES.filter((t) => {
@@ -87,13 +157,14 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
     setSelServices(new Set(serviceIds ?? prefs?.selected_services ?? []));
     setSelGenres(new Set(genres ?? prefs?.selected_genres ?? []));
     openHydratedRef.current = true;
-  }, [kinds, maxYear, minYear, mood, serviceIds, genres, prefs, visible]);
+  }, [kinds, maxYear, minYear, mood, vibes, country, forYou, serviceIds, genres, prefs, visible]);
 
   const toggleType = (t: string) => {
     const next = new Set(types);
     if (next.has(t)) next.delete(t);
     else next.add(t);
     setTypes(next);
+    setSelForYou(false);
   };
 
   const toggleService = (id: string) => {
@@ -101,6 +172,7 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelServices(next);
+    setSelForYou(false);
   };
 
   const toggleGenre = (id: string) => {
@@ -108,12 +180,30 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelGenres(next);
+    setSelForYou(false);
+  };
+
+  const toggleVibe = (id: string) => {
+    const next = new Set(selVibes);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelVibes(next);
+    setSelForYou(false);
+  };
+
+  const selectCountry = (id: string) => {
+    setSelCountry((prev) => (prev === id ? null : id));
+    setSelForYou(false);
   };
 
   const apply = () => {
-    const nextMood =
-      selMood === 'feel_good' || selMood === 'edge_of_seat' || selMood === 'cozy' ? selMood : null;
+    const moodMatch = MOODS.find((m) => m.id === selMood);
+    const nextMood: MoodPreset | null = moodMatch ? moodMatch.id : null;
     setMood(nextMood);
+    const knownVibes = VIBES.filter((v) => selVibes.has(v.id)).map((v) => v.id);
+    setVibes(knownVibes.length > 0 ? knownVibes : null);
+    setCountry(selCountry);
+    setForYou(selForYou);
 
     const wantsMovies = types.has('Movies');
     const wantsSeries = types.has('Series');
@@ -130,7 +220,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
     setGenres(Array.from(selGenres));
 
     events.filterApplied({
+      forYou: selForYou,
       mood: nextMood,
+      vibes: selVibes.size > 0 ? Array.from(selVibes) : null,
+      country: selCountry,
       kinds: [...(wantsMovies ? ['movie'] : []), ...(wantsSeries ? ['tv'] : [])],
       minYear: selectedYear?.min ?? null,
       maxYear: selectedYear?.max ?? null,
@@ -141,12 +234,23 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
 
   const resetFilters = () => {
     reset();
+    setSelForYou(true);
     setSelMood(null);
+    setSelVibes(new Set());
+    setSelCountry(null);
     setTypes(new Set(TYPES));
     setYearRange(':');
     setSelServices(new Set(prefs?.selected_services ?? []));
     setSelGenres(new Set(prefs?.selected_genres ?? []));
-    events.filterApplied({ mood: null, kinds: ['movie', 'tv'], minYear: null, maxYear: null });
+    events.filterApplied({
+      forYou: true,
+      mood: null,
+      vibes: null,
+      country: null,
+      kinds: ['movie', 'tv'],
+      minYear: null,
+      maxYear: null,
+    });
     onClose();
   };
 
@@ -198,6 +302,54 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
             {t('filters.sheetTitle', 'What are you in the mood for?')}
           </Text>
 
+          <SectionLabel>{t('filters.sectionForYou', 'For you')}</SectionLabel>
+          <Pressable
+            testID="filter-for-you"
+            accessibilityRole="button"
+            accessibilityState={{ selected: selForYou }}
+            onPress={() => setSelForYou(!selForYou)}
+            style={{
+              width: '100%',
+              minHeight: 48,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: selForYou ? colors.accentBorder : colors.border,
+              backgroundColor: selForYou ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 9,
+              paddingHorizontal: 12,
+              paddingVertical: 10,
+              marginBottom: 18,
+            }}
+          >
+            <Sparkles
+              size={18}
+              strokeWidth={2.2}
+              color={selForYou ? colors.accent : 'rgba(245,245,240,0.55)'}
+            />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontFamily: fonts.bodySemi,
+                  color: selForYou ? colors.text : colors.textMuted,
+                }}
+              >
+                {t('filters.forYouLabel', 'For You')}
+              </Text>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontFamily: fonts.body,
+                  color: colors.textMuted,
+                }}
+              >
+                {t('filters.forYouHint', 'Uses your swipes, saves, and taste to pick for you.')}
+              </Text>
+            </View>
+          </Pressable>
+
           <SectionLabel>{t('filters.sectionMood', 'Mood presets')}</SectionLabel>
           <View
             style={{
@@ -216,7 +368,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                   testID={`filter-mood-${m.id}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isOn }}
-                  onPress={() => setSelMood(isOn ? null : m.id)}
+                  onPress={() => {
+                    setSelMood(isOn ? null : m.id);
+                    setSelForYou(false);
+                  }}
                   style={{
                     width: '48%',
                     height: 44,
@@ -243,6 +398,98 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                     }}
                   >
                     {t(`filters.moods.${m.id}`, m.label)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <SectionLabel>{t('filters.sectionVibes', 'Vibes')}</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {VIBES.map((v) => {
+              const isOn = selVibes.has(v.id);
+              const Icon = v.Icon;
+              return (
+                <Pressable
+                  key={v.id}
+                  testID={`filter-vibe-${v.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => toggleVibe(v.id)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 12,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 6,
+                  }}
+                >
+                  <Icon
+                    size={13}
+                    strokeWidth={2.2}
+                    color={isOn ? colors.accent : 'rgba(245,245,240,0.45)'}
+                  />
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {t(`filters.vibes.${v.id}`, v.label)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <SectionLabel>{t('filters.sectionCountry', 'Country')}</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {COUNTRIES.map((c) => {
+              const isOn = selCountry === c.id;
+              return (
+                <Pressable
+                  key={c.id}
+                  testID={`filter-country-${c.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => selectCountry(c.id)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 13,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {t(c.label, c.id)}
                   </Text>
                 </Pressable>
               );
@@ -395,7 +642,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                   testID={`filter-year-${range.label.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}
                   accessibilityRole="button"
                   accessibilityState={{ selected: isOn }}
-                  onPress={() => setYearRange(id)}
+                  onPress={() => {
+                    setYearRange(id);
+                    setSelForYou(false);
+                  }}
                   style={{
                     height: 32,
                     paddingHorizontal: 13,

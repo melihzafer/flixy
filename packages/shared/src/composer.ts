@@ -1,5 +1,5 @@
-import type { DeckCard, MoodPreset, RuleTrace } from './schemas/deck';
-import { MOOD_PRESETS } from './schemas/deck';
+import type { DeckCard, MoodPreset, RuleTrace, VibePreset } from './schemas/deck';
+import { MOOD_PRESETS, VIBE_PRESETS } from './schemas/deck';
 import type { TasteSignal } from './schemas/swipe';
 import { type Title, TitleAvailabilitySchema, TitleSchema } from './schemas/title';
 
@@ -24,6 +24,12 @@ export type ComposeOptions = {
   now?: Date;
   recommendationScores?: Record<string, number>;
   userSeed?: string | null;
+  /** Selected vibes; titles matching any vibe's genre cluster get a boost. */
+  vibes?: readonly VibePreset[] | null;
+  /** Preferred origin countries (ISO-3166 alpha-2); matching titles get a boost. */
+  preferredCountries?: readonly string[] | null;
+  /** "For You" mode emphasises on-device taste + remote recommendations. */
+  forYou?: boolean;
 };
 
 export type ComposeResult = {
@@ -41,6 +47,9 @@ const COLD_START_THRESHOLD = 50;
 const MAX_CONSECUTIVE_SAME_GENRE = 3;
 const EXPLORATION_RATIO = 0.15;
 const DEFAULT_TARGET_SIZE = 50;
+const VIBE_BOOST = 0.2;
+const COUNTRY_BOOST = 0.2;
+const FOR_YOU_BOOST = 0.12;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
@@ -132,6 +141,54 @@ function personalizationScore(t: Title, taste: TasteSignal, recommendationScore?
   return baseScore;
 }
 
+/**
+ * Genre-overlap boost for selected vibes. A title matches a vibe when it
+ * carries at least one of the vibe's anchor genres.
+ */
+function vibeScore(t: Title, vibes: readonly VibePreset[] | null | undefined): number {
+  if (!vibes || vibes.length === 0) return 0;
+  const titleGenres = new Set(t.genres);
+  for (const vibe of vibes) {
+    const filter = VIBE_PRESETS[vibe];
+    if (!filter?.genres) continue;
+    if (filter.genres.some((g) => titleGenres.has(g))) return VIBE_BOOST;
+  }
+  return 0;
+}
+
+/**
+ * Origin-country affinity. TMDB `language` is the ISO-639 original language
+ * (en, tr, ko, ...); we treat a known preferred country code as a language
+ * prefix hint when there is no explicit country field on the title.
+ */
+function countryScore(t: Title, preferred: readonly string[] | null | undefined): number {
+  if (!preferred || preferred.length === 0) return 0;
+  const lang = (t.language ?? '').toLowerCase();
+  if (!lang) return 0;
+  for (const code of preferred) {
+    const lower = code.toLowerCase();
+    // Common ISO-639 -> ISO-3166 pairs we care about (en/us, tr/tr, ko/kr, ja/jp, hi/in, de/de, es/es, fr/fr).
+    const langByCountry: Record<string, string> = {
+      us: 'en',
+      gb: 'en',
+      tr: 'tr',
+      kr: 'ko',
+      jp: 'ja',
+      in: 'hi',
+      de: 'de',
+      es: 'es',
+      fr: 'fr',
+      it: 'it',
+      br: 'pt',
+      mx: 'es',
+    };
+    const expectedLang = langByCountry[lower];
+    if (expectedLang && lang.startsWith(expectedLang)) return COUNTRY_BOOST;
+    if (lang.startsWith(lower)) return COUNTRY_BOOST;
+  }
+  return 0;
+}
+
 function availabilityScore(t: Title, ownedServices: string[]): number {
   if (t.availability.length === 0) return 0;
   const owned = new Set(ownedServices);
@@ -186,17 +243,26 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   const now = opts.now ?? new Date();
   const recommendationScores = opts.recommendationScores ?? {};
   const userSeed = typeof opts.userSeed === 'string' ? opts.userSeed : null;
+  const vibes = Array.isArray(opts.vibes) ? opts.vibes : null;
+  const preferredCountries = Array.isArray(opts.preferredCountries)
+    ? opts.preferredCountries
+    : null;
+  const forYou = opts.forYou === true;
+
+  // Cold-start weighting: popularity dominates when signal is thin. In
+  // "For You" mode we tilt even harder toward personalization + remote recos so
+  // the deck visibly reflects the user's taste the moment they swipe in.
+  const isColdStart = taste.totalSwipes < COLD_START_THRESHOLD;
+  const wPersonal = isColdStart ? (forYou ? 0.35 : 0.2) : forYou ? 0.7 : 0.6;
+  const wPopularity = isColdStart ? 0.6 : forYou ? 0.1 : 0.2;
+  const wAvailability = 0.3;
+  const wFreshness = forYou ? 0.1 : 0.2;
+  const wCooldown = 1.0;
+  const wVibes = 1.0;
+  const wCountry = 1.0;
 
   // Hard exclude (Layer 1 residue): seen, watchlist, recent passes' hard list.
   const eligible = candidates.filter((t) => !excludeIds.has(t.id));
-
-  // Cold-start weighting: popularity dominates when signal is thin.
-  const isColdStart = taste.totalSwipes < COLD_START_THRESHOLD;
-  const wPersonal = isColdStart ? 0.2 : 0.6;
-  const wPopularity = isColdStart ? 0.6 : 0.2;
-  const wAvailability = 0.3;
-  const wFreshness = 0.2;
-  const wCooldown = 1.0;
 
   const scored: Array<{ title: Title; trace: RuleTrace }> = eligible.map((t) => {
     const personalization = personalizationScore(t, taste, recommendationScores[t.id]);
@@ -204,12 +270,18 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
     const availability = availabilityScore(t, ownedServiceIds);
     const freshness = freshnessScore(t, now);
     const cooldown = cooldownScore(t.id, passedRecently, shownLast7d);
+    const vibe = vibeScore(t, vibes);
+    const country = countryScore(t, preferredCountries);
+    const forYouBoost = forYou && taste.totalSwipes > 0 ? FOR_YOU_BOOST : 0;
     const finalScore =
       wPersonal * personalization +
       wPopularity * popularity +
       wAvailability * availability +
       wFreshness * freshness +
       wCooldown * cooldown +
+      wVibes * vibe +
+      wCountry * country +
+      forYouBoost +
       userJitter(t.id, userSeed);
     return {
       title: t,

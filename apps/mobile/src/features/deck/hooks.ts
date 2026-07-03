@@ -1,8 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { MoodPreset, TasteSignal, Title } from '@flixy/shared';
-import { type ComposeOptions, type ComposeResult, composeDeck, moodToFilter } from '@flixy/shared';
+import type { MoodPreset, TasteSignal, Title, VibePreset } from '@flixy/shared';
+import {
+  type ComposeOptions,
+  type ComposeResult,
+  composeDeck,
+  moodToFilter,
+  vibesToGenres,
+} from '@flixy/shared';
 
 import { normalizeGenreId, normalizeServiceId } from '../../lib/fallbackCatalogue';
 import { localDb } from '../../lib/localDb';
@@ -248,6 +254,10 @@ function useDeckExclusions() {
 
 export type UseDeckOptions = {
   mood?: MoodPreset | null;
+  vibes?: VibePreset[] | null;
+  country?: string | null;
+  /** For You mode bypasses manual filters and leans on taste + remote recos. */
+  forYou?: boolean;
   extraFilter?: Partial<TitleQueryFilter>;
 };
 
@@ -270,11 +280,30 @@ function hasRestrictiveFilter(filter: TitleQueryFilter, maxRuntime?: number): bo
   return Boolean(
     (filter.serviceIds?.length ?? 0) > 0 ||
       (filter.genres?.length ?? 0) > 0 ||
+      (filter.vibeGenres?.length ?? 0) > 0 ||
+      filter.originCountry != null ||
       filter.minYear != null ||
       filter.maxYear != null ||
       maxRuntime != null,
   );
 }
+
+// ISO-3166 alpha-2 -> ISO-639-1 original language used to filter the merged
+// candidate pool client-side when a country filter is active.
+const COUNTRY_LANGUAGE_MAP: Record<string, string> = {
+  US: 'en',
+  GB: 'en',
+  TR: 'tr',
+  KR: 'ko',
+  JP: 'ja',
+  IN: 'hi',
+  DE: 'de',
+  ES: 'es',
+  FR: 'fr',
+  IT: 'it',
+  BR: 'pt',
+  MX: 'es',
+};
 
 function makeRelaxedFilter(filter: TitleQueryFilter): TitleQueryFilter {
   return {
@@ -337,6 +366,7 @@ export function useDeck(options: UseDeckOptions = {}) {
   const { taste, isLoading: isTasteLoading } = useTasteSignal();
   const { exclusions, isLoading: isExclusionsLoading } = useDeckExclusions();
   const moodFilter = moodToFilter(options.mood ?? null);
+  const forYou = options.forYou === true;
   const [refillPage, setRefillPage] = useState(1);
   const filterServices = useDeckFilters((s) => s.serviceIds);
   const filterGenres = useDeckFilters((s) => s.genres);
@@ -350,20 +380,33 @@ export function useDeck(options: UseDeckOptions = {}) {
     [filterGenres, prefs?.selected_genres],
   );
 
+  const vibeGenres = useMemo(
+    () => vibesToGenres(options.vibes ?? null) ?? undefined,
+    [options.vibes],
+  );
+
   const baseFilter: TitleQueryFilter = useMemo(
     () => ({
       region: profile?.region,
-      serviceIds: selectedServices,
-      genres: moodFilter.genres ?? selectedGenres,
-      minYear: moodFilter.minYear,
-      maxYear: moodFilter.maxYear,
+      // In For You mode the user is not filtering — keep services/genres as
+      // soft preferences only (so the catalogue query stays wide and the
+      // composer can lean on taste + remote recos).
+      serviceIds: forYou ? undefined : selectedServices,
+      genres: forYou ? undefined : (moodFilter.genres ?? selectedGenres),
+      vibeGenres: forYou ? undefined : vibeGenres,
+      originCountry: forYou ? undefined : (options.country ?? undefined),
+      minYear: forYou ? undefined : moodFilter.minYear,
+      maxYear: forYou ? undefined : moodFilter.maxYear,
       limit: DECK_PAGE_SIZE,
       ...options.extraFilter,
     }),
     [
+      forYou,
       profile?.region,
       selectedServices,
       selectedGenres,
+      vibeGenres,
+      options.country,
       moodFilter.genres,
       moodFilter.minYear,
       moodFilter.maxYear,
@@ -427,8 +470,20 @@ export function useDeck(options: UseDeckOptions = {}) {
       targetSize: 50,
       recommendationScores,
       userSeed: userId,
+      vibes: forYou ? null : (options.vibes ?? null),
+      preferredCountries: forYou ? null : options.country ? [options.country] : null,
+      forYou,
     }),
-    [taste, selectedServices, exclusions, recommendationScores, userId],
+    [
+      taste,
+      selectedServices,
+      exclusions,
+      recommendationScores,
+      userId,
+      forYou,
+      options.vibes,
+      options.country,
+    ],
   );
 
   const primaryDeck = useMemo(() => {
@@ -437,7 +492,8 @@ export function useDeck(options: UseDeckOptions = {}) {
     if (pooledCandidates.length === 0 && firstPageCandidates.length === 0) return null;
     let candidates = pooledCandidates.length > 0 ? pooledCandidates : firstPageCandidates;
 
-    // Merge remote recommendations if present
+    // Merge remote recommendations if present. In For You mode recommendations
+    // are weighted more heavily by the composer, so we merge a larger share.
     const recommendedTitles = recoTitlesQuery.data ?? [];
     if (recommendedTitles.length > 0) {
       const seenIds = new Set(candidates.map((t) => t.id));
@@ -452,13 +508,29 @@ export function useDeck(options: UseDeckOptions = {}) {
     }
 
     // Inclusive genre filter: keep candidates that match AT LEAST ONE selected
-    // genre. Subset matching (`every`) silently dropped any title carrying an
-    // extra genre, which made filtering work for some titles but not others.
-    if (selectedGenres && selectedGenres.length > 0) {
+    // genre. In For You mode we do NOT apply genre filtering — the composer
+    // boosts preferred genres via the taste signal instead.
+    if (!forYou && selectedGenres && selectedGenres.length > 0) {
       const selectedSet = new Set(selectedGenres);
       candidates = candidates.filter((t) =>
         t.genres.some((g) => selectedSet.has(normalizeGenreId(g))),
       );
+    }
+
+    // Vibe genre filter (mirror of the genre inclusive match for vibe presets).
+    if (!forYou && vibeGenres && vibeGenres.length > 0) {
+      const vibeSet = new Set(vibeGenres);
+      candidates = candidates.filter((t) => t.genres.some((g) => vibeSet.has(normalizeGenreId(g))));
+    }
+
+    // Country filter using the title `language` field as a coarse proxy.
+    if (!forYou && options.country) {
+      const countryLang = COUNTRY_LANGUAGE_MAP[options.country.toUpperCase()];
+      if (countryLang) {
+        candidates = candidates.filter((t) =>
+          (t.language ?? '').toLowerCase().startsWith(countryLang),
+        );
+      }
     }
 
     // Content-type filter (movie/tv). Recommendations are merged in unfiltered,
@@ -468,7 +540,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       candidates = candidates.filter((t) => kinds.includes(t.kind));
     }
 
-    if (moodFilter.maxRuntime != null) {
+    if (!forYou && moodFilter.maxRuntime != null) {
       const cap = moodFilter.maxRuntime;
       const filtered = candidates.filter(
         (t) => t.runtimeMinutes == null || t.runtimeMinutes <= cap,
@@ -485,6 +557,9 @@ export function useDeck(options: UseDeckOptions = {}) {
     composeOpts,
     moodFilter.maxRuntime,
     selectedGenres,
+    vibeGenres,
+    options.country,
+    forYou,
     baseFilter.kinds,
   ]);
 
@@ -495,11 +570,25 @@ export function useDeck(options: UseDeckOptions = {}) {
     let candidates = pooledCandidates.length > 0 ? pooledCandidates : firstPageCandidates;
 
     // Inclusive genre filter (match at least one selected genre) — see primaryDeck.
-    if (selectedGenres && selectedGenres.length > 0) {
+    if (!forYou && selectedGenres && selectedGenres.length > 0) {
       const selectedSet = new Set(selectedGenres);
       candidates = candidates.filter((t) =>
         t.genres.some((g) => selectedSet.has(normalizeGenreId(g))),
       );
+    }
+
+    if (!forYou && vibeGenres && vibeGenres.length > 0) {
+      const vibeSet = new Set(vibeGenres);
+      candidates = candidates.filter((t) => t.genres.some((g) => vibeSet.has(normalizeGenreId(g))));
+    }
+
+    if (!forYou && options.country) {
+      const countryLang = COUNTRY_LANGUAGE_MAP[options.country.toUpperCase()];
+      if (countryLang) {
+        candidates = candidates.filter((t) =>
+          (t.language ?? '').toLowerCase().startsWith(countryLang),
+        );
+      }
     }
 
     const kinds = baseFilter.kinds;
@@ -518,6 +607,9 @@ export function useDeck(options: UseDeckOptions = {}) {
     relaxedCandidatePool,
     relaxedCandidatesQuery.data,
     selectedGenres,
+    vibeGenres,
+    options.country,
+    forYou,
     baseFilter.kinds,
   ]);
 

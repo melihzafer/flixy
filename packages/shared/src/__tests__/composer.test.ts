@@ -273,4 +273,81 @@ describe('composeDeck', () => {
 
     expect(first).not.toEqual(second);
   });
+
+  it('boosts titles matching selected vibes', () => {
+    const vibeMatch = mkTitle({
+      id: '00000000-0000-0000-0000-000000000001',
+      popularity: 400,
+      genres: ['horror'],
+    });
+    const nonMatch = mkTitle({
+      id: '00000000-0000-0000-0000-000000000002',
+      popularity: 500,
+      genres: ['comedy'],
+    });
+    const { cards } = composeDeck({
+      candidates: [vibeMatch, nonMatch],
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+      vibes: ['dark'],
+    });
+    expect(cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000001');
+  });
+
+  it('boosts titles whose language matches preferred country', () => {
+    const turkishTitle = mkTitle({
+      id: '00000000-0000-0000-0000-000000000001',
+      popularity: 400,
+      language: 'tr',
+    });
+    const englishTitle = mkTitle({
+      id: '00000000-0000-0000-0000-000000000002',
+      popularity: 500,
+      language: 'en',
+    });
+    const { cards } = composeDeck({
+      candidates: [turkishTitle, englishTitle],
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+      preferredCountries: ['TR'],
+    });
+    expect(cards[0]?.title.language).toBe('tr');
+  });
+
+  it('tilts scoring toward taste signal in For You mode', () => {
+    const loved = mkTitle({
+      id: '00000000-0000-0000-0000-000000000001',
+      popularity: 100,
+      genres: ['drama'],
+    });
+    const popular = mkTitle({
+      id: '00000000-0000-0000-0000-000000000002',
+      popularity: 1000,
+      genres: ['horror'],
+    });
+    const taste: TasteSignal = {
+      positiveGenres: { drama: 30 },
+      negativeGenres: {},
+      totalSwipes: 60,
+    };
+    const { cards } = composeDeck({
+      candidates: [loved, popular],
+      taste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+      forYou: true,
+    });
+    expect(cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000001');
+  });
 });

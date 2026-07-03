@@ -415,8 +415,28 @@ export type TmdbDiscoverFilter = {
   kinds?: ('movie' | 'tv')[];
   minYear?: number;
   maxYear?: number;
+  /** Origin country ISO-3166 alpha-2 filter (e.g. "TR", "US", "KR"). */
+  originCountry?: string;
+  /** Vibe-derived genre OR-list merged into `with_genres`. */
+  vibeGenres?: string[];
   limit?: number;
   page?: number;
+};
+
+// ISO-3166 alpha-2 -> ISO-639-1 used to drive TMDB `with_original_language`.
+const COUNTRY_LANGUAGE_MAP: Record<string, string> = {
+  US: 'en',
+  GB: 'en',
+  TR: 'tr',
+  KR: 'ko',
+  JP: 'ja',
+  IN: 'hi',
+  DE: 'de',
+  ES: 'es',
+  FR: 'fr',
+  IT: 'it',
+  BR: 'pt',
+  MX: 'es',
 };
 
 /**
@@ -432,6 +452,15 @@ export async function discoverTmdbTitles(filter: TmdbDiscoverFilter): Promise<Ti
     .filter(Boolean);
 
   const region = filter.region || 'US';
+  const originCountry = filter.originCountry?.toUpperCase();
+  const originalLanguage = originCountry ? COUNTRY_LANGUAGE_MAP[originCountry] : undefined;
+
+  // Merge explicit genres + vibe-derived genres into a single OR-list so the
+  // user can stack "preferred genres" and "vibes" without one cancelling the
+  // other out.
+  const mergedGenres = Array.from(
+    new Set([...(filter.genres ?? []), ...(filter.vibeGenres ?? [])]),
+  );
 
   const fetchPromises = kinds.map(async (kind) => {
     const params: Record<string, string> = {
@@ -447,8 +476,8 @@ export async function discoverTmdbTitles(filter: TmdbDiscoverFilter): Promise<Ti
       params.with_watch_providers = serviceProviders.join('|');
     }
 
-    if (filter.genres && filter.genres.length > 0) {
-      const genreIds = filter.genres
+    if (mergedGenres.length > 0) {
+      const genreIds = mergedGenres
         .map((g) => (kind === 'movie' ? FLIXY_TO_TMDB_MOVIE_GENRE[g] : FLIXY_TO_TMDB_TV_GENRE[g]))
         .filter(Boolean);
       if (genreIds.length > 0) {
@@ -458,6 +487,16 @@ export async function discoverTmdbTitles(filter: TmdbDiscoverFilter): Promise<Ti
         // broken (most titles carry a secondary genre the user didn't pick).
         params.with_genres = genreIds.join('|');
       }
+    }
+
+    // Origin country / original language filter. TMDB's discover endpoints
+    // accept `with_origin_country` (movie + tv) and `with_original_language`.
+    // We use both to be robust across endpoints that may not return origin_country.
+    if (originCountry) {
+      params.with_origin_country = originCountry;
+    }
+    if (originalLanguage) {
+      params.with_original_language = originalLanguage;
     }
 
     if (filter.minYear) {

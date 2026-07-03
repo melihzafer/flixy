@@ -172,7 +172,12 @@
     "reset": "Sıfırla",
     "apply": "Uygula",
     "sheetTitle": "Ne izlemek istersin?",
+    "sectionForYou": "Senin için",
+    "forYouLabel": "Senin için",
+    "forYouHint": "Kaydırma, kaydetme ve tadına göre sana seçer.",
     "sectionMood": "Ruh hali",
+    "sectionVibes": "Atmosfer",
+    "sectionCountry": "Ülke",
     "sectionType": "İçerik türü",
     "sectionServices": "Yayın servisleri",
     "sectionGenres": "Tercih edilen türler",
@@ -181,9 +186,28 @@
     "resetButton": "Filtreleri sıfırla",
     "yearRanges": {
       "any": "Tüm yıllar",
+      "thisYear": "Bu yıl",
+      "last5": "Son 5 yıl",
       "y2020s": "2020'ler",
       "y2010s": "2010'lar",
+      "y2000s": "2000'ler",
+      "y1990s": "1990'lar",
+      "y1980s": "1980'ler",
       "classics": "Klasikler"
+    },
+    "countries": {
+      "US": "Amerikan",
+      "GB": "İngiliz",
+      "TR": "Türk",
+      "KR": "Kore",
+      "JP": "Japon",
+      "IN": "Hint",
+      "DE": "Alman",
+      "ES": "İspanyol",
+      "FR": "Fransız",
+      "IT": "İtalyan",
+      "BR": "Brezilyalı",
+      "MX": "Meksika"
     },
     "kinds": {
       "movie": "Filmler",
@@ -195,7 +219,25 @@
       "mind_bender": "Zihin bükücü",
       "feel_good": "İçimi ısıtsın",
       "short_pick": "Kısa",
-      "classic": "Klasik"
+      "classic": "Klasik",
+      "dark": "Karanlık",
+      "romantic": "Romantik",
+      "epic": "Epik",
+      "chill": "Sakin"
+    },
+    "vibes": {
+      "dark": "Karanlık",
+      "wholesome": "Sağlıklı",
+      "intense": "Yoğun",
+      "slow_burn": "Yavaş işleyen",
+      "feel_good": "İçimi ısıtsın",
+      "mind_bending": "Zihin bükücü",
+      "nostalgic": "Nostaljik",
+      "epic": "Epik",
+      "offbeat": "Sıra dışı",
+      "emotional": "Duygusal",
+      "funny": "Komik",
+      "surreal": "Sürreal"
     }
   },
   "search": {

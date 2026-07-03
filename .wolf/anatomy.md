@@ -184,6 +184,9 @@
 ## apps/mobile/app/(app)/
 
 - `settings-language.tsx` — LANGUAGES (~629 tok)
+- `trailers.tsx` — TrailersScreen for popular trailer-first vertical paging feed (~2000 tok)
+- `watchlist-triage.tsx` — WatchlistTriageScreen for swipe-triaging backlog items (~1800 tok)
+
 
 ## apps/mobile/app/(app)/(tabs)/
 
@@ -295,7 +298,10 @@
 ## apps/web/
 
 
+
 ## docs/
+
+- `BRAINSTORM_FILTERS_FEATURES.md` — Brainstorming blueprint for advanced filtering and features (~1800 tok)
 
 
 ## packages/catalogue-ingest/

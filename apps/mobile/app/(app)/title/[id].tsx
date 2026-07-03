@@ -5,8 +5,18 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Check, ChevronLeft, Heart, Play, Share2, Star, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Linking, Pressable, ScrollView, Share, StatusBar, View } from 'react-native';
+import {
+  Alert,
+  Linking,
+  Pressable,
+  ScrollView,
+  Share,
+  StatusBar,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 
 import { ActionButton } from '../../../src/components/ActionButton';
 import { Text } from '../../../src/components/Text';
@@ -26,7 +36,9 @@ export default function TitleDetail() {
   const { data: title, isLoading, isError, refetch } = useTitle(id ?? null);
   const recordSwipe = useRecordSwipe();
   const { data: profile } = useProfile();
+  const { width: screenWidth } = useWindowDimensions();
   const [sharing, setSharing] = useState(false);
+  const [trailerPlaying, setTrailerPlaying] = useState(false);
 
   useEffect(() => {
     if (id) events.detailViewed(id);
@@ -165,7 +177,7 @@ export default function TitleDetail() {
   const openTrailer = async () => {
     if (!title.trailerKey) return;
     events.trailerOpened(title.id);
-    await Linking.openURL(`https://www.youtube.com/watch?v=${title.trailerKey}`);
+    setTrailerPlaying(true);
   };
 
   const openAvailability = async (offer: (typeof title.availability)[number]) => {
@@ -363,33 +375,71 @@ export default function TitleDetail() {
           </Text>
 
           <SectionLabel>Trailer</SectionLabel>
-          <Pressable
-            onPress={openTrailer}
-            disabled={!title.trailerKey}
-            testID="detail-trailer-button"
-            accessibilityRole="button"
-            accessibilityState={{ disabled: !title.trailerKey }}
-            style={{
-              minHeight: 42,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: title.trailerKey ? colors.accentBorder : colors.border,
-              backgroundColor: title.trailerKey ? colors.accentDim : 'rgba(255,255,255,0.035)',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginTop: 8,
-            }}
-          >
-            <Text
+          {title.trailerKey ? (
+            <View style={{ marginTop: 8 }}>
+              <YoutubePlayer
+                videoId={title.trailerKey}
+                height={Math.round((screenWidth - 28) * (9 / 16))}
+                width={screenWidth - 28}
+                play={trailerPlaying}
+                mute={trailerPlaying}
+                forceAndroidAutoplay
+                initialPlayerParams={{ preventFullScreen: false }}
+                onChangeState={(state: PLAYER_STATES) => {
+                  if (state === PLAYER_STATES.PLAYING) setTrailerPlaying(true);
+                  else if (state === PLAYER_STATES.PAUSED || state === PLAYER_STATES.ENDED)
+                    setTrailerPlaying(false);
+                }}
+                webViewStyle={{ borderRadius: 12, overflow: 'hidden' }}
+              />
+              <Pressable
+                onPress={() => {
+                  if (!trailerPlaying) openTrailer();
+                  else setTrailerPlaying(false);
+                }}
+                testID="detail-trailer-button"
+                accessibilityRole="button"
+                style={{
+                  marginTop: 8,
+                  minHeight: 40,
+                  borderRadius: 10,
+                  borderWidth: 1,
+                  borderColor: colors.accentBorder,
+                  backgroundColor: colors.accentDim,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexDirection: 'row',
+                  gap: 6,
+                }}
+              >
+                <Play size={13} color={colors.accent} strokeWidth={2.2} />
+                <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, color: colors.text }}>
+                  {trailerPlaying ? 'Pause trailer' : 'Watch trailer'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable
+              disabled
+              testID="detail-trailer-button"
+              accessibilityRole="button"
+              accessibilityState={{ disabled: true }}
               style={{
-                fontFamily: fonts.bodySemi,
-                fontSize: 13,
-                color: title.trailerKey ? colors.text : colors.textMuted,
+                minHeight: 42,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: 'rgba(255,255,255,0.035)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 8,
               }}
             >
-              {title.trailerKey ? 'Watch trailer' : 'Trailer not available yet'}
-            </Text>
-          </Pressable>
+              <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, color: colors.textMuted }}>
+                Trailer not available yet
+              </Text>
+            </Pressable>
+          )}
 
           {/* Cast */}
           <SectionLabel>Cast</SectionLabel>

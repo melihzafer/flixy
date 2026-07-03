@@ -206,7 +206,12 @@
     "reset": "Reset",
     "apply": "Apply",
     "sheetTitle": "What are you in the mood for?",
+    "sectionForYou": "For you",
+    "forYouLabel": "For You",
+    "forYouHint": "Uses your swipes, saves, and taste to pick for you.",
     "sectionMood": "Mood presets",
+    "sectionVibes": "Vibes",
+    "sectionCountry": "Country",
     "sectionType": "Content type",
     "sectionServices": "Streaming services",
     "sectionGenres": "Preferred genres",
@@ -215,9 +220,28 @@
     "resetButton": "Reset filters",
     "yearRanges": {
       "any": "Any year",
+      "thisYear": "This year",
+      "last5": "Last 5 years",
       "y2020s": "2020s",
       "y2010s": "2010s",
+      "y2000s": "2000s",
+      "y1990s": "1990s",
+      "y1980s": "1980s",
       "classics": "Classics"
+    },
+    "countries": {
+      "US": "American",
+      "GB": "British",
+      "TR": "Turkish",
+      "KR": "Korean",
+      "JP": "Japanese",
+      "IN": "Indian",
+      "DE": "German",
+      "ES": "Spanish",
+      "FR": "French",
+      "IT": "Italian",
+      "BR": "Brazilian",
+      "MX": "Mexican"
     },
     "kinds": {
       "movie": "Movies",
@@ -229,7 +253,25 @@
       "mind_bender": "Mind bender",
       "feel_good": "Feel good",
       "short_pick": "Short pick",
-      "classic": "Classic"
+      "classic": "Classic",
+      "dark": "Dark",
+      "romantic": "Romantic",
+      "epic": "Epic",
+      "chill": "Chill"
+    },
+    "vibes": {
+      "dark": "Dark",
+      "wholesome": "Wholesome",
+      "intense": "Intense",
+      "slow_burn": "Slow burn",
+      "feel_good": "Feel good",
+      "mind_bending": "Mind bending",
+      "nostalgic": "Nostalgic",
+      "epic": "Epic",
+      "offbeat": "Offbeat",
+      "emotional": "Emotional",
+      "funny": "Funny",
+      "surreal": "Surreal"
     }
   },
   "search": {

@@ -3,10 +3,14 @@ import type { TFunction } from 'i18next';
 import {
   AlertTriangle,
   Check,
+  Clapperboard,
+  Eye,
+  EyeOff,
   Heart,
   Info,
   RotateCcw,
   Settings2,
+  Sparkles,
   Star,
   X,
 } from 'lucide-react-native';
@@ -52,21 +56,29 @@ export default function DeckScreen() {
   const deckSaveSize = isCompactWidth ? 54 : 58;
   const deckActionGap = isCompactWidth ? 8 : 12;
   const activeMood = useDeckFilters((s) => s.mood);
+  const vibes = useDeckFilters((s) => s.vibes);
+  const country = useDeckFilters((s) => s.country);
+  const forYou = useDeckFilters((s) => s.forYou);
   const kinds = useDeckFilters((s) => s.kinds);
   const minYear = useDeckFilters((s) => s.minYear);
   const maxYear = useDeckFilters((s) => s.maxYear);
   const resetFilters = useDeckFilters((s) => s.reset);
+  const blindDate = useDeckFilters((s) => s.blindDate); // <-- NEW
+  const toggleBlindDate = useDeckFilters((s) => s.toggleBlindDate); // <-- NEW
   const extraFilter = useMemo(
     () => ({
       kinds,
-      minYear: minYear ?? undefined,
-      maxYear: maxYear ?? undefined,
+      minYear: forYou ? undefined : (minYear ?? undefined),
+      maxYear: forYou ? undefined : (maxYear ?? undefined),
     }),
-    [kinds, minYear, maxYear],
+    [kinds, minYear, maxYear, forYou],
   );
 
   const { deck, diagnostics, isLoading, isError, error, refetch } = useDeck({
     mood: activeMood,
+    vibes,
+    country,
+    forYou,
     extraFilter,
   });
   const { data: prefs } = useUserPreferences();
@@ -462,7 +474,37 @@ export default function DeckScreen() {
         }
         right={
           <>
-            {activeMood && (
+            {forYou && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={t('deck.editForYouFilter', 'For You mode is active')}
+                accessibilityState={{ selected: true }}
+                onPress={() => setShowFilters(true)}
+                style={{
+                  backgroundColor: 'rgba(255,77,28,0.15)',
+                  borderWidth: 1,
+                  borderColor: 'rgba(255,77,28,0.3)',
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 20,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 5,
+                }}
+              >
+                <Sparkles size={11} color={colors.accent} strokeWidth={2.4} />
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontFamily: fonts.bodySemi,
+                    color: colors.accent,
+                  }}
+                >
+                  {t('filters.forYouLabel', 'For You')}
+                </Text>
+              </Pressable>
+            )}
+            {!forYou && activeMood && (
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={t('deck.editMoodFilter', 'Edit active mood filter: {{mood}}', {
@@ -494,6 +536,48 @@ export default function DeckScreen() {
                 <X size={12} color={colors.accent} strokeWidth={2.4} />
               </Pressable>
             )}
+            <Pressable
+              onPress={toggleBlindDate}
+              testID="deck-blind-date-button"
+              accessibilityRole="button"
+              accessibilityLabel={t('deck.toggleBlindDate', 'Toggle blind date mode')}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: blindDate ? 'rgba(255,77,28,0.15)' : 'rgba(255,255,255,0.06)',
+                borderWidth: 1,
+                borderColor: blindDate ? 'rgba(255,77,28,0.3)' : 'rgba(255,255,255,0.09)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {blindDate ? (
+                <EyeOff size={17} color={colors.accent} strokeWidth={2.1} />
+              ) : (
+                <Eye size={17} color="rgba(245,245,240,0.7)" strokeWidth={2.1} />
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={() => router.push('/(app)/trailers')}
+              testID="deck-trailers-button"
+              accessibilityRole="button"
+              accessibilityLabel={t('deck.openTrailers', 'Open trailers')}
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 18,
+                backgroundColor: 'rgba(255,255,255,0.06)',
+                borderWidth: 1,
+                borderColor: 'rgba(255,255,255,0.09)',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Clapperboard size={17} color="rgba(245,245,240,0.7)" strokeWidth={2.1} />
+            </Pressable>
+
             <Pressable
               onPress={() => setShowFilters(true)}
               testID="deck-filter-button"

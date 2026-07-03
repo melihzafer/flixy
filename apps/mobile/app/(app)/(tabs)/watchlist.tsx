@@ -1,10 +1,12 @@
+import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { MoreVertical, Star } from 'lucide-react-native';
+import { Dices, MoreVertical, Star, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Modal, Pressable, View } from 'react-native';
+import { Alert, Modal, Pressable, View } from 'react-native';
 
+import type { Title } from '@flixy/shared';
 import { AppHeader } from '../../../src/components/AppHeader';
 import { Screen } from '../../../src/components/Screen';
 import { Text } from '../../../src/components/Text';
@@ -43,6 +45,64 @@ export default function WatchlistScreen() {
   const unmarkWatched = useUnmarkWatched();
   const removeFromWatchlist = useRemoveFromWatchlist();
   const setPriority = useSetPriority();
+
+  // Streaming Roulette State (ZERO_COST feature)
+  const [showRoulette, setShowRoulette] = useState(false);
+  const [spinning, setSpinning] = useState(false);
+  const [rouletteCandidate, setRouletteCandidate] = useState<Title | null>(null);
+
+  const startRoulette = () => {
+    const pool = entries
+      .filter((e): e is typeof e & { title: Title } => {
+        if (!e.title || e.item.watchedAt) return false;
+        if (typeFilter !== 'all' && e.title.kind !== typeFilter) return false;
+        if (filter === 'top' && e.item.priority !== 'top') return false;
+        return true;
+      })
+      .map((e) => e.title);
+
+    if (pool.length === 0) {
+      const hasFilters = typeFilter !== 'all' || filter !== 'all';
+      Alert.alert(
+        t('watchlist.rouletteEmptyTitle', 'Roulette Pool Empty'),
+        hasFilters
+          ? t(
+              'watchlist.rouletteEmptyFiltered',
+              'No unwatched items match your active filters. Try resetting tabs!',
+            )
+          : t('watchlist.rouletteEmpty', 'Add some titles to your watchlist first!'),
+      );
+      return;
+    }
+
+    setShowRoulette(true);
+    setSpinning(true);
+    setRouletteCandidate(pool[0] || null);
+
+    const ticks = [50, 60, 80, 110, 150, 200, 260, 340, 440, 560, 700];
+    let i = 0;
+
+    const runTick = () => {
+      if (i >= ticks.length) {
+        setSpinning(false);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        return;
+      }
+
+      const randomTitle = pool[Math.floor(Math.random() * pool.length)] ?? null;
+      if (randomTitle) {
+        setRouletteCandidate(randomTitle);
+      }
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+      setTimeout(() => {
+        i++;
+        runTick();
+      }, ticks[i]);
+    };
+
+    runTick();
+  };
 
   if (isLoading) {
     return (
@@ -101,23 +161,70 @@ export default function WatchlistScreen() {
       <AppHeader
         title={t('watchlist.title')}
         right={
-          <View
-            style={{
-              backgroundColor: 'rgba(255,255,255,0.06)',
-              paddingHorizontal: 10,
-              paddingVertical: 4,
-              borderRadius: 12,
-            }}
-          >
-            <Text
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {entries.length > 0 && (
+              <>
+                <Pressable
+                  onPress={startRoulette}
+                  testID="watchlist-roulette-button"
+                  accessibilityRole="button"
+                  accessibilityLabel="Roulette pick"
+                  style={({ pressed }) => ({
+                    width: 30,
+                    height: 26,
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(255,255,255,0.06)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.09)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <Dices size={14} color={colors.accent} strokeWidth={2.2} />
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/(app)/watchlist-triage')}
+                  testID="watchlist-triage-button"
+                  accessibilityRole="button"
+                  accessibilityLabel="Triage backlog"
+                  style={({ pressed }) => ({
+                    height: 26,
+                    paddingHorizontal: 9,
+                    borderRadius: 8,
+                    backgroundColor: colors.accent,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <Text
+                    style={{ fontSize: 11, color: colors.onAccent, fontFamily: fonts.bodyBold }}
+                  >
+                    Triage
+                  </Text>
+                </Pressable>
+              </>
+            )}
+            <View
               style={{
-                fontSize: 11,
-                color: 'rgba(245,245,240,0.4)',
-                fontFamily: fonts.bodySemi,
+                backgroundColor: 'rgba(255,255,255,0.06)',
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+                borderRadius: 12,
               }}
             >
-              {t('watchlist.titlesCount', '{{count}} titles', { count: entries.length })}
-            </Text>
+              <Text
+                style={{
+                  fontSize: 11,
+                  color: 'rgba(245,245,240,0.4)',
+                  fontFamily: fonts.bodySemi,
+                }}
+              >
+                {t('watchlist.titlesCount', '{{count}} titles', { count: entries.length })}
+              </Text>
+            </View>
           </View>
         }
       />
@@ -329,6 +436,181 @@ export default function WatchlistScreen() {
       )}
 
       {validEntries.length === 0 && <WatchlistEmptyState filter={filter} />}
+
+      {/* Roulette Picker Modal */}
+      <Modal
+        visible={showRoulette}
+        animationType="fade"
+        transparent
+        onRequestClose={() => {
+          if (!spinning) setShowRoulette(false);
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: 'rgba(0,0,0,0.85)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+          }}
+        >
+          <View
+            style={{
+              width: '100%',
+              maxWidth: 340,
+              backgroundColor: '#111113',
+              borderRadius: 24,
+              borderWidth: 1,
+              borderColor: colors.accentBorder,
+              padding: 24,
+              alignItems: 'center',
+              position: 'relative',
+              gap: 16,
+            }}
+          >
+            {/* Close button */}
+            {!spinning && (
+              <Pressable
+                onPress={() => setShowRoulette(false)}
+                style={{
+                  position: 'absolute',
+                  top: 14,
+                  right: 14,
+                  width: 30,
+                  height: 30,
+                  borderRadius: 15,
+                  backgroundColor: 'rgba(255,255,255,0.06)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={16} color={colors.textMuted} />
+              </Pressable>
+            )}
+
+            <Text
+              style={{
+                fontFamily: fonts.bodyBold,
+                fontSize: 12,
+                color: colors.accent,
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+              }}
+            >
+              {spinning
+                ? t('watchlist.rouletteSpinning', 'Selecting match…')
+                : t('watchlist.rouletteWinner', 'Watch This Tonight!')}
+            </Text>
+
+            {rouletteCandidate ? (
+              <View style={{ width: '100%', alignItems: 'center', gap: 12 }}>
+                {/* Image poster */}
+                <View
+                  style={{
+                    width: 140,
+                    height: 210,
+                    borderRadius: 16,
+                    overflow: 'hidden',
+                    backgroundColor: colors.surface2,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.08)',
+                  }}
+                >
+                  {rouletteCandidate.posterUrl ? (
+                    <Image
+                      source={{ uri: rouletteCandidate.posterUrl }}
+                      contentFit="cover"
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  ) : (
+                    <View
+                      style={{
+                        flex: 1,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: 8,
+                      }}
+                    >
+                      <Text style={{ textAlign: 'center', fontSize: 11, color: colors.textMuted }}>
+                        No Poster
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Title and details */}
+                <View style={{ alignItems: 'center', gap: 4 }}>
+                  <Text
+                    style={{
+                      fontFamily: fonts.display,
+                      fontSize: 22,
+                      color: colors.text,
+                      textAlign: 'center',
+                    }}
+                    numberOfLines={2}
+                  >
+                    {rouletteCandidate.title}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: colors.textMuted }}>
+                    {rouletteCandidate.releaseYear} ·{' '}
+                    {rouletteCandidate.kind === 'movie' ? 'Movie' : 'TV Show'}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
+
+            {/* Actions */}
+            <View style={{ width: '100%', gap: 8, marginTop: 10 }}>
+              {!spinning && rouletteCandidate && (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => {
+                    setShowRoulette(false);
+                    router.push({
+                      pathname: '/(app)/title/[id]',
+                      params: { id: rouletteCandidate.id },
+                    });
+                  }}
+                  style={{
+                    height: 46,
+                    borderRadius: 12,
+                    backgroundColor: colors.accent,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{ fontFamily: fonts.bodyBold, color: colors.onAccent, fontSize: 14 }}
+                  >
+                    View details
+                  </Text>
+                </Pressable>
+              )}
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={spinning}
+                onPress={startRoulette}
+                style={{
+                  height: 44,
+                  borderRadius: 12,
+                  backgroundColor: 'rgba(255,255,255,0.05)',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: spinning ? 0.5 : 1,
+                }}
+              >
+                <Text style={{ fontFamily: fonts.bodySemi, color: colors.text, fontSize: 13 }}>
+                  {spinning
+                    ? t('watchlist.spinning', 'Spinning…')
+                    : t('watchlist.spinAgain', 'Spin Again')}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </Screen>
   );
 }

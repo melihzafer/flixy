@@ -1,7 +1,8 @@
+import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Info } from 'lucide-react-native';
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -13,10 +14,10 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import { useDeckFilters } from '../../features/deck/filterStore';
 
 import type { SwipeDirection, Title } from '@flixy/shared';
 
-import { SwipeStamp } from '../../components/SwipeStamp';
 import { Text } from '../../components/Text';
 import { toTitleDisplay } from '../../features/catalogue/display';
 import { colors, fonts } from '../../theme/tokens';
@@ -51,6 +52,14 @@ export function SwipeCard({
   const ty = useSharedValue(0);
   const isCommitting = useSharedValue(false);
 
+  const blindDate = useDeckFilters((s) => s.blindDate);
+  const [revealed, setRevealed] = useState(false);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Reset revealed state when active card changes
+  useEffect(() => {
+    setRevealed(false);
+  }, [title.id]);
+
   const display = useMemo(() => toTitleDisplay(title), [title]);
   const isSeries = display.kind === 'tv';
   const typeLabel = isSeries ? t('detail.series', 'Series') : t('detail.movie', 'Movie');
@@ -62,13 +71,21 @@ export function SwipeCard({
   const horizontalThreshold = cardWidth * HORIZONTAL_THRESHOLD_RATIO;
 
   const commit = useCallback((dir: SwipeDirection) => onCommit(dir), [onCommit]);
-  const handleTap = useCallback(() => onTap?.(), [onTap]);
+  const handleTap = useCallback(() => {
+    if (blindDate && !revealed) {
+      setRevealed(true);
+    } else {
+      onTap?.();
+    }
+  }, [blindDate, revealed, onTap]);
 
   const pan = Gesture.Pan()
     .enabled(!disabled)
     .onUpdate((e) => {
       tx.value = e.translationX;
-      ty.value = e.translationY;
+      // Kartın yukarı sürüklenmesini engelle — yalnızca aşağıya doğru (watch)
+      // hareket serbest. Yukarı kayma (top pick) görsel olarak kilidi.
+      ty.value = Math.max(0, e.translationY);
     })
     .onEnd((e) => {
       const absX = Math.abs(e.translationX);
@@ -83,9 +100,7 @@ export function SwipeCard({
           direction = 'left';
         }
       } else {
-        if (e.translationY < -VERTICAL_THRESHOLD || e.velocityY < -VELOCITY_THRESHOLD) {
-          direction = 'up';
-        } else if (e.translationY > VERTICAL_THRESHOLD || e.velocityY > VELOCITY_THRESHOLD) {
+        if (e.translationY > VERTICAL_THRESHOLD || e.velocityY > VELOCITY_THRESHOLD) {
           direction = 'down';
         }
       }
@@ -98,12 +113,7 @@ export function SwipeCard({
             : direction === 'left'
               ? -SWIPE_OUT_DISTANCE_X
               : 0;
-        const toy =
-          direction === 'up'
-            ? -SWIPE_OUT_DISTANCE_Y
-            : direction === 'down'
-              ? SWIPE_OUT_DISTANCE_Y
-              : 0;
+        const toy = direction === 'down' ? SWIPE_OUT_DISTANCE_Y : 0;
         tx.value = withTiming(tox, { duration: 280 });
         ty.value = withTiming(toy, { duration: 280 }, (finished) => {
           if (finished) runOnJS(commit)(direction);
@@ -129,17 +139,14 @@ export function SwipeCard({
     };
   });
 
-  const stampWatchlist = useAnimatedStyle(() => ({
-    opacity: interpolate(tx.value, [0, horizontalThreshold], [0, 1], 'clamp'),
+  const overlayWatchlist = useAnimatedStyle(() => ({
+    opacity: interpolate(tx.value, [0, horizontalThreshold], [0, 0.85], 'clamp'),
   }));
-  const stampPass = useAnimatedStyle(() => ({
-    opacity: interpolate(tx.value, [-horizontalThreshold, 0], [1, 0], 'clamp'),
+  const overlayPass = useAnimatedStyle(() => ({
+    opacity: interpolate(tx.value, [-horizontalThreshold, 0], [0.85, 0], 'clamp'),
   }));
-  const stampTop = useAnimatedStyle(() => ({
-    opacity: interpolate(ty.value, [-VERTICAL_THRESHOLD, 0], [1, 0], 'clamp'),
-  }));
-  const stampSeen = useAnimatedStyle(() => ({
-    opacity: interpolate(ty.value, [0, VERTICAL_THRESHOLD], [0, 1], 'clamp'),
+  const overlaySeen = useAnimatedStyle(() => ({
+    opacity: interpolate(ty.value, [0, VERTICAL_THRESHOLD], [0, 0.85], 'clamp'),
   }));
 
   const meta = [display.year, seasonsLabel ?? display.runtime, display.rating]
@@ -150,7 +157,7 @@ export function SwipeCard({
     <GestureDetector gesture={composed}>
       <Animated.View
         accessibilityRole="adjustable"
-        accessibilityLabel={`${display.title}. Swipe right to add, left to pass, up to top, down to mark seen.`}
+        accessibilityLabel={`${display.title}. Swipe right to add, left to pass, down to mark watched.`}
         testID="swipe-card"
         style={[
           {
@@ -180,19 +187,35 @@ export function SwipeCard({
         />
 
         {display.posterUrl ? (
-          <Image
-            source={{ uri: display.posterUrl }}
-            contentFit="cover"
-            transition={180}
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              opacity: 0.9,
-            }}
-          />
+          <>
+            <Image
+              source={{ uri: display.posterUrl }}
+              contentFit="cover"
+              transition={180}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                opacity: 0.9,
+              }}
+            />
+            {blindDate && !revealed && (
+              <BlurView
+                intensity={80}
+                tint="dark"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  zIndex: 2,
+                }}
+              />
+            )}
+          </>
         ) : null}
 
         <LinearGradient
@@ -260,7 +283,7 @@ export function SwipeCard({
               color: 'rgba(255,120,77,0.78)',
             }}
           >
-            {display.hook}
+            {blindDate && !revealed ? t('deck.blindDateHook', 'TAP TO REVEAL') : display.hook}
           </Text>
 
           <Text
@@ -273,7 +296,7 @@ export function SwipeCard({
             }}
             numberOfLines={2}
           >
-            {display.title}
+            {blindDate && !revealed ? t('deck.blindDateTitle', 'Mystery Pick') : display.title}
           </Text>
 
           <Text
@@ -364,10 +387,111 @@ export function SwipeCard({
           </View>
         </View>
 
-        <SwipeStamp text="Watchlist" align="left" animatedStyle={stampWatchlist} />
-        <SwipeStamp text="Pass" align="right" animatedStyle={stampPass} />
-        <SwipeStamp text="Top Pick" align="center-top" animatedStyle={stampTop} />
-        <SwipeStamp text="Seen" align="center-bottom" animatedStyle={stampSeen} />
+        {/* Tinder-style full-card colored overlays */}
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(61,214,140,0.85)', // Tinder green
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+            },
+            overlayWatchlist,
+          ]}
+        >
+          <Text
+            style={{
+              color: '#FFFFFF',
+              fontFamily: fonts.display,
+              fontSize: 38,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              transform: [{ rotate: '-10deg' }],
+              borderWidth: 4,
+              borderColor: '#FFFFFF',
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 12,
+            }}
+          >
+            Watchlist
+          </Text>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(224,92,75,0.85)', // Tinder red
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+            },
+            overlayPass,
+          ]}
+        >
+          <Text
+            style={{
+              color: '#FFFFFF',
+              fontFamily: fonts.display,
+              fontSize: 38,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              transform: [{ rotate: '10deg' }],
+              borderWidth: 4,
+              borderColor: '#FFFFFF',
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 12,
+            }}
+          >
+            Passed
+          </Text>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(91,141,239,0.85)', // Tinder blue
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 100,
+            },
+            overlaySeen,
+          ]}
+        >
+          <Text
+            style={{
+              color: '#FFFFFF',
+              fontFamily: fonts.display,
+              fontSize: 38,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              transform: [{ rotate: '-5deg' }],
+              borderWidth: 4,
+              borderColor: '#FFFFFF',
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              borderRadius: 12,
+            }}
+          >
+            Watched
+          </Text>
+        </Animated.View>
       </Animated.View>
     </GestureDetector>
   );
