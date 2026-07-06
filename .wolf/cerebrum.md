@@ -68,6 +68,8 @@
 - [2026-07-06] Deck stability invariant: `deck.cards` recomposes whenever taste/exclusions/recommendations/pages land, so deck.tsx keeps an append-only display queue per `filterKey` (exposed by `useDeck`) with an accumulated `byId` map — queued cards must never be dropped/re-ordered by a recomposition, only by a filter change.
 - [2026-07-06] Query persistence blocklist lives in app/_layout.tsx (`NEVER_PERSIST_QUERY_ROOTS`): auth, deck_exclusions, taste_signal, swipes. Any query whose data holds `Set`s (JSON-serializes to `{}`) or is derived from fast local reads must be added there, not persisted.
 
+- [2026-07-06] For You algorithm architecture: taste semantics live in `packages/shared/src/taste.ts` (SWIPE_TASTE_WEIGHTS up+4/right+3/down+0.5/left-1, 30-day exp decay, COLD_START_GENRE_PRIOR from onboarding genres) and feed composition in `composer.ts` (deterministic 60/20/10/10 personalized/trending/fresh/exploration mix via MIX_SLOT_PATTERN, trace.source + diagnostics.sources for explainability). Change weights/quotas there, never inline in hooks. 'down' (Seen) is a WEAK POSITIVE, not a dislike.
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->

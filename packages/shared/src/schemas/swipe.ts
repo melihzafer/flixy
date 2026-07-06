@@ -24,7 +24,9 @@ export type SwipeEvent = z.infer<typeof SwipeEventSchema>;
 
 /**
  * Aggregated taste signal derived from prior swipes. Used by the deck composer
- * to score candidates (positive = right + up, negative = left + down).
+ * to score candidates. Built by `buildTasteSignal` (see ../taste.ts): values
+ * are weighted, time-decayed sums — up/right/down contribute positively
+ * (Top Pick > Save > Seen), left contributes negatively.
  */
 export const TasteSignalSchema = z.object({
   positiveGenres: z.record(z.number()),

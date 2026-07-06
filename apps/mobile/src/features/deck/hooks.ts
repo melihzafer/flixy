@@ -5,9 +5,11 @@ import type { MoodPreset, TasteSignal, Title, VibePreset } from '@flixy/shared';
 import {
   type ComposeOptions,
   type ComposeResult,
+  buildTasteSignal,
   composeDeck,
   moodToFilter,
   vibesToGenres,
+  withColdStartPrior,
 } from '@flixy/shared';
 
 import { normalizeGenreId, normalizeServiceId } from '../../lib/fallbackCatalogue';
@@ -157,43 +159,38 @@ const EMPTY_TASTE: TasteSignal = {
 function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
+  const { data: prefs } = useUserPreferences();
   const { data, isLoading } = useQuery({
     queryKey: ['taste_signal', userId],
     enabled: !!userId,
     queryFn: async (): Promise<TasteSignal> => {
       if (!userId) return EMPTY_TASTE;
       const swipes = await localDb.getSwipes(userId);
-      const positiveGenres: Record<string, number> = {};
-      const negativeGenres: Record<string, number> = {};
-      let totalSwipes = 0;
-
-      for (const row of swipes) {
-        if (row.is_undone) continue;
-        totalSwipes++;
-        if (Array.isArray(row.genres)) {
-          const isPositive = row.direction === 'right' || row.direction === 'up';
-          const isNegative = row.direction === 'left' || row.direction === 'down';
-
-          if (isPositive) {
-            for (const genre of row.genres) {
-              positiveGenres[genre] = (positiveGenres[genre] || 0) + 1;
-            }
-          } else if (isNegative) {
-            for (const genre of row.genres) {
-              negativeGenres[genre] = (negativeGenres[genre] || 0) + 1;
-            }
-          }
-        }
-      }
-
-      return {
-        positiveGenres,
-        negativeGenres,
-        totalSwipes,
-      };
+      // Weighted + time-decayed: Top Pick > Save > Seen (weak positive, NOT a
+      // dislike) > Pass (negative); a 30-day-old swipe weighs ~1/e of today's.
+      return buildTasteSignal(
+        swipes.map((row) => ({
+          direction: row.direction,
+          genres: row.genres,
+          occurredAt: row.occurred_at,
+          isUndone: row.is_undone,
+        })),
+      );
     },
   });
-  return { taste: data ?? EMPTY_TASTE, isLoading: !!userId && isLoading };
+
+  // Onboarding genre selection seeds the profile so brand-new users get
+  // genre-aware ranking instead of pure popularity. Real swipes quickly
+  // outweigh the fixed prior.
+  const coldStartGenres = useMemo(
+    () => prefs?.selected_genres?.map(normalizeGenreId) ?? null,
+    [prefs?.selected_genres],
+  );
+  const taste = useMemo(
+    () => withColdStartPrior(data ?? EMPTY_TASTE, coldStartGenres),
+    [data, coldStartGenres],
+  );
+  return { taste, isLoading: !!userId && isLoading };
 }
 
 function useDeckExclusions() {

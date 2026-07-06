@@ -2,6 +2,28 @@
   "version": 1,
   "bugs": [
     {
+      "id": "bug-111",
+      "timestamp": "2026-07-06T00:00:00Z",
+      "error_message": "Taste signal counted 'down' (Seen) swipes as dislikes, poisoning the genre profile of users who honestly mark watched titles; all directions weighed equally; no time decay; onboarding genre selection unused in For You (pure popularity on cold start); strong repeated passes on a genre barely affected ranking during cold start.",
+      "file": "packages/shared/src/taste.ts (new); packages/shared/src/composer.ts; apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "useTasteSignal used raw counts with isNegative = left||down and no weights/decay; composer personalizationScore required totalSwipes>0 so an onboarding prior could never apply; cold-start weighting (wPersonal 0.2) let popularity outrank a consistently disliked genre.",
+      "fix": "Shared buildTasteSignal: per-direction weights up+4/right+3/down+0.5/left-1 with exp(-days/30) decay; withColdStartPrior seeds onboarding genres (+1.5); personalizationScore fires on any genre signal, amplifies firmly negative signals (base<-0.5 ×3) and clamps to [-2,2].",
+      "tags": [
+        "recommendations",
+        "taste-signal",
+        "for-you",
+        "cold-start",
+        "decay",
+        "composer",
+        "algorithm"
+      ],
+      "related_bugs": [
+        "bug-110"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T00:00:00Z"
+    },
+    {
       "id": "bug-110",
       "timestamp": "2026-07-06T00:00:00Z",
       "error_message": "User batch report: undo button overlaps deck action buttons; trailers play in a small horizontal strip; some trailers buttons don't work; watchlist/title share button doesn't work; For You deck composes once then claims exhausted; diagonal swipes possible; triage swipe-up (Remove) doesn't work; filter change should lazy-load first cards immediately.",
@@ -2997,6 +3019,70 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-07-06T08:45:58.553Z"
+    },
+    {
+      "id": "bug-167",
+      "timestamp": "2026-07-06T08:57:49.659Z",
+      "error_message": "Significant refactor of ",
+      "file": "packages/shared/src/composer.ts",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 19→28 lines (2 removed) | Also: cards: ordered.slice(0, targetSize),; finalCardsCount: Math.min(ordered.length, targetSi",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-06T08:59:17.216Z"
+    },
+    {
+      "id": "bug-168",
+      "timestamp": "2026-07-06T08:58:53.329Z",
+      "error_message": "Null/undefined access in ",
+      "file": "packages/shared/src/composer.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:58:53.329Z"
+    },
+    {
+      "id": "bug-169",
+      "timestamp": "2026-07-06T08:59:07.527Z",
+      "error_message": "Wrong operator: && should be ||",
+      "file": "packages/shared/src/composer.ts",
+      "root_cause": "Used \"&&\" instead of \"||\"",
+      "fix": "Changed operator && → ||",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:59:07.527Z"
+    },
+    {
+      "id": "bug-170",
+      "timestamp": "2026-07-06T09:01:28.373Z",
+      "error_message": "Null/undefined access in ",
+      "file": "packages/shared/src/__tests__/composer.test.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T09:01:28.373Z"
     }
   ]
 }

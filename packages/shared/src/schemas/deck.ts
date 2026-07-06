@@ -7,6 +7,9 @@ import { TitleSchema } from './title';
  * deck (FSD section 3.5.2). Rule trace is for analytics + debugging; not
  * surfaced in the UI directly.
  */
+export const DeckCardSourceSchema = z.enum(['personalized', 'trending', 'fresh', 'exploration']);
+export type DeckCardSource = z.infer<typeof DeckCardSourceSchema>;
+
 export const RuleTraceSchema = z.object({
   personalization: z.number(),
   popularity: z.number(),
@@ -14,6 +17,8 @@ export const RuleTraceSchema = z.object({
   freshness: z.number(),
   cooldown: z.number(),
   exploration: z.boolean().default(false),
+  /** Which feed-mix slice placed this card in the deck (default keeps old persisted traces parseable). */
+  source: DeckCardSourceSchema.default('personalized'),
   finalScore: z.number(),
 });
 export type RuleTrace = z.infer<typeof RuleTraceSchema>;

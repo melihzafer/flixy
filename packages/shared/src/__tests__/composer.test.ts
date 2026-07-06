@@ -1,5 +1,6 @@
 import { composeDeck } from '../composer';
 import type { TasteSignal, Title } from '../index';
+import { buildTasteSignal, withColdStartPrior } from '../taste';
 
 function mkTitle(over: Partial<Title>): Title {
   return {
@@ -320,6 +321,181 @@ describe('composeDeck', () => {
       preferredCountries: ['TR'],
     });
     expect(cards[0]?.title.language).toBe('tr');
+  });
+
+  it('personalizes from the cold-start onboarding prior alone (zero swipes)', () => {
+    const comedy = mkTitle({
+      id: '00000000-0000-0000-0000-000000000001',
+      popularity: 500,
+      genres: ['comedy'],
+    });
+    const drama = mkTitle({
+      id: '00000000-0000-0000-0000-000000000002',
+      popularity: 500,
+      genres: ['drama'],
+    });
+    const taste = withColdStartPrior(noTaste, ['comedy']);
+    const { cards } = composeDeck({
+      candidates: [drama, comedy],
+      taste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+    });
+    expect(cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000001');
+  });
+
+  it('drops a repeatedly-passed genre below neutral titles', () => {
+    const now = new Date('2026-07-06T00:00:00Z');
+    const taste = buildTasteSignal(
+      Array.from({ length: 10 }, () => ({
+        direction: 'left',
+        genres: ['horror'],
+        occurredAt: now.toISOString(),
+      })),
+      { now },
+    );
+    const horror = mkTitle({
+      id: '00000000-0000-0000-0000-000000000001',
+      popularity: 900,
+      genres: ['horror'],
+    });
+    const drama = mkTitle({
+      id: '00000000-0000-0000-0000-000000000002',
+      popularity: 500,
+      genres: ['drama'],
+    });
+    const { cards } = composeDeck({
+      candidates: [horror, drama],
+      taste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+      now,
+    });
+    expect(cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000002');
+  });
+
+  it('boosts a repeatedly-saved genre above more popular titles', () => {
+    const now = new Date('2026-07-06T00:00:00Z');
+    const taste = buildTasteSignal(
+      Array.from({ length: 10 }, () => ({
+        direction: 'right',
+        genres: ['comedy'],
+        occurredAt: now.toISOString(),
+      })),
+      { now },
+    );
+    const comedy = mkTitle({
+      id: '00000000-0000-0000-0000-000000000001',
+      popularity: 300,
+      genres: ['comedy'],
+    });
+    const drama = mkTitle({
+      id: '00000000-0000-0000-0000-000000000002',
+      popularity: 600,
+      genres: ['drama'],
+    });
+    const { cards } = composeDeck({
+      candidates: [drama, comedy],
+      taste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+      now,
+    });
+    expect(cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000001');
+  });
+
+  it('produces an identical deck for identical inputs (deterministic feed)', () => {
+    const now = new Date('2026-07-06T00:00:00Z');
+    const candidates = Array.from({ length: 30 }, (_, i) =>
+      mkTitle({
+        id: `00000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`,
+        popularity: ((i * 137) % 900) + 50,
+        genres: [['drama', 'comedy', 'action', 'horror'][i % 4] as string],
+        releaseYear: i % 5 === 0 ? 2026 : 2015,
+      }),
+    );
+    const opts = {
+      candidates,
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set<string>(),
+      shownLast7d: new Set<string>(),
+      excludeIds: new Set<string>(),
+      targetSize: 20,
+      userSeed: 'user-a',
+      now,
+    };
+    const first = composeDeck(opts).cards.map((c) => c.title.id);
+    const second = composeDeck(opts).cards.map((c) => c.title.id);
+    expect(first).toEqual(second);
+    expect(first.length).toBe(20);
+  });
+
+  it('fills the 60/20/10/10 feed mix and reports source counts', () => {
+    const now = new Date('2026-07-06T00:00:00Z');
+    const candidates = Array.from({ length: 30 }, (_, i) =>
+      mkTitle({
+        id: `00000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`,
+        popularity: ((i * 137) % 900) + 50,
+        genres: [['drama', 'comedy', 'action', 'horror'][i % 4] as string],
+        releaseYear: i % 5 === 0 ? 2026 : 2015,
+      }),
+    );
+    const { cards, diagnostics } = composeDeck({
+      candidates,
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 20,
+      now,
+    });
+
+    expect(cards).toHaveLength(20);
+    for (const card of cards) {
+      expect(['personalized', 'trending', 'fresh', 'exploration']).toContain(card.trace.source);
+    }
+    expect(diagnostics.sources.personalized).toBe(12);
+    expect(diagnostics.sources.trending).toBe(4);
+    expect(diagnostics.sources.fresh).toBe(2);
+    expect(diagnostics.sources.exploration).toBe(2);
+    const total = Object.values(diagnostics.sources).reduce((a, b) => a + b, 0);
+    expect(total).toBe(cards.length);
+  });
+
+  it('never resurfaces excluded ids through any feed-mix slice', () => {
+    const now = new Date('2026-07-06T00:00:00Z');
+    const candidates = Array.from({ length: 30 }, (_, i) =>
+      mkTitle({
+        id: `00000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`,
+        popularity: ((i * 137) % 900) + 50,
+        releaseYear: i % 5 === 0 ? 2026 : 2015,
+      }),
+    );
+    const excluded = new Set(candidates.slice(0, 10).map((c) => c.id));
+    const { cards } = composeDeck({
+      candidates,
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: excluded,
+      targetSize: 20,
+      now,
+    });
+    for (const card of cards) {
+      expect(excluded.has(card.title.id)).toBe(false);
+    }
   });
 
   it('tilts scoring toward taste signal in For You mode', () => {

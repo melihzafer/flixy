@@ -573,3 +573,19 @@
 | 08:45 | Edited apps/mobile/app/(app)/title/[id].tsx | CSS: file, https, https | ~373 |
 | 08:45 | Edited apps/mobile/app/(app)/title/[id].tsx | 2→1 lines | ~10 |
 | 2026-07-06 | UX bug batch: undo overlap, triage up-swipe via SwipeCard allowUp+overlayLabels, axis-locked swipes (no diagonals), fullscreen vertical trailers player + box-none touch fixes + Android share links, reliable title share (TMDB link, no poster download), deck refill on empty + page cap 10 + non-blocking recommendations | SwipeCard.tsx, deck.tsx, deck/hooks.ts, trailers.tsx, title/[id].tsx, watchlist-triage.tsx | lint+typecheck+75 tests green | ~60k |
+| 08:56 | Created packages/shared/src/taste.ts | — | ~1080 |
+| 08:57 | Edited packages/shared/src/index.ts | 2→3 lines | ~26 |
+| 08:57 | Edited packages/shared/src/schemas/deck.ts | 10→15 lines | ~182 |
+| 08:57 | Edited packages/shared/src/composer.ts | modified personalizationScore() | ~318 |
+| 08:58 | Edited packages/shared/src/composer.ts | 2→2 lines | ~46 |
+| 08:58 | Edited packages/shared/src/composer.ts | expanded (+19 lines) | ~312 |
+| 08:58 | Edited packages/shared/src/composer.ts | added nullish coalescing | ~863 |
+| 08:59 | Edited packages/shared/src/composer.ts | reduced (-13 lines) | ~189 |
+| 08:59 | Edited packages/shared/src/composer.ts | modified for() | ~160 |
+| 08:59 | Edited apps/mobile/src/features/deck/hooks.ts | 7→9 lines | ~48 |
+| 08:59 | Edited apps/mobile/src/features/deck/hooks.ts | modified useTasteSignal() | ~384 |
+| 09:00 | Created packages/shared/src/__tests__/taste.test.ts | — | ~1215 |
+| 09:01 | Edited packages/shared/src/__tests__/composer.test.ts | added 1 import(s) | ~46 |
+| 09:01 | Edited packages/shared/src/__tests__/composer.test.ts | added optional chaining | ~1598 |
+| 09:02 | Edited packages/shared/src/composer.ts | added 1 condition(s) | ~169 |
+| 2026-07-06 | For You v1 algorithm: shared taste.ts (weighted+decayed signal, cold-start prior from onboarding genres), composer 60/20/10/10 feed mix (personalized/trending/fresh/exploration) with trace.source + diagnostics.sources, dislike amplification, deterministic tie-breaks; useTasteSignal wired to shared builder; 13 new tests | packages/shared/src/taste.ts, composer.ts, schemas/deck.ts, schemas/swipe.ts, deck/hooks.ts, taste.test.ts, composer.test.ts | 133/133 tests, lint+typecheck green | ~70k |

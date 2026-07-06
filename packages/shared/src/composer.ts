@@ -1,4 +1,4 @@
-import type { DeckCard, MoodPreset, RuleTrace, VibePreset } from './schemas/deck';
+import type { DeckCard, DeckCardSource, MoodPreset, RuleTrace, VibePreset } from './schemas/deck';
 import { MOOD_PRESETS, VIBE_PRESETS } from './schemas/deck';
 import type { TasteSignal } from './schemas/swipe';
 import { type Title, TitleAvailabilitySchema, TitleSchema } from './schemas/title';
@@ -40,13 +40,32 @@ export type ComposeResult = {
     eligibleCount: number;
     finalCardsCount: number;
     excludedCount: number;
+    /** How many final cards each feed-mix slice contributed (explainability). */
+    sources: Record<DeckCardSource, number>;
   };
 };
 
 const COLD_START_THRESHOLD = 50;
 const MAX_CONSECUTIVE_SAME_GENRE = 3;
-const EXPLORATION_RATIO = 0.15;
 const DEFAULT_TARGET_SIZE = 50;
+
+/**
+ * Feed mix slot pattern, repeated every 10 positions: 6 personalized,
+ * 2 trending, 1 fresh (new release), 1 exploration — i.e. 60/20/10/10.
+ * Unlisted positions are personalized. When a slice has nothing left the slot
+ * falls back to personalized, so small pools degrade gracefully to pure
+ * score order (which keeps decks of <4 cards byte-identical to the old
+ * behavior).
+ */
+const MIX_SLOT_PATTERN: Record<number, DeckCardSource> = {
+  3: 'trending',
+  6: 'fresh',
+  8: 'trending',
+  9: 'exploration',
+};
+/** A title is "fresh" when released this year or the previous one. */
+const FRESH_WINDOW_YEARS = 1;
+const EXPLORATION_RATIO = 0.1;
 const VIBE_BOOST = 0.2;
 const COUNTRY_BOOST = 0.2;
 const FOR_YOU_BOOST = 0.12;
@@ -123,15 +142,29 @@ function popularityScore(t: Title): number {
 
 function personalizationScore(t: Title, taste: TasteSignal, recommendationScore?: number): number {
   let baseScore = 0;
-  if (taste.totalSwipes > 0) {
+  // Score whenever ANY genre signal exists — a cold-start prior (onboarding
+  // genre selection) populates positiveGenres with zero swipes and must still
+  // personalize the deck.
+  const hasSignal =
+    taste.totalSwipes > 0 ||
+    Object.keys(taste.positiveGenres).length > 0 ||
+    Object.keys(taste.negativeGenres).length > 0;
+  if (hasSignal) {
     let pos = 0;
     let neg = 0;
     for (const g of t.genres) {
       pos += taste.positiveGenres[g] ?? 0;
       neg += taste.negativeGenres[g] ?? 0;
     }
-    // Normalize by total swipes so early swipes don't overpower.
+    // Normalize by total swipes so early swipes don't overpower, and clamp so
+    // an extreme genre profile can never fully drown popularity/availability.
     baseScore = (pos - neg) / Math.max(1, taste.totalSwipes);
+    // Strong consistent dislike must matter even while cold-start weighting
+    // keeps the personalization weight low: amplify firmly negative genre
+    // signals so a repeatedly-passed genre drops below neutral titles instead
+    // of being carried by popularity.
+    if (baseScore < -0.5) baseScore *= 3;
+    baseScore = Math.max(-2, Math.min(2, baseScore));
   }
 
   if (recommendationScore != null) {
@@ -232,6 +265,91 @@ function userJitter(titleId: string, userSeed?: string | null): number {
   return (hashString(`${userSeed}:${titleId}`) / 0xffffffff) * 0.015;
 }
 
+type ScoredCandidate = { title: Title; trace: RuleTrace };
+
+function tagged(item: ScoredCandidate, source: DeckCardSource): ScoredCandidate {
+  return {
+    title: item.title,
+    trace: { ...item.trace, exploration: source === 'exploration', source },
+  };
+}
+
+/** Deterministic evenly-spaced sample of up to `count` items. */
+function strideSample<T>(pool: readonly T[], count: number): T[] {
+  if (pool.length === 0 || count <= 0) return [];
+  const stride = Math.max(1, Math.floor(pool.length / count));
+  const out: T[] = [];
+  for (let i = 0; i < pool.length && out.length < count; i += stride) {
+    const item = pool[i];
+    if (item) out.push(item);
+  }
+  return out;
+}
+
+/**
+ * Interleave the scored candidates into the 60/20/10/10 feed mix. Fully
+ * deterministic: every pool has a fixed order and the slot pattern is fixed,
+ * so the same inputs always produce the same deck.
+ */
+function mixFeed(scored: ScoredCandidate[], targetSize: number, now: Date): ScoredCandidate[] {
+  const targetCount = Math.min(targetSize, scored.length);
+  if (targetCount === 0) return [];
+
+  const byId = (a: ScoredCandidate, b: ScoredCandidate) => (a.title.id < b.title.id ? -1 : 1);
+  const byPopularity = [...scored].sort(
+    (a, b) => b.title.popularity - a.title.popularity || byId(a, b),
+  );
+  const currentYear = now.getUTCFullYear();
+  const freshPool = byPopularity.filter(
+    (c) => c.title.releaseYear != null && c.title.releaseYear >= currentYear - FRESH_WINDOW_YEARS,
+  );
+  // Exploration samples the lower half of the score order — titles the user
+  // would otherwise never reach — to break filter bubbles.
+  const explorationPool = strideSample(
+    scored.slice(Math.floor(scored.length / 2)),
+    Math.max(1, Math.ceil(targetCount * EXPLORATION_RATIO)),
+  );
+
+  const pools: Record<DeckCardSource, ScoredCandidate[]> = {
+    personalized: scored,
+    trending: byPopularity,
+    fresh: freshPool,
+    exploration: explorationPool,
+  };
+  const cursors: Record<DeckCardSource, number> = {
+    personalized: 0,
+    trending: 0,
+    fresh: 0,
+    exploration: 0,
+  };
+  const chosen = new Set<string>();
+
+  const next = (source: DeckCardSource): ScoredCandidate | null => {
+    const pool = pools[source];
+    let i = cursors[source];
+    while (i < pool.length) {
+      const item = pool[i];
+      i++;
+      if (item && !chosen.has(item.title.id)) {
+        cursors[source] = i;
+        chosen.add(item.title.id);
+        return tagged(item, source);
+      }
+    }
+    cursors[source] = i;
+    return null;
+  };
+
+  const result: ScoredCandidate[] = [];
+  for (let position = 0; position < targetCount; position++) {
+    const preferred = MIX_SLOT_PATTERN[position % 10] ?? 'personalized';
+    const item = next(preferred) ?? next('personalized') ?? next('trending');
+    if (!item) break;
+    result.push(item);
+  }
+  return result;
+}
+
 export function composeDeck(opts: ComposeOptions): ComposeResult {
   const candidates = candidateArray(opts.candidates);
   const taste = safeTasteSignal(opts.taste);
@@ -292,33 +410,20 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
         freshness,
         cooldown,
         exploration: false,
+        source: 'personalized' as const,
         finalScore,
       },
     };
   });
 
-  // Sort by final score desc, then split into top + exploration pool.
-  scored.sort((a, b) => b.trace.finalScore - a.trace.finalScore);
-
-  const explorationCount = Math.floor(targetSize * EXPLORATION_RATIO);
-  const topCount = Math.min(scored.length, targetSize - explorationCount);
-  const top = scored.slice(0, topCount);
-
-  // Exploration: deterministic stride sample from the tail to break filter
-  // bubbles (FSD 3.5.3 Layer 5). Mark with `exploration: true`.
-  const tail = scored.slice(topCount);
-  const exploration: typeof scored = [];
-  if (tail.length > 0 && explorationCount > 0) {
-    const stride = Math.max(1, Math.floor(tail.length / explorationCount));
-    for (let i = 0; i < tail.length && exploration.length < explorationCount; i += stride) {
-      const item = tail[i];
-      if (!item) continue;
-      exploration.push({ title: item.title, trace: { ...item.trace, exploration: true } });
-    }
-  }
+  // Sort by final score desc (deterministic tie-break on id), then interleave
+  // the feed mix: personalized backbone + trending + fresh + exploration.
+  scored.sort(
+    (a, b) => b.trace.finalScore - a.trace.finalScore || (a.title.id < b.title.id ? -1 : 1),
+  );
+  const merged = mixFeed(scored, targetSize, now);
 
   // Diversity guard: no more than 3 consecutive cards in the same primary genre.
-  const merged = [...top, ...exploration];
   const ordered: DeckCard[] = [];
   const remaining = [...merged];
   let lastGenre: string | null = null;
@@ -340,14 +445,26 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
     ordered.push(item);
   }
 
+  const finalCards = ordered.slice(0, targetSize);
+  const sources: Record<DeckCardSource, number> = {
+    personalized: 0,
+    trending: 0,
+    fresh: 0,
+    exploration: 0,
+  };
+  for (const card of finalCards) {
+    sources[card.trace.source] += 1;
+  }
+
   return {
-    cards: ordered.slice(0, targetSize),
+    cards: finalCards,
     isNarrow: ordered.length < targetSize,
     diagnostics: {
       candidateCount: candidates.length,
       eligibleCount: eligible.length,
-      finalCardsCount: Math.min(ordered.length, targetSize),
+      finalCardsCount: finalCards.length,
       excludedCount: candidates.length - eligible.length,
+      sources,
     },
   };
 }

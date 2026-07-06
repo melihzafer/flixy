@@ -86,6 +86,36 @@
       "count": 2,
       "tokens": 5523,
       "first_read": "2026-07-06T08:40:35.673Z"
+    },
+    "/home/user/flixy/apps/mobile/src/features/telemetry/events.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-07-06T08:54:37.027Z"
+    },
+    "/home/user/flixy/apps/mobile/src/lib/localDb.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-07-06T08:54:46.999Z"
+    },
+    "/home/user/flixy/packages/shared/src/schemas/deck.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-07-06T08:54:47.442Z"
+    },
+    "/home/user/flixy/packages/shared/src/schemas/title.ts": {
+      "count": 1,
+      "tokens": 502,
+      "first_read": "2026-07-06T08:54:47.795Z"
+    },
+    "/home/user/flixy/packages/shared/src/index.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-07-06T08:55:29.457Z"
+    },
+    "/home/user/flixy/packages/shared/src/__tests__/composer.test.ts": {
+      "count": 2,
+      "tokens": 0,
+      "first_read": "2026-07-06T08:55:29.801Z"
     }
   },
   "files_written": [
@@ -262,23 +292,119 @@
       "action": "edit",
       "tokens": 10,
       "at": "2026-07-06T08:45:58.550Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/taste.ts",
+      "action": "create",
+      "tokens": 1080,
+      "at": "2026-07-06T08:56:53.107Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/index.ts",
+      "action": "edit",
+      "tokens": 26,
+      "at": "2026-07-06T08:57:01.136Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/schemas/deck.ts",
+      "action": "edit",
+      "tokens": 182,
+      "at": "2026-07-06T08:57:16.156Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/composer.ts",
+      "action": "edit",
+      "tokens": 318,
+      "at": "2026-07-06T08:57:49.656Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/composer.ts",
+      "action": "edit",
+      "tokens": 46,
+      "at": "2026-07-06T08:58:26.024Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/composer.ts",
+      "action": "edit",
+      "tokens": 312,
+      "at": "2026-07-06T08:58:33.125Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/composer.ts",
+      "action": "edit",
+      "tokens": 863,
+      "at": "2026-07-06T08:58:53.324Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/composer.ts",
+      "action": "edit",
+      "tokens": 189,
+      "at": "2026-07-06T08:59:07.523Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/composer.ts",
+      "action": "edit",
+      "tokens": 160,
+      "at": "2026-07-06T08:59:17.212Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 48,
+      "at": "2026-07-06T08:59:33.480Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 384,
+      "at": "2026-07-06T08:59:49.771Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/__tests__/taste.test.ts",
+      "action": "create",
+      "tokens": 1215,
+      "at": "2026-07-06T09:00:59.499Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/__tests__/composer.test.ts",
+      "action": "edit",
+      "tokens": 46,
+      "at": "2026-07-06T09:01:07.805Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/__tests__/composer.test.ts",
+      "action": "edit",
+      "tokens": 1598,
+      "at": "2026-07-06T09:01:28.369Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/composer.ts",
+      "action": "edit",
+      "tokens": 169,
+      "at": "2026-07-06T09:02:12.957Z"
     }
   ],
   "edit_counts": {
     "apps/mobile/src/features/auth/useSession.ts": 3,
     "apps/mobile/app/_layout.tsx": 2,
-    "apps/mobile/src/features/deck/hooks.ts": 6,
+    "apps/mobile/src/features/deck/hooks.ts": 8,
     "apps/mobile/app/(app)/(tabs)/deck.tsx": 4,
     "apps/mobile/src/features/catalogue/hooks.ts": 1,
     "apps/mobile/src/features/auth/__tests__/useSession.test.ts": 1,
     "apps/mobile/src/features/swipe/SwipeCard.tsx": 6,
     "apps/mobile/app/(app)/watchlist-triage.tsx": 1,
     "apps/mobile/app/(app)/trailers.tsx": 3,
-    "apps/mobile/app/(app)/title/[id].tsx": 2
+    "apps/mobile/app/(app)/title/[id].tsx": 2,
+    "packages/shared/src/taste.ts": 1,
+    "packages/shared/src/index.ts": 1,
+    "packages/shared/src/schemas/deck.ts": 1,
+    "packages/shared/src/composer.ts": 7,
+    "packages/shared/src/__tests__/taste.test.ts": 1,
+    "packages/shared/src/__tests__/composer.test.ts": 2
   },
-  "anatomy_hits": 9,
-  "anatomy_misses": 8,
-  "repeated_reads_warned": 2,
+  "anatomy_hits": 10,
+  "anatomy_misses": 13,
+  "repeated_reads_warned": 3,
   "cerebrum_warnings": 0,
   "stop_count": 0
 }

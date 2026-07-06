@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T08:45:58.538Z
-> Files: 25 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T09:02:12.944Z
+> Files: 31 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -234,7 +234,7 @@
 ## apps/mobile/src/features/deck/
 
 - `FilterSheet.tsx` — MOODS — renders modal (~4610 tok)
-- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~7159 tok)
+- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~7158 tok)
 
 ## apps/mobile/src/features/notifications/
 
@@ -317,12 +317,18 @@
 
 ## packages/shared/src/
 
+- `composer.ts` — 7-layer deck composer (FSD section 3.5.3). Pure function: takes a candidate (~4708 tok)
+- `index.ts` (~132 tok)
+- `taste.ts` — Taste signal builder — turns raw swipe history into the weighted, (~1080 tok)
 
 ## packages/shared/src/__tests__/
 
+- `composer.test.ts` — Declares mkTitle (~4580 tok)
+- `taste.test.ts` — Declares NOW (~1215 tok)
 
 ## packages/shared/src/schemas/
 
+- `deck.ts` — A scored deck candidate plus the rule trace explaining why it landed in the (~1343 tok)
 - `title.ts` — Zod schemas: TitleKindSchema, OfferTypeSchema, TitleAvailabilitySchema, TitleSchema (~502 tok)
 
 ## packages/shared/src/schemas/__tests__/
