@@ -77,15 +77,20 @@ export function useRecordSwipe() {
         direction: args.direction,
         occurredAt: new Date().toISOString(),
         sessionId: args.discoverySessionId ?? sessionId,
+        // Only a real discovery session id may sync to swipes.session_id
+        // (FK to discovery_sessions since migration 0024). Swipes made
+        // outside a discovery session (title detail, search) carry null.
+        discoverySessionId: args.discoverySessionId ?? null,
         deckPosition: args.deckPosition,
         region: profile?.region || 'US',
         filtersSnapshot: {
           services: prefs?.selected_services ?? [],
           genres: prefs?.selected_genres ?? [],
         },
+        genres: args.genres,
       };
       void hapticFor(args.direction);
-      await enqueue({ ...event, genres: args.genres } as SwipeEvent);
+      await enqueue(event);
       events.swipeCommitted({
         titleId: args.titleId,
         direction: args.direction,

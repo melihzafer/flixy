@@ -163,7 +163,14 @@ export default function TitleDetail() {
   }
 
   const onAction = (dir: 'left' | 'right' | 'up' | 'down') => {
-    recordSwipe.mutate({ titleId: title.id, direction: dir, deckPosition: 0 });
+    // genres feed the on-device taste signal; without them a detail-screen
+    // Save/Pass taught the recommender nothing.
+    recordSwipe.mutate({
+      titleId: title.id,
+      direction: dir,
+      deckPosition: 0,
+      genres: title.genres,
+    });
   };
 
   const handleBack = () => {

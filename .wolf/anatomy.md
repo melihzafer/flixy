@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T22:09:25.773Z
-> Files: 21 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T22:34:30.877Z
+> Files: 28 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -190,6 +190,7 @@
 
 ## apps/mobile/app/(app)/title/
 
+- `[id].tsx` — TitleDetail (~5998 tok)
 
 ## apps/mobile/app/(auth)/
 
@@ -258,6 +259,12 @@
 
 ## apps/mobile/src/features/swipe/
 
+- `hooks.ts` — High-level swipe API consumed by the deck screen. Wraps queue + haptics + (~3259 tok)
+- `queue.ts` — Swipe queue (FSD section 3.6.4). Every swipe is an immutable event with a (~1859 tok)
+
+## apps/mobile/src/features/swipe/__tests__/
+
+- `queue.test.ts` — Declares insert (~1474 tok)
 
 ## apps/mobile/src/features/telemetry/
 
@@ -286,6 +293,7 @@
 - `localDb.ts` — A card the user actually SAW at the top of the deck but did not swipe. (~4948 tok)
 - `pwaInstall.ts` — PWA "Add to Home Screen" install-prompt persistence. (~624 tok)
 - `pwaInstallPlatform.ts` — Flixy ships as a native APK (Platform.OS === 'ios' | 'android') and as a (~506 tok)
+- `query.ts` — Exports queryClient, queryPersister (~311 tok)
 
 ## apps/mobile/src/lib/__tests__/
 
@@ -306,6 +314,10 @@
 
 ## apps/web/
 
+
+## apps/web/scripts/
+
+- `build.js` — fs: cleanDir, copyRecursiveSync, getAllFiles, build (~2583 tok)
 
 ## docs/
 
@@ -332,6 +344,7 @@
 
 ## packages/shared/src/schemas/
 
+- `swipe.ts` — Client-emitted swipe event. The `eventId` is a client UUID used for (~520 tok)
 
 ## packages/shared/src/schemas/__tests__/
 

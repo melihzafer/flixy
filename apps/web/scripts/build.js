@@ -130,6 +130,11 @@ const CACHE_NAME = 'flixy-cache-v${Date.now()}';
 const ASSETS = ${JSON.stringify(precacheAssets, null, 2)};
 
 self.addEventListener('install', (event) => {
+  // Take over immediately on the next load. Without skipWaiting a new SW
+  // stays in "waiting" until EVERY window/tab of the app is fully closed —
+  // installed PWAs often linger for days, so users kept running the previous
+  // deploy's bundle no matter how many times they reopened the app.
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Pre-caching offline shell');
@@ -212,8 +217,26 @@ self.addEventListener('fetch', (event) => {
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js')
-            .then(reg => console.log('[Flixy] Service Worker registered:', reg.scope))
+            .then(reg => {
+              console.log('[Flixy] Service Worker registered:', reg.scope);
+              // Proactively look for a newer deploy on every open, not only
+              // when the browser feels like revalidating sw.js.
+              reg.update().catch(() => undefined);
+            })
             .catch(err => console.error('[Flixy] Service Worker registration failed:', err));
+
+          // When a new SW takes control (skipWaiting + clients.claim), the
+          // page is still running the previous bundle — reload once so the
+          // user actually gets the update they just downloaded. Guarded so
+          // the very first install (no prior controller) never reloads and
+          // repeated controllerchange events can't loop.
+          const hadController = !!navigator.serviceWorker.controller;
+          let refreshed = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!hadController || refreshed) return;
+            refreshed = true;
+            window.location.reload();
+          });
         });
       }
     </script>
