@@ -50,3 +50,4 @@ In your **Vercel Project Settings** → **Git** → **Ignored Build Step**:
    git diff --quiet HEAD^ HEAD -- ../mobile ../../packages/shared .
    ```
    *(This tells Vercel to trigger a build whenever changes occur in the mobile app, shared package, or web folder).*
+<!-- Trigger Vercel Deploy: trailers feed update -->
