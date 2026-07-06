@@ -166,16 +166,17 @@ describe('composeDeck', () => {
   });
 
   it('reports exclusion diagnostics', () => {
+    const excludedId = '00000000-0000-0000-0000-000000000001';
     const { diagnostics } = composeDeck({
       candidates: [
-        mkTitle({ id: '00000000-0000-0000-0000-000000000001' }),
+        mkTitle({ id: excludedId }),
         mkTitle({ id: '00000000-0000-0000-0000-000000000002' }),
       ],
       taste: noTaste,
       ownedServiceIds: [],
-      passedRecently: new Set(),
-      shownLast7d: new Set(),
-      excludeIds: new Set(['00000000-0000-0000-0000-000000000001']),
+      passedRecently: new Set([excludedId]),
+      shownLast7d: new Set([excludedId]),
+      excludeIds: new Set([excludedId]),
       targetSize: 2,
     });
 
@@ -184,6 +185,9 @@ describe('composeDeck', () => {
       eligibleCount: 1,
       finalCardsCount: 1,
       excludedCount: 1,
+      exclusions: {
+        '00000000-0000-0000-0000-000000000001': ['exclude_ids', 'passed_recently', 'shown_last_7d'],
+      },
     });
   });
 
@@ -464,6 +468,8 @@ describe('composeDeck', () => {
     expect(cards).toHaveLength(20);
     for (const card of cards) {
       expect(['personalized', 'trending', 'fresh', 'exploration']).toContain(card.trace.source);
+      expect(card.trace.positiveFactors.length).toBeGreaterThan(0);
+      expect(card.trace.negativeFactors).toEqual([]);
     }
     expect(diagnostics.sources.personalized).toBe(12);
     expect(diagnostics.sources.trending).toBe(4);

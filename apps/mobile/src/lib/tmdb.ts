@@ -12,6 +12,7 @@ const TMDB_API_KEY = extra.tmdbApiKey || '';
 const TMDB_READ_ACCESS_TOKEN = extra.tmdbReadAccessToken || '';
 
 const BASE_URL = 'https://api.themoviedb.org/3';
+export const TMDB_REQUEST_TIMEOUT_MS = 12_000;
 
 // TMDB returns localized titles/overviews when given a `language` param. We keep
 // it in sync with the app language so movies AND series show up translated.
@@ -212,6 +213,8 @@ async function callTmdb(endpoint: string, params: Record<string, string> = {}): 
   if (cached) return cached;
 
   const promise = (async () => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), TMDB_REQUEST_TIMEOUT_MS);
     const headers: Record<string, string> = {
       Accept: 'application/json',
     };
@@ -219,11 +222,19 @@ async function callTmdb(endpoint: string, params: Record<string, string> = {}): 
       headers.Authorization = `Bearer ${TMDB_READ_ACCESS_TOKEN}`;
     }
 
-    const response = await fetch(url, { headers });
-    if (!response.ok) {
-      throw new Error(`TMDB API call failed: ${response.status} ${response.statusText}`);
+    try {
+      const response = await fetch(url, { headers, signal: controller.signal });
+      if (!response.ok) {
+        const error = new Error(
+          `TMDB API call failed: ${response.status} ${response.statusText}`,
+        ) as Error & { status: number };
+        error.status = response.status;
+        throw error;
+      }
+      return response.json();
+    } finally {
+      clearTimeout(timeout);
     }
-    return response.json();
   })();
 
   pendingRequests.set(url, promise);

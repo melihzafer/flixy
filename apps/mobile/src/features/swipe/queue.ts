@@ -6,6 +6,7 @@ import { SwipeEventSchema } from '@flixy/shared';
 
 import { localDb } from '../../lib/localDb';
 import { logger } from '../../lib/logger';
+import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { events } from '../telemetry/events';
 
 /**
@@ -39,7 +40,24 @@ async function persist(pending: SwipeEvent[]): Promise<void> {
   }
 }
 
-async function postSwipe(ev: SwipeEvent & { genres?: string[] }): Promise<void> {
+export async function syncSwipeEvent(ev: SwipeEvent & { genres?: string[] }): Promise<void> {
+  if (isSupabaseConfigured) {
+    const { error } = await supabase.from('swipes').insert({
+      event_id: ev.eventId,
+      user_id: ev.userId,
+      title_id: ev.titleId,
+      direction: ev.direction,
+      occurred_at: ev.occurredAt,
+      session_id: ev.sessionId,
+      deck_position: ev.deckPosition,
+      region: ev.region,
+      filters_snapshot: ev.filtersSnapshot,
+    });
+    // event_id is the idempotency key. A duplicate means a previous ambiguous
+    // request succeeded and the queue can safely advance.
+    if (error && error.code !== '23505') throw error;
+  }
+
   await localDb.insertSwipe({
     event_id: ev.eventId,
     user_id: ev.userId,
@@ -52,6 +70,17 @@ async function postSwipe(ev: SwipeEvent & { genres?: string[] }): Promise<void> 
     filters_snapshot: ev.filtersSnapshot,
     genres: ev.genres,
   });
+}
+
+export async function syncSwipeUndo(eventId: string): Promise<void> {
+  if (isSupabaseConfigured) {
+    const { error } = await supabase
+      .from('swipes')
+      .update({ is_undone: true })
+      .eq('event_id', eventId);
+    if (error) throw error;
+  }
+  await localDb.updateSwipe(eventId, { is_undone: true });
 }
 
 export const useSwipeQueue = create<QueueState>((set, get) => ({
@@ -92,7 +121,7 @@ export const useSwipeQueue = create<QueueState>((set, get) => ({
         const head = get().pending[0];
         if (!head) break;
         try {
-          await postSwipe(head);
+          await syncSwipeEvent(head);
           const next = get().pending.slice(1);
           set({ pending: next });
           await persist(next);
@@ -113,6 +142,6 @@ export const useSwipeQueue = create<QueueState>((set, get) => ({
   },
 
   markUndone: async (eventId) => {
-    await localDb.updateSwipe(eventId, { is_undone: true });
+    await syncSwipeUndo(eventId);
   },
 }));

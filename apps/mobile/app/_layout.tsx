@@ -1,21 +1,17 @@
 import '../src/lib/silenceWarnings';
 
-import { Damion_400Regular } from '@expo-google-fonts/damion';
-import {
-  DMSans_400Regular,
-  DMSans_500Medium,
-  DMSans_600SemiBold,
-  DMSans_700Bold,
-} from '@expo-google-fonts/dm-sans';
-import {
-  Newsreader_400Regular,
-  Newsreader_400Regular_Italic,
-  Newsreader_500Medium,
-  Newsreader_600SemiBold_Italic,
-  Newsreader_700Bold_Italic,
-  Newsreader_800ExtraBold_Italic,
-} from '@expo-google-fonts/newsreader';
-import { PlayfairDisplay_900Black_Italic } from '@expo-google-fonts/playfair-display';
+import { Damion_400Regular } from '@expo-google-fonts/damion/400Regular';
+import { DMSans_400Regular } from '@expo-google-fonts/dm-sans/400Regular';
+import { DMSans_500Medium } from '@expo-google-fonts/dm-sans/500Medium';
+import { DMSans_600SemiBold } from '@expo-google-fonts/dm-sans/600SemiBold';
+import { DMSans_700Bold } from '@expo-google-fonts/dm-sans/700Bold';
+import { Newsreader_400Regular } from '@expo-google-fonts/newsreader/400Regular';
+import { Newsreader_400Regular_Italic } from '@expo-google-fonts/newsreader/400Regular_Italic';
+import { Newsreader_500Medium } from '@expo-google-fonts/newsreader/500Medium';
+import { Newsreader_600SemiBold_Italic } from '@expo-google-fonts/newsreader/600SemiBold_Italic';
+import { Newsreader_700Bold_Italic } from '@expo-google-fonts/newsreader/700Bold_Italic';
+import { Newsreader_800ExtraBold_Italic } from '@expo-google-fonts/newsreader/800ExtraBold_Italic';
+import { PlayfairDisplay_900Black_Italic } from '@expo-google-fonts/playfair-display/900Black_Italic';
 import { defaultShouldDehydrateQuery } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useFonts } from 'expo-font';

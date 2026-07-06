@@ -3,10 +3,10 @@
 Swipe-based mobile app for movie & TV discovery.
 
 > **Current MVP target:** Supabase Auth + watchlist, API-backed catalogue.
-> Auth sessions and saved watchlist rows use Supabase. Movie and TV metadata
-> stays live through TMDB and is not persisted by the mobile app. Swipes,
-> onboarding preferences, and profile polish still use the local repository
-> seam for the MVP.
+> Auth sessions, saved watchlist rows, and queued swipe events use Supabase.
+> Movie and TV metadata stays live through TMDB and is not persisted by the
+> mobile app. Preferences and profile data retain a local repository seam for
+> offline operation and development.
 
 See `docs/PRD.md`, `docs/SRS.md`, `docs/FSD.md` for product, requirements, and feature specs.
 
@@ -20,8 +20,8 @@ See `docs/PRD.md`, `docs/SRS.md`, `docs/FSD.md` for product, requirements, and f
            |                                |
            v                                v
 +------------------------+      +------------------------+
-| Watchlist (Supabase)   |      | Local MVP data seam    |
-| watchlist_items only   |      | prefs/profile/swipes   |
+| Watchlist (Supabase)   |      | Offline data seam      |
+| watchlist_items only   |      | prefs/profile/queue    |
 +------------------------+      +------------------------+
 ```
 
@@ -29,13 +29,15 @@ See `docs/PRD.md`, `docs/SRS.md`, `docs/FSD.md` for product, requirements, and f
   `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY` are set.
 - `apps/mobile/src/features/watchlist/store.ts` writes watchlist rows to
   Supabase when configured and falls back to local storage for tests/dev.
+- `apps/mobile/src/features/swipe/queue.ts` persists swipe events locally
+  before synchronizing idempotently to Supabase.
 - Catalogue hooks read live TMDB data through `apps/mobile/src/lib/tmdb.ts`;
   mobile never stores movie or TV metadata in Supabase.
 
 ## Stack
 
 React Native + Expo SDK 54 (New Architecture), TypeScript strict, expo-router,
-NativeWind, TanStack Query, Zustand, Reanimated v3, Gesture Handler, Sentry,
+NativeWind, TanStack Query, Zustand, Reanimated v4, Gesture Handler, Sentry,
 PostHog, Biome, Jest, Maestro. Full rationale in `docs/SRS.md § 7.5` and
 `docs/PRD.md Appendix E § 16.5`.
 
@@ -44,8 +46,8 @@ PostHog, Biome, Jest, Maestro. Full rationale in `docs/SRS.md § 7.5` and
 ```
 apps/mobile          Expo app (expo-router)
 packages/shared      zod schemas + shared types
-packages/catalogue-ingest  [dormant] TMDB → Supabase backfill worker
-supabase/            [dormant] migrations + edge functions
+packages/catalogue-ingest  TMDB → Supabase backfill worker
+supabase/            migrations + edge functions
 docs/                PRD / SRS / FSD / DECISIONS / DATA_LAYER
 ```
 
@@ -70,7 +72,8 @@ should allow `flixy:///auth/callback`.
 - `pnpm typecheck` — TypeScript strict, `noUncheckedIndexedAccess`
 - `pnpm test` — Jest unit + component tests
 
-CI runs all three on every PR. Pre-commit hook formats staged files and
+CI runs lint, typecheck, tests, catalogue and web builds, and a production
+dependency audit on every PR. The pre-commit hook formats staged files and
 validates commit messages (conventional commits).
 
 ## Human blockers

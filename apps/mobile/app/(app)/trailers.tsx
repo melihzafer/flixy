@@ -5,14 +5,19 @@ import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronLeft, Heart, Play, Share2, X } from 'lucide-react-native';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, Share, View, useWindowDimensions } from 'react-native';
+import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 
+import { Screen } from '../../src/components/Screen';
+import { ShareCardModal } from '../../src/components/ShareCardModal';
+
 import type { Title } from '@flixy/shared';
 import { Text } from '../../src/components/Text';
+import { type TitleDisplay, toTitleDisplay } from '../../src/features/catalogue/display';
 import { useProfile } from '../../src/features/profile/hooks';
 import { useRecordSwipe } from '../../src/features/swipe/hooks';
+import { useRecordTasteEvent } from '../../src/features/taste/hooks';
 import { events } from '../../src/features/telemetry/events';
 import { discoverTmdbTitles, fetchTmdbTitlesByIds } from '../../src/lib/tmdb';
 import { colors, fonts } from '../../src/theme/tokens';
@@ -25,6 +30,7 @@ export default function TrailersScreen() {
   const { data: profile } = useProfile();
   const region = profile?.region ?? 'US';
   const recordSwipe = useRecordSwipe();
+  const recordTasteEvent = useRecordTasteEvent();
   const listRef = useRef<FlatList<Title>>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [playIndex, setPlayIndex] = useState<number>(-1);
@@ -103,84 +109,89 @@ export default function TrailersScreen() {
   const openTrailer = async (title: Title, index: number) => {
     if (!title.trailerKey) return;
     events.trailerOpened(title.id);
+    void recordTasteEvent('watch_trailer', title);
     setPlayIndex(index);
   };
 
-  const shareTitle = async (title: Title) => {
-    try {
-      const trailerUrl = `https://www.youtube.com/watch?v=${title.trailerKey}`;
-      events.titleShared({ titleId: title.id, hasImage: false });
-      // `url` is iOS-only in Share.share — the link must live in the message
-      // for Android, otherwise the share sheet sends text with no link.
-      await Share.share({
-        message: `Check out the trailer for "${title.title}" on Flixy!\n${trailerUrl}`,
-        url: trailerUrl,
-      });
-    } catch (_e) {
-      // ignore
-    }
+  const [shareItem, setShareItem] = useState<{
+    display: TitleDisplay;
+    url: string | null;
+    titleId: string;
+  } | null>(null);
+
+  const openShareCard = (title: Title) => {
+    const display = toTitleDisplay(title);
+    const url = title.trailerKey
+      ? `https://www.youtube.com/watch?v=${title.trailerKey}`
+      : title.tmdbId
+        ? `https://www.themoviedb.org/${title.kind === 'tv' ? 'tv' : 'movie'}/${title.tmdbId}`
+        : '';
+    events.titleShared({ titleId: title.id, hasImage: !!display.posterUrl });
+    setShareItem({ display, url: url || null, titleId: title.id });
   };
 
   if (isLoading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: colors.bg,
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 6,
-        }}
-      >
-        <Text tone="muted">{t('common.loading', 'Loading…')}</Text>
-        <Text tone="dim" style={{ fontSize: 12 }}>
-          {t('trailers.loadingHint', 'Curating live trailers feed…')}
-        </Text>
-      </View>
+      <Screen scroll={false}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+          }}
+        >
+          <Text tone="muted">{t('common.loading', 'Loading…')}</Text>
+          <Text tone="dim" style={{ fontSize: 12 }}>
+            {t('trailers.loadingHint', 'Curating live trailers feed…')}
+          </Text>
+        </View>
+      </Screen>
     );
   }
 
   if (isError || !titles || titles.length === 0) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: colors.bg,
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 24,
-          gap: 12,
-        }}
-      >
-        <Text
+      <Screen scroll={false}>
+        <View
           style={{
-            fontFamily: fonts.display,
-            fontSize: 24,
-            color: colors.text,
-            textAlign: 'center',
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            gap: 12,
           }}
         >
-          {t('trailers.errorTitle', "Couldn't load trailers")}
-        </Text>
-        <Text style={{ color: colors.textMuted, textAlign: 'center', lineHeight: 20 }}>
-          {t('trailers.errorHint', 'Make sure your network is connected and try again.')}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => refetch()}
-          style={{
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            backgroundColor: colors.accent,
-            borderRadius: 12,
-            marginTop: 10,
-          }}
-        >
-          <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold }}>
-            {t('common.retry', 'Retry')}
+          <Text
+            style={{
+              fontFamily: fonts.display,
+              fontSize: 24,
+              color: colors.text,
+              textAlign: 'center',
+            }}
+          >
+            {t('trailers.errorTitle', "Couldn't load trailers")}
           </Text>
-        </Pressable>
-      </View>
+          <Text style={{ color: colors.textMuted, textAlign: 'center', lineHeight: 20 }}>
+            {t('trailers.errorHint', 'Make sure your network is connected and try again.')}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => refetch()}
+            style={{
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              backgroundColor: colors.accent,
+              borderRadius: 12,
+              marginTop: 10,
+            }}
+          >
+            <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold }}>
+              {t('common.retry', 'Retry')}
+            </Text>
+          </Pressable>
+        </View>
+      </Screen>
     );
   }
 
@@ -468,7 +479,7 @@ export default function TrailersScreen() {
 
                 {/* Share Button */}
                 <Pressable
-                  onPress={() => shareTitle(item)}
+                  onPress={() => openShareCard(item)}
                   accessibilityRole="button"
                   accessibilityLabel="Share"
                   style={({ pressed }) => ({
@@ -576,6 +587,13 @@ export default function TrailersScreen() {
           <ChevronDown size={16} color="rgba(255,255,255,0.36)" style={{ marginTop: -2 }} />
         </View>
       )}
+
+      <ShareCardModal
+        visible={!!shareItem}
+        onClose={() => setShareItem(null)}
+        display={shareItem?.display ?? null}
+        shareUrl={shareItem?.url ?? null}
+      />
     </View>
   );
 }

@@ -30,11 +30,14 @@ import { useSession } from '../../../src/features/auth/useSession';
 import { FilterSheet } from '../../../src/features/deck/FilterSheet';
 import { useDeckFilters } from '../../../src/features/deck/filterStore';
 import { type DeckDiagnostics, useDeck } from '../../../src/features/deck/hooks';
+import {
+  useRequireEntitlement,
+  useStartDiscoverySession,
+} from '../../../src/features/entitlements/hooks';
+import type { DiscoverySessionResult } from '../../../src/features/entitlements/types';
 import { useUserPreferences } from '../../../src/features/onboarding/hooks';
 import { SwipeCard } from '../../../src/features/swipe/SwipeCard';
 import {
-  CARD_LIMITS,
-  useCardQuota,
   useFlushOnReconnect,
   useRecordSwipe,
   useSwipeQueueBoot,
@@ -85,11 +88,29 @@ export default function DeckScreen() {
   const recordSwipe = useRecordSwipe();
   const undoSwipe = useUndoSwipe();
   const stats = useSwipeStats();
-  const { data: quota } = useCardQuota();
+  const startDiscoverySession = useStartDiscoverySession();
+  const blindDateGate = useRequireEntitlement('blind_date');
+  const advancedFiltersGate = useRequireEntitlement('advanced_filters');
+  const [discoverySession, setDiscoverySession] = useState<DiscoverySessionResult | null>(null);
+  const [sessionSwipeCount, setSessionSwipeCount] = useState(0);
+  const sessionKeyRef = useRef<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
   useSwipeQueueBoot();
   useFlushOnReconnect(true);
+
+  useEffect(() => {
+    if (sessionKeyRef.current === filterKey) return;
+    sessionKeyRef.current = filterKey;
+    setDiscoverySession(null);
+    setSessionSwipeCount(0);
+    void startDiscoverySession
+      .mutateAsync({ mode: blindDate ? 'blind_date' : 'main_deck', requestedCards: 12 })
+      .then(setDiscoverySession)
+      .catch(() => {
+        sessionKeyRef.current = null;
+      });
+  }, [blindDate, filterKey, startDiscoverySession.mutateAsync]);
 
   // Track swiped titles by id (in commit order) so background reorders/refetches
   // of the underlying `cards` array can't snap a different card under the user.
@@ -161,10 +182,14 @@ export default function DeckScreen() {
     () => queuedCards.filter((c) => !swipedSet.has(c.title.id)),
     [queuedCards, swipedSet],
   );
-  const quotaRemaining = quota?.remaining ?? CARD_LIMITS.hourly;
+  const sessionCardLimit =
+    discoverySession?.allowed && discoverySession.cards_limit != null
+      ? discoverySession.cards_limit
+      : Number.POSITIVE_INFINITY;
+  const sessionRemaining = Math.max(0, sessionCardLimit - sessionSwipeCount);
   const visible = useMemo(
-    () => remaining.slice(0, Math.min(3, quotaRemaining)),
-    [remaining, quotaRemaining],
+    () => remaining.slice(0, Math.min(3, sessionRemaining)),
+    [remaining, sessionRemaining],
   );
   // Cards have arrived from the query but the local display queue (built in an
   // effect) hasn't synced yet. Without this guard the empty state flashes for a
@@ -174,7 +199,7 @@ export default function DeckScreen() {
   const handleCommit = useCallback(
     async (dir: SwipeDirection) => {
       const card = remaining[0];
-      if (!card || quotaRemaining <= 0) return;
+      if (!card || sessionRemaining <= 0 || !discoverySession?.allowed) return;
       const swipeIndex = swipedIds.length;
       try {
         const ev = await recordSwipe.mutateAsync({
@@ -182,6 +207,7 @@ export default function DeckScreen() {
           direction: dir,
           deckPosition: swipeIndex,
           genres: card.title.genres,
+          discoverySessionId: discoverySession.session_id,
         });
         lastEventRef.current = ev;
       } catch {
@@ -189,6 +215,7 @@ export default function DeckScreen() {
       }
       const nextPos = swipeIndex + 1;
       setSwipedIds((prev) => [...prev, card.title.id]);
+      setSessionSwipeCount((count) => count + 1);
 
       if (isPreviewUser && !nudgeFired.current) {
         if (authState?.isAnonymous) {
@@ -213,7 +240,8 @@ export default function DeckScreen() {
       isPreviewUser,
       recordSwipe,
       remaining,
-      quotaRemaining,
+      discoverySession,
+      sessionRemaining,
       shouldPromptAnonUpgrade,
       swipedIds.length,
     ],
@@ -225,15 +253,79 @@ export default function DeckScreen() {
     await undoSwipe.mutateAsync(last);
     lastEventRef.current = null;
     setSwipedIds((prev) => prev.slice(0, -1));
+    setSessionSwipeCount((count) => Math.max(0, count - 1));
   }, [swipedIds.length, undoSwipe]);
 
-  if (isLoading || isHydratingQueue) {
+  if (
+    isLoading ||
+    isHydratingQueue ||
+    startDiscoverySession.isPending ||
+    (!discoverySession && !startDiscoverySession.isError)
+  ) {
     return (
       <Screen scroll={false}>
         <DeckLoadingState
           title={t('deck.loadingTitle', "Finding tonight's picks")}
           hint={t('deck.loadingHint', 'Composing your deck…')}
         />
+      </Screen>
+    );
+  }
+
+  if (startDiscoverySession.isError || !discoverySession) {
+    return (
+      <Screen scroll={false}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 28,
+            gap: 14,
+          }}
+        >
+          <AlertTriangle size={30} color={colors.left} />
+          <Text style={{ color: colors.text, fontFamily: fonts.display, fontSize: 28 }}>
+            Your reel could not start.
+          </Text>
+          <Text
+            style={{
+              color: colors.textMuted,
+              fontFamily: fonts.body,
+              textAlign: 'center',
+              lineHeight: 20,
+            }}
+          >
+            Check your connection, then try opening a fresh discovery session.
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => {
+              sessionKeyRef.current = null;
+              startDiscoverySession.reset();
+              void startDiscoverySession
+                .mutateAsync({
+                  mode: blindDate ? 'blind_date' : 'main_deck',
+                  requestedCards: 12,
+                })
+                .then((result) => {
+                  sessionKeyRef.current = filterKey;
+                  setSessionSwipeCount(0);
+                  setDiscoverySession(result);
+                })
+                .catch(() => undefined);
+            }}
+            style={{
+              minHeight: 48,
+              borderRadius: 14,
+              backgroundColor: colors.accent,
+              justifyContent: 'center',
+              paddingHorizontal: 22,
+            }}
+          >
+            <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold }}>Try again</Text>
+          </Pressable>
+        </View>
       </Screen>
     );
   }
@@ -308,11 +400,35 @@ export default function DeckScreen() {
     );
   }
 
-  if (quota?.isLimited) {
+  if (!discoverySession.allowed || sessionRemaining <= 0) {
     return (
       <Screen scroll={false}>
-        <DeckLimitState
-          quota={quota}
+        <DiscoverySessionComplete
+          periodEnd={discoverySession.period_end}
+          exhausted={!discoverySession.allowed}
+          canStartNext={
+            discoverySession.allowed &&
+            (discoverySession.remaining_sessions == null || discoverySession.remaining_sessions > 0)
+          }
+          onStartNext={() => {
+            startDiscoverySession.reset();
+            void startDiscoverySession
+              .mutateAsync({
+                mode: blindDate ? 'blind_date' : 'main_deck',
+                requestedCards: 12,
+              })
+              .then((result) => {
+                setSessionSwipeCount(0);
+                setDiscoverySession(result);
+              })
+              .catch(() => undefined);
+          }}
+          onUpgrade={() =>
+            router.push({
+              pathname: '/(app)/paywall',
+              params: { surface: 'daily_session_complete' },
+            })
+          }
           onOpenWatchlist={() => router.push('/(app)/(tabs)/watchlist')}
         />
       </Screen>
@@ -473,7 +589,16 @@ export default function DeckScreen() {
             </Pressable>
           </View>
         </View>
-        <FilterSheet visible={showFilters} onClose={() => setShowFilters(false)} />
+        <FilterSheet
+          visible={showFilters}
+          onClose={() => setShowFilters(false)}
+          advancedAllowed={advancedFiltersGate.allowed}
+          onAdvancedBlocked={() => {
+            events.premiumFeatureBlocked('advanced_filters');
+            setShowFilters(false);
+            router.push({ pathname: '/(app)/paywall', params: { surface: 'advanced_filters' } });
+          }}
+        />
       </Screen>
     );
   }
@@ -560,7 +685,14 @@ export default function DeckScreen() {
               </Pressable>
             )}
             <Pressable
-              onPress={toggleBlindDate}
+              onPress={() => {
+                if (blindDateGate.allowed) {
+                  toggleBlindDate();
+                  return;
+                }
+                events.premiumFeatureBlocked('blind_date');
+                router.push({ pathname: '/(app)/paywall', params: { surface: 'blind_date' } });
+              }}
               testID="deck-blind-date-button"
               accessibilityRole="button"
               accessibilityLabel={t('deck.toggleBlindDate', 'Toggle blind date mode')}
@@ -799,7 +931,16 @@ export default function DeckScreen() {
         />
       </View>
 
-      <FilterSheet visible={showFilters} onClose={() => setShowFilters(false)} />
+      <FilterSheet
+        visible={showFilters}
+        onClose={() => setShowFilters(false)}
+        advancedAllowed={advancedFiltersGate.allowed}
+        onAdvancedBlocked={() => {
+          events.premiumFeatureBlocked('advanced_filters');
+          setShowFilters(false);
+          router.push({ pathname: '/(app)/paywall', params: { surface: 'advanced_filters' } });
+        }}
+      />
       <SaveNudge
         visible={showNudge}
         watchlistCount={Math.max(1, position)}
@@ -947,145 +1088,109 @@ function DeckLoadingState({ title, hint }: { title: string; hint: string }) {
   );
 }
 
-function DeckLimitState({
-  quota,
+function DiscoverySessionComplete({
+  periodEnd,
+  exhausted,
+  canStartNext,
+  onStartNext,
+  onUpgrade,
   onOpenWatchlist,
 }: {
-  quota: {
-    hourlyUsed: number;
-    dailyUsed: number;
-    hourlyRemaining: number;
-    dailyRemaining: number;
-    nextResetAt: string | null;
-  };
+  periodEnd: string;
+  exhausted: boolean;
+  canStartNext: boolean;
+  onStartNext: () => void;
+  onUpgrade: () => void;
   onOpenWatchlist: () => void;
 }) {
-  const { t } = useTranslation();
-  const resetLabel = quota.nextResetAt
-    ? new Date(quota.nextResetAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : null;
-
+  const resetLabel = new Date(periodEnd).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
   return (
     <View
       style={{
         flex: 1,
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 12,
-        paddingHorizontal: 28,
+        padding: 28,
+        gap: 14,
       }}
     >
       <View
         style={{
-          width: 78,
-          height: 102,
-          borderRadius: 22,
+          width: 76,
+          height: 76,
+          borderRadius: 24,
           backgroundColor: colors.accentDim,
           borderWidth: 1,
           borderColor: colors.accentBorder,
           alignItems: 'center',
           justifyContent: 'center',
-          transform: [{ rotate: '-3deg' }],
         }}
       >
-        <Text
-          allowFontScaling={false}
-          style={{ fontFamily: fonts.display, fontSize: 42, color: colors.accent }}
-        >
-          F
-        </Text>
+        <Clapperboard size={31} color={colors.accent} strokeWidth={1.8} />
       </View>
       <Text
         style={{
           fontFamily: fonts.display,
-          fontSize: 30,
-          lineHeight: 34,
+          fontSize: 31,
+          lineHeight: 35,
           color: colors.text,
           textAlign: 'center',
         }}
       >
-        {t('deck.limit.title', 'Card limit reached')}
+        {exhausted ? 'Today’s reel is complete.' : 'That reel is complete.'}
       </Text>
       <Text
         style={{
-          maxWidth: 300,
+          maxWidth: 310,
           color: colors.textMuted,
           fontFamily: fonts.body,
-          fontSize: 13,
           lineHeight: 20,
           textAlign: 'center',
         }}
       >
-        {`${t('deck.limit.body', 'You get {{hourly}} cards per hour and {{daily}} cards per day.', {
-          hourly: CARD_LIMITS.hourly,
-          daily: CARD_LIMITS.daily,
-        })} ${
-          resetLabel
-            ? t('deck.limit.resetAround', 'Come back around {{time}} for a fresh stack.', {
-                time: resetLabel,
-              })
-            : t('deck.limit.resetSoon', 'Come back soon for a fresh stack.')
-        }`}
+        {exhausted
+          ? `Your next daily reel opens after ${resetLabel}. Unlock unlimited discovery when you’re ready.`
+          : 'Start a fresh reel, revisit your picks, or unlock unlimited discovery.'}
       </Text>
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
-        <LimitPill
-          label={t('deck.limit.thisHour', 'This hour')}
-          value={`${quota.hourlyUsed}/${CARD_LIMITS.hourly}`}
-        />
-        <LimitPill
-          label={t('deck.limit.today', 'Today')}
-          value={`${quota.dailyUsed}/${CARD_LIMITS.daily}`}
-        />
-      </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Open your watchlist"
-        onPress={onOpenWatchlist}
+        onPress={canStartNext ? onStartNext : onUpgrade}
         style={({ pressed }) => ({
-          marginTop: 10,
-          height: 46,
-          paddingHorizontal: 22,
+          width: '100%',
+          maxWidth: 320,
+          minHeight: 50,
           borderRadius: 14,
+          backgroundColor: pressed ? '#D93E12' : colors.accent,
           alignItems: 'center',
           justifyContent: 'center',
-          backgroundColor: pressed ? '#E84618' : colors.accent,
+          marginTop: 6,
         })}
       >
-        <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold, fontSize: 14 }}>
-          {t('deck.limit.openWatchlist', 'Open watchlist')}
+        <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold }}>
+          {canStartNext ? 'Start another reel' : 'Explore Flixy plans'}
         </Text>
       </Pressable>
-    </View>
-  );
-}
-
-function LimitPill({ label, value }: { label: string; value: string }) {
-  return (
-    <View
-      style={{
-        minWidth: 104,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: colors.border,
-        backgroundColor: 'rgba(245,245,240,0.045)',
-        paddingHorizontal: 12,
-        paddingVertical: 9,
-        alignItems: 'center',
-      }}
-    >
-      <Text style={{ color: colors.text, fontFamily: fonts.bodyBold, fontSize: 14 }}>{value}</Text>
-      <Text
-        style={{
-          marginTop: 2,
-          color: colors.textDim,
-          fontFamily: fonts.bodyMedium,
-          fontSize: 10,
-          textTransform: 'uppercase',
-          letterSpacing: 0.5,
-        }}
+      {canStartNext ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={onUpgrade}
+          style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 18 }}
+        >
+          <Text style={{ color: colors.accent, fontFamily: fonts.bodySemi }}>
+            Explore Flixy plans
+          </Text>
+        </Pressable>
+      ) : null}
+      <Pressable
+        accessibilityRole="button"
+        onPress={onOpenWatchlist}
+        style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 18 }}
       >
-        {label}
-      </Text>
+        <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemi }}>Open watchlist</Text>
+      </Pressable>
     </View>
   );
 }

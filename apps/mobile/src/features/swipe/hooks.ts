@@ -26,6 +26,7 @@ export type RecordSwipeArgs = {
   direction: SwipeDirection;
   deckPosition: number;
   genres?: string[];
+  discoverySessionId?: string | null;
 };
 
 export const CARD_LIMITS = {
@@ -75,7 +76,7 @@ export function useRecordSwipe() {
         titleId: args.titleId,
         direction: args.direction,
         occurredAt: new Date().toISOString(),
-        sessionId,
+        sessionId: args.discoverySessionId ?? sessionId,
         deckPosition: args.deckPosition,
         region: profile?.region || 'US',
         filtersSnapshot: {

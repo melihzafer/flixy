@@ -9,7 +9,7 @@ Flixy is built with narrow **repository seams** for each persistence boundary. T
 *   **Supabase Client**: [`src/lib/supabase.ts`](file:///D:/Projects/Flixy/apps/mobile/src/lib/supabase.ts)
 *   **Watchlist Boundary**: [`src/features/watchlist/store.ts`](file:///D:/Projects/Flixy/apps/mobile/src/features/watchlist/store.ts)
 *   **Local MVP Boundary**: [`src/lib/localDb.ts`](file:///D:/Projects/Flixy/apps/mobile/src/lib/localDb.ts)
-*   **Contract Rule**: Watchlist code must use `watchlistStore`; local-only MVP data (swipes, profile, onboarding preferences) must use `localDb`; catalogue code must use the TMDB API client and must not write movie/TV rows to Supabase.
+*   **Contract Rule**: Watchlist code must use `watchlistStore`; swipe writes must use the persistent `useSwipeQueue` (which synchronizes to Supabase and mirrors locally); profile and onboarding preferences use `localDb`; catalogue code must use the TMDB API client and must not write movie/TV rows from the client.
 *   **Seam Benefit**: Auth/watchlist can run against Supabase in production while tests and unconfigured dev environments retain a local fallback.
 
 ---
@@ -108,8 +108,10 @@ export const localDb = {
 
   // Credentials (Auth Mocking)
   getCredential(email: string): Promise<LocalCredential | null>;
-  saveCredential(email: string, passwordHash: string): Promise<void>;
-  updatePassword(email: string, newPasswordHash: string): Promise<void>;
+  saveCredential(email: string, password: string, userId: string): Promise<void>;
+  verifyCredential(email: string, password: string): Promise<boolean>;
+  updatePassword(email: string, newPassword: string): Promise<void>;
+  deleteCredential(email: string): Promise<void>;
 
   // Session Cleanup
   clearUserMemory(): Promise<void>;

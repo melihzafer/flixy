@@ -17,6 +17,7 @@
       "**/android",
       "**/*.lock",
       "**/coverage",
+      "supabase/.temp/**",
       ".agents/**",
       ".claude/**",
       ".design-bundle/**",

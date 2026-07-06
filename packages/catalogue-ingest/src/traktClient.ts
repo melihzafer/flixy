@@ -9,6 +9,8 @@
 // strong real-time popularity signal that complements TMDB's slower
 // trending/day curve.
 
+import { fetchWithTimeout } from './http';
+
 export type TraktTrendingItem = {
   watchers: number;
   imdbId: string | null;
@@ -46,7 +48,7 @@ export class TraktClient {
     for (const [key, value] of Object.entries(params)) {
       url.searchParams.set(key, String(value));
     }
-    const response = await this.fetchImpl(url.toString(), {
+    const response = await fetchWithTimeout(this.fetchImpl, url.toString(), {
       headers: {
         accept: 'application/json',
         'content-type': 'application/json',

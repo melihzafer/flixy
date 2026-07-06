@@ -165,16 +165,21 @@ function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
     enabled: !!userId,
     queryFn: async (): Promise<TasteSignal> => {
       if (!userId) return EMPTY_TASTE;
-      const swipes = await localDb.getSwipes(userId);
+      const [swipes, tasteEvents] = await Promise.all([
+        localDb.getSwipes(userId),
+        localDb.getTasteEvents(userId),
+      ]);
       // Weighted + time-decayed: Top Pick > Save > Seen (weak positive, NOT a
       // dislike) > Pass (negative); a 30-day-old swipe weighs ~1/e of today's.
       return buildTasteSignal(
         swipes.map((row) => ({
           direction: row.direction,
+          itemId: row.title_id,
           genres: row.genres,
           occurredAt: row.occurred_at,
           isUndone: row.is_undone,
         })),
+        { tasteEvents },
       );
     },
   });

@@ -40,6 +40,8 @@ export type ComposeResult = {
     eligibleCount: number;
     finalCardsCount: number;
     excludedCount: number;
+    /** Candidate id -> applicable hard/recency exclusion reasons. */
+    exclusions: Record<string, string[]>;
     /** How many final cards each feed-mix slice contributed (explainability). */
     sources: Record<DeckCardSource, number>;
   };
@@ -267,6 +269,18 @@ function userJitter(titleId: string, userSeed?: string | null): number {
 
 type ScoredCandidate = { title: Title; trace: RuleTrace };
 
+function rankedFactors(
+  factors: Array<{ factor: string; contribution: number }>,
+  sign: 'positive' | 'negative',
+) {
+  return factors
+    .filter(({ contribution }) => (sign === 'positive' ? contribution > 0 : contribution < 0))
+    .sort((a, b) =>
+      sign === 'positive' ? b.contribution - a.contribution : a.contribution - b.contribution,
+    )
+    .slice(0, 3);
+}
+
 function tagged(item: ScoredCandidate, source: DeckCardSource): ScoredCandidate {
   return {
     title: item.title,
@@ -380,7 +394,15 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   const wCountry = 1.0;
 
   // Hard exclude (Layer 1 residue): seen, watchlist, recent passes' hard list.
-  const eligible = candidates.filter((t) => !excludeIds.has(t.id));
+  const exclusions: Record<string, string[]> = {};
+  const eligible = candidates.filter((t) => {
+    if (!excludeIds.has(t.id)) return true;
+    const reasons = ['exclude_ids'];
+    if (passedRecently.has(t.id)) reasons.push('passed_recently');
+    if (shownLast7d.has(t.id)) reasons.push('shown_last_7d');
+    exclusions[t.id] = reasons;
+    return false;
+  });
 
   const scored: Array<{ title: Title; trace: RuleTrace }> = eligible.map((t) => {
     const personalization = personalizationScore(t, taste, recommendationScores[t.id]);
@@ -391,6 +413,18 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
     const vibe = vibeScore(t, vibes);
     const country = countryScore(t, preferredCountries);
     const forYouBoost = forYou && taste.totalSwipes > 0 ? FOR_YOU_BOOST : 0;
+    const jitter = userJitter(t.id, userSeed);
+    const factors = [
+      { factor: 'personalization', contribution: wPersonal * personalization },
+      { factor: 'popularity', contribution: wPopularity * popularity },
+      { factor: 'availability', contribution: wAvailability * availability },
+      { factor: 'freshness', contribution: wFreshness * freshness },
+      { factor: 'cooldown', contribution: wCooldown * cooldown },
+      { factor: 'vibe', contribution: wVibes * vibe },
+      { factor: 'country', contribution: wCountry * country },
+      { factor: 'for_you', contribution: forYouBoost },
+      { factor: 'stable_jitter', contribution: jitter },
+    ];
     const finalScore =
       wPersonal * personalization +
       wPopularity * popularity +
@@ -400,7 +434,7 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
       wVibes * vibe +
       wCountry * country +
       forYouBoost +
-      userJitter(t.id, userSeed);
+      jitter;
     return {
       title: t,
       trace: {
@@ -411,6 +445,8 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
         cooldown,
         exploration: false,
         source: 'personalized' as const,
+        positiveFactors: rankedFactors(factors, 'positive'),
+        negativeFactors: rankedFactors(factors, 'negative'),
         finalScore,
       },
     };
@@ -464,9 +500,28 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
       eligibleCount: eligible.length,
       finalCardsCount: finalCards.length,
       excludedCount: candidates.length - eligible.length,
+      exclusions,
       sources,
     },
   };
+}
+
+/** Development-only helper for inspecting a composed card without changing UI. */
+export function debugRecommendation(card: DeckCard): void {
+  const isDevelopment =
+    typeof globalThis === 'object' &&
+    '__DEV__' in globalThis &&
+    (globalThis as { __DEV__?: unknown }).__DEV__ === true;
+  if (!isDevelopment) return;
+  // biome-ignore lint/suspicious/noConsole: explicit development-only recommendation diagnostics
+  console.debug('[recommendation]', {
+    itemId: card.title.id,
+    title: card.title.title,
+    finalScore: card.trace.finalScore,
+    source: card.trace.source,
+    positiveFactors: card.trace.positiveFactors,
+    negativeFactors: card.trace.negativeFactors,
+  });
 }
 
 export function moodToFilter(mood: MoodPreset | null) {

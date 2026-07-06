@@ -90,6 +90,25 @@ export const events = {
   anonymousUpgradeDismissed: (surface: string) => track('anonymous_upgrade_dismissed', { surface }),
   anonymousUpgradeCompleted: (surface: string) => track('anonymous_upgrade_completed', { surface }),
 
+  entitlementsLoaded: (planId: string) => track('entitlements_loaded', { planId }),
+  discoverySessionStartRequested: (mode: string) =>
+    track('discovery_session_start_requested', { mode }),
+  discoverySessionStarted: (mode: string, planId: string) =>
+    track('discovery_session_started', { mode, planId }),
+  discoverySessionQuotaExceeded: (mode: string, planId: string) =>
+    track('discovery_session_quota_exceeded', { mode, planId }),
+  paywallViewed: (surface: string) => track('paywall_viewed', { surface }),
+  paywallPlanSelected: (planId: string, surface: string) =>
+    track('paywall_plan_selected', { planId, surface }),
+  premiumFeatureBlocked: (feature: string) => track('premium_feature_blocked', { feature }),
+  anonymousSignupNudgeViewed: () => track('anonymous_signup_nudge_viewed'),
+  platinumTeaserViewed: () => track('platinum_teaser_viewed'),
+
+  promoCodeScreenViewed: () => track('promo_code_screen_viewed'),
+  promoCodeRedeemed: (planId: string, durationDays: number | null) =>
+    track('promo_code_redeemed', { planId, durationDays: durationDays ?? 0 }),
+  promoCodeFailed: (reason: string) => track('promo_code_failed', { reason }),
+
   notificationPermissionRequested: (granted: boolean) =>
     track('notification_permission_requested', { granted }),
   notificationOpened: (props: { category?: string; titleId?: string }) =>

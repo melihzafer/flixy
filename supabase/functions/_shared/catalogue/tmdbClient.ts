@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from './http.ts';
 import type { CandidateRef, CandidateSource, ContentType } from './types.ts';
 
 type TmdbListResponse = {
@@ -62,7 +63,7 @@ export class TmdbClient {
       url.searchParams.set('api_key', this.auth.apiKey);
     }
 
-    const response = await this.fetchImpl(url.toString(), { headers });
+    const response = await fetchWithTimeout(this.fetchImpl, url.toString(), { headers });
     if (!response.ok) {
       const body = await response.text().catch(() => '');
       throw new Error(
@@ -219,7 +220,9 @@ export class TmdbClient {
 
     for (const snapshotDate of dates) {
       const url = `${this.exportBaseUrl}/${exportFilename(kind, snapshotDate)}`;
-      const response = await this.fetchImpl(url, { headers: { accept: 'application/json' } });
+      const response = await fetchWithTimeout(this.fetchImpl, url, {
+        headers: { accept: 'application/json' },
+      });
       if (response.ok) {
         return { snapshotDate, text: await decodeExportResponse(response, url) };
       }

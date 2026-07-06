@@ -13,11 +13,15 @@ type Props = {
 /**
  * Common screen chrome: dark canvas only. No built-in title.
  * Each screen manages its own header to match the prototype exactly.
+ *
+ * `paddingTop` floors at 16px so devices with no status-bar inset
+ * (many Androids, older iPhones) still get breathing room from the
+ * top edge — a raw 0 inset puts content under the glass with no gap.
  */
 export function Screen({ children, scroll = true, style }: Props) {
   const insets = useSafeAreaInsets();
   const padding = {
-    paddingTop: insets.top,
+    paddingTop: Math.max(insets.top, 16),
     paddingBottom: insets.bottom,
     flexGrow: 1,
   } as const;

@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Pencil, Settings as SettingsIcon } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +11,7 @@ import { SettingsGroup } from '../../../src/components/SettingsPage';
 import { Text } from '../../../src/components/Text';
 import { useSignOut } from '../../../src/features/auth/hooks';
 import { useSession } from '../../../src/features/auth/useSession';
+import { AvatarIcon } from '../../../src/features/profile/avatars';
 import { toProfilePreferenceDisplay } from '../../../src/features/profile/display';
 import { useProfile } from '../../../src/features/profile/hooks';
 import { useSwipeCount } from '../../../src/features/swipe/hooks';
@@ -97,19 +97,11 @@ export default function ProfileScreen() {
         onPress={() => openProfileRow('edit_profile', '/(app)/edit-profile')}
         style={styles.headerWrap}
       >
-        <View style={styles.avatar}>
-          {profile?.avatar_url ? (
-            <Image
-              source={{ uri: profile.avatar_url }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-            />
-          ) : (
-            <Text style={styles.avatarInitial}>
-              {signedIn ? display.displayName.charAt(0).toUpperCase() || 'F' : 'F'}
-            </Text>
-          )}
-        </View>
+        <AvatarIcon
+          avatarId={profile?.avatar_url}
+          size={64}
+          fallbackInitial={signedIn ? display.displayName.charAt(0).toUpperCase() || 'F' : 'F'}
+        />
         <View style={styles.headerText}>
           <Text style={styles.displayName} numberOfLines={1}>
             {display.displayName}
@@ -134,7 +126,24 @@ export default function ProfileScreen() {
         ))}
       </View>
 
-      {/* Account section */}
+      {/* Preferences — single entry to the unified Settings hub.
+          High-frequency, non-destructive: sits at the top so the user's
+          eye lands here first after the profile header (Hick's Law:
+          frequent actions first; Gestalt proximity to the stats card). */}
+      <SettingsGroup title={t('settings.preferences', 'Preferences')}>
+        <SettingsRow
+          testID="profile-settings-row"
+          label={t('settings.title', 'Settings')}
+          subtitle={t('settings.subtitle', 'Tune Flixy without leaving the cinema.')}
+          leading={<SettingsIcon size={18} color={colors.accent} strokeWidth={2} />}
+          onPress={() => openProfileRow('settings', '/(app)/settings')}
+        />
+      </SettingsGroup>
+
+      {/* Account section — identity management, no destructive actions here.
+          Sign out is pulled to its own group at the very bottom so it sits
+          far from accidental taps (Nielsen #5: error prevention; Norman
+          mapping: irreversible actions belong away from primary content). */}
       <SettingsGroup title={t('profile.section.account', 'Account')}>
         <SettingsRow
           label={t('profile.row.editProfile', 'Edit profile')}
@@ -151,15 +160,7 @@ export default function ProfileScreen() {
             valueNumberOfLines={1}
           />
         )}
-        {signedIn || isPreviewUser ? (
-          <SettingsRow
-            label={t('auth.signOut', 'Sign out')}
-            value={signOut.isPending ? t('profile.row.signingOut', 'Signing out') : undefined}
-            tone="danger"
-            disabled={signOut.isPending}
-            onPress={handleSignOut}
-          />
-        ) : (
+        {!signedIn && !isPreviewUser && (
           <>
             <SettingsRow
               label={t('profile.row.signUpFree', 'Sign up free')}
@@ -173,16 +174,20 @@ export default function ProfileScreen() {
         )}
       </SettingsGroup>
 
-      {/* Preferences — single entry to the unified Settings hub */}
-      <SettingsGroup title={t('settings.preferences', 'Preferences')}>
-        <SettingsRow
-          testID="profile-settings-row"
-          label={t('settings.title', 'Settings')}
-          subtitle={t('settings.subtitle', 'Tune Flixy without leaving the cinema.')}
-          leading={<SettingsIcon size={18} color={colors.accent} strokeWidth={2} />}
-          onPress={() => openProfileRow('settings', '/(app)/settings')}
-        />
-      </SettingsGroup>
+      {/* Sign out — isolated at the bottom, danger-toned.
+          Destructive/irreversible actions get their own group with extra
+          spacing above so they never sit adjacent to a benign row. */}
+      {(signedIn || isPreviewUser) && (
+        <SettingsGroup>
+          <SettingsRow
+            label={t('auth.signOut', 'Sign out')}
+            value={signOut.isPending ? t('profile.row.signingOut', 'Signing out') : undefined}
+            tone="danger"
+            disabled={signOut.isPending}
+            onPress={handleSignOut}
+          />
+        </SettingsGroup>
+      )}
 
       <View style={{ height: 24 }} />
     </Screen>
@@ -226,23 +231,6 @@ const styles = {
     paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 18,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: 'rgba(255,77,28,0.14)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,77,28,0.35)',
-    alignItems: 'center' as const,
-    justifyContent: 'center' as const,
-    overflow: 'hidden' as const,
-  },
-  avatarInitial: {
-    fontFamily: fonts.display,
-    fontSize: 30,
-    lineHeight: 34,
-    color: colors.accent,
   },
   headerText: {
     flex: 1,

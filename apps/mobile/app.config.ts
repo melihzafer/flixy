@@ -1,15 +1,14 @@
 import type { ExpoConfig } from 'expo/config';
 
 declare const process: { env: Record<string, string | undefined> };
-declare const console: { warn: (...args: unknown[]) => void };
 
 // These values are read from `process.env` at BUILD time and baked into
 // `extra` below. EAS cloud builds do NOT see the gitignored `.env.local`, so
 // they must be provided as EAS environment variables scoped to the build
 // profile's `environment` (see eas.json + docs/HUMAN_BLOCKERS.md HB-009).
-// Warn loudly in the build log when a non-development build is missing the
-// runtime credentials the app needs to reach TMDB/Supabase — otherwise the
-// installed APK silently shows "couldn't connect to the server".
+// Release builds must fail closed when required runtime configuration is
+// absent. Otherwise the installed app silently falls back to development-only
+// local auth and catalogue behavior.
 const appVariant = process.env.APP_VARIANT ?? 'development';
 if (appVariant !== 'development') {
   const requiredRuntimeEnv = {
@@ -21,8 +20,8 @@ if (appVariant !== 'development') {
     .filter(([, value]) => !value)
     .map(([name]) => name);
   if (missing.length > 0) {
-    console.warn(
-      `[flixy] WARNING: building "${appVariant}" without runtime env vars: ${missing.join(', ')}. The resulting build will not load catalogue data or connect to auth. Set them as EAS environment variables for this environment (see docs/HUMAN_BLOCKERS.md HB-009).`,
+    throw new Error(
+      `[flixy] Refusing to build "${appVariant}" without required runtime env vars: ${missing.join(', ')}. Configure the EAS environment first (see docs/HUMAN_BLOCKERS.md HB-009).`,
     );
   }
 }

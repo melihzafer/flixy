@@ -21,6 +21,8 @@ jest.mock('@react-native-async-storage/async-storage', () => {
 
 jest.mock('expo-crypto', () => ({
   randomUUID: jest.fn(() => `uuid-${Math.random().toString(36).slice(2, 10)}`),
+  CryptoDigestAlgorithm: { SHA256: 'SHA-256' },
+  digestStringAsync: jest.fn(async (_algorithm: string, value: string) => `digest-${value}`),
 }));
 
 import type { LocalWatchlistItem } from '../localDb';
@@ -219,6 +221,52 @@ describe('localDb', () => {
     });
   });
 
+  describe('taste event persistence', () => {
+    it('deduplicates repeated detail opens for the same item within 15 minutes', async () => {
+      const first = await localDb.recordTasteEvent({
+        userId: 'user-a',
+        itemId: 'title-a',
+        itemType: 'movie',
+        genres: ['drama'],
+        eventType: 'open_details',
+        occurredAt: '2026-07-06T10:00:00.000Z',
+      });
+      const duplicate = await localDb.recordTasteEvent({
+        userId: 'user-a',
+        itemId: 'title-a',
+        itemType: 'movie',
+        genres: ['drama'],
+        eventType: 'open_details',
+        occurredAt: '2026-07-06T10:10:00.000Z',
+      });
+
+      expect(first).not.toBeNull();
+      expect(duplicate).toBeNull();
+      await expect(localDb.getTasteEvents('user-a')).resolves.toHaveLength(1);
+    });
+
+    it('survives an in-memory reset and rehydrates from AsyncStorage', async () => {
+      await localDb.recordTasteEvent({
+        userId: 'user-a',
+        itemId: 'title-a',
+        itemType: 'tv',
+        genres: ['sci_fi'],
+        eventType: 'watch_trailer',
+      });
+
+      await localDb.clearUserMemory();
+
+      const events = await localDb.getTasteEvents('user-a');
+      expect(events).toHaveLength(1);
+      expect(events[0]).toMatchObject({
+        itemId: 'title-a',
+        itemType: 'tv',
+        genres: ['sci_fi'],
+        eventType: 'watch_trailer',
+      });
+    });
+  });
+
   describe('isHandleTaken', () => {
     it('returns true when another user already has the same handle', async () => {
       const userA = 'user-a';
@@ -340,7 +388,7 @@ describe('localDb', () => {
       await localDb.saveCredential('User@Flixy.app', 'hash-1', 'user-user@flixy.app');
       const cred = await localDb.getCredential('user@flixy.app');
       expect(cred).not.toBeNull();
-      expect(cred?.passwordHash).toBe('hash-1');
+      expect(cred?.passwordHash).toBe('sha256:digest-hash-1');
       expect(cred?.userId).toBe('user-user@flixy.app');
     });
 
@@ -348,12 +396,41 @@ describe('localDb', () => {
       await localDb.saveCredential('a@flixy.app', 'old-hash', 'user-a@flixy.app');
       await localDb.updatePassword('a@flixy.app', 'new-hash');
       const cred = await localDb.getCredential('a@flixy.app');
-      expect(cred?.passwordHash).toBe('new-hash');
+      expect(cred?.passwordHash).toBe('sha256:digest-new-hash');
       expect(cred?.userId).toBe('user-a@flixy.app');
     });
 
     it('updatePassword is a no-op for unknown email', async () => {
       await expect(localDb.updatePassword('nobody@flixy.app', 'x')).resolves.toBeUndefined();
+    });
+
+    it('deletes only the requested credential from memory and storage', async () => {
+      await localDb.saveCredential('first@flixy.app', 'first-password', 'user-first');
+      await localDb.saveCredential('second@flixy.app', 'second-password', 'user-second');
+
+      await localDb.deleteCredential('FIRST@flixy.app');
+
+      await expect(localDb.getCredential('first@flixy.app')).resolves.toBeNull();
+      await expect(localDb.getCredential('second@flixy.app')).resolves.toMatchObject({
+        userId: 'user-second',
+      });
+
+      await localDb.clearUserMemory();
+      await expect(localDb.getCredential('first@flixy.app')).resolves.toBeNull();
+      await expect(localDb.getCredential('second@flixy.app')).resolves.toMatchObject({
+        userId: 'user-second',
+      });
+    });
+
+    it('verifies hashed credentials without storing the raw password', async () => {
+      await localDb.saveCredential('safe@flixy.app', 'secret-value', 'user-safe');
+
+      await expect(localDb.verifyCredential('safe@flixy.app', 'secret-value')).resolves.toBe(true);
+      await expect(localDb.verifyCredential('safe@flixy.app', 'wrong-value')).resolves.toBe(false);
+
+      const raw = await AsyncStorage.getItem('flixy.local_db.credentials.v3');
+      expect(raw).not.toContain('"passwordHash":"secret-value"');
+      expect(raw).toContain('sha256:digest-secret-value');
     });
 
     it('round-trips sign-up + sign-out + sign-in against the same user_id', async () => {

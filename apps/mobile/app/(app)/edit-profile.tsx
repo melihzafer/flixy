@@ -1,9 +1,8 @@
-import { Image } from 'expo-image';
-import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
+import { Check } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Pressable, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { HandleSchema } from '@flixy/shared';
 
@@ -13,12 +12,13 @@ import { SettingsPage } from '../../src/components/SettingsPage';
 import { Text } from '../../src/components/Text';
 import { useSession } from '../../src/features/auth/useSession';
 import {
-  isHandleAvailable,
-  uploadLocalAvatar,
-  useProfile,
-  useUpdateProfile,
-} from '../../src/features/profile/hooks';
-import { colors, fonts } from '../../src/theme/tokens';
+  AvatarIcon,
+  type AvatarId,
+  PROFILE_AVATARS,
+  isAvatarId,
+} from '../../src/features/profile/avatars';
+import { isHandleAvailable, useProfile, useUpdateProfile } from '../../src/features/profile/hooks';
+import { colors, fonts, radii, spacing } from '../../src/theme/tokens';
 
 export default function EditProfile() {
   const { t } = useTranslation();
@@ -28,18 +28,16 @@ export default function EditProfile() {
 
   const [displayName, setDisplayName] = useState('');
   const [handle, setHandle] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarId, setAvatarId] = useState<AvatarId | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [handleTaken, setHandleTaken] = useState(false);
   const [checkingHandle, setCheckingHandle] = useState(false);
 
-  // Sync local form state once the profile loads (and only then, so the user
-  // typing isn't clobbered by a re-render).
   useEffect(() => {
     if (profile && !hydrated) {
       setDisplayName(profile.display_name ?? '');
       setHandle(profile.handle ?? '');
-      setAvatarUrl(profile.avatar_url ?? null);
+      setAvatarId(isAvatarId(profile.avatar_url) ? (profile.avatar_url as AvatarId) : null);
       setHydrated(true);
     }
   }, [profile, hydrated]);
@@ -93,53 +91,17 @@ export default function EditProfile() {
       ? t('settingsPages.editProfile.nameRequired', "Display name can't be empty.")
       : null;
 
+  const initialAvatarId = isAvatarId(profile?.avatar_url)
+    ? (profile?.avatar_url as AvatarId)
+    : null;
   const nothingChanged =
     hydrated &&
     nameTrimmed === (profile?.display_name ?? '') &&
     trimmedHandle === (profile?.handle ?? '') &&
-    avatarUrl === (profile?.avatar_url ?? null);
+    avatarId === initialAvatarId;
 
   const canSave =
     hydrated && nameOk && handleFormatOk && !handleTaken && !checkingHandle && !nothingChanged;
-
-  const pickImage = async () => {
-    try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(
-          t('settingsPages.editProfile.permissionTitle', 'Permission required'),
-          t(
-            'settingsPages.editProfile.permissionBody',
-            'Permission to access your photos is required to update your avatar.',
-          ),
-        );
-        return;
-      }
-
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets[0]) {
-        const sourceUri = result.assets[0].uri;
-        if (profile?.id) {
-          const localPath = await uploadLocalAvatar(profile.id, sourceUri);
-          setAvatarUrl(localPath);
-        }
-      }
-    } catch {
-      Alert.alert(
-        t('settingsPages.editProfile.errorTitle', 'Something went wrong'),
-        t(
-          'settingsPages.editProfile.errorBody',
-          'Failed to pick or process the image. Please try again.',
-        ),
-      );
-    }
-  };
 
   const save = () => {
     if (!canSave) return;
@@ -147,7 +109,7 @@ export default function EditProfile() {
       {
         display_name: nameTrimmed || null,
         handle: trimmedHandle || null,
-        avatar_url: avatarUrl,
+        avatar_url: avatarId,
       },
       { onSuccess: () => router.back() },
     );
@@ -161,63 +123,49 @@ export default function EditProfile() {
         'Set the name, handle, and avatar shown inside Flixy.',
       )}
     >
-      <View style={{ alignItems: 'center', marginBottom: 8 }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('settingsPages.editProfile.changeAvatar', 'Change avatar image')}
-          onPress={pickImage}
-          style={({ pressed }) => ({
-            width: 88,
-            height: 88,
-            borderRadius: 44,
-            backgroundColor: colors.accentDim,
-            borderWidth: 1,
-            borderColor: colors.accentBorder,
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            opacity: pressed ? 0.85 : 1,
+      {/* Avatar picker — curated cinematic icon set.
+          No photo upload: zero permissions, zero storage, instant load,
+          deterministic across devices (Norman: visibility + affordance —
+          the user sees all options at once and taps to select). */}
+      <View style={styles.avatarSection}>
+        <AvatarIcon
+          avatarId={avatarId}
+          size={88}
+          fallbackInitial={nameTrimmed.charAt(0).toUpperCase()}
+        />
+        <Text style={styles.avatarHint}>
+          {t('settingsPages.editProfile.avatarHint', 'Pick your cinema avatar')}
+        </Text>
+        <View style={styles.avatarGrid}>
+          {PROFILE_AVATARS.map((avatar) => {
+            const selected = avatarId === avatar.id;
+            return (
+              <Pressable
+                key={avatar.id}
+                accessibilityRole="button"
+                accessibilityLabel={avatar.id}
+                accessibilityState={{ selected }}
+                hitSlop={4}
+                onPress={() => setAvatarId(avatar.id)}
+                style={[
+                  styles.avatarCell,
+                  {
+                    backgroundColor: avatar.bg,
+                    borderColor: selected ? avatar.color : avatar.border,
+                    borderWidth: selected ? 2.5 : 1.5,
+                  },
+                ]}
+              >
+                <avatar.Icon size={24} color={avatar.color} strokeWidth={2.1} />
+                {selected ? (
+                  <View style={[styles.avatarCheck, { backgroundColor: avatar.color }]}>
+                    <Check size={11} color={colors.bg} strokeWidth={3.2} />
+                  </View>
+                ) : null}
+              </Pressable>
+            );
           })}
-        >
-          {avatarUrl ? (
-            <Image
-              source={{ uri: avatarUrl }}
-              style={{ width: '100%', height: '100%' }}
-              contentFit="cover"
-            />
-          ) : (
-            <Text
-              allowFontScaling={false}
-              style={{
-                fontFamily: fonts.display,
-                fontSize: 38,
-                lineHeight: 44,
-                color: colors.accent,
-                textAlign: 'center',
-                includeFontPadding: false,
-                textAlignVertical: 'center',
-              }}
-            >
-              {nameTrimmed ? nameTrimmed.charAt(0).toUpperCase() : 'F'}
-            </Text>
-          )}
-        </Pressable>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={t('settingsPages.editProfile.changePhoto', 'Change photo')}
-          onPress={pickImage}
-          style={{ marginTop: 10, paddingVertical: 4, paddingHorizontal: 8 }}
-        >
-          <Text
-            style={{
-              fontSize: 13,
-              fontFamily: fonts.bodySemi,
-              color: colors.accent,
-            }}
-          >
-            {t('settingsPages.editProfile.changePhoto', 'Change photo')}
-          </Text>
-        </Pressable>
+        </View>
       </View>
 
       <Input
@@ -254,3 +202,42 @@ export default function EditProfile() {
     </SettingsPage>
   );
 }
+
+const styles = StyleSheet.create({
+  avatarSection: {
+    alignItems: 'center',
+    gap: spacing[3],
+    marginBottom: spacing[2],
+  },
+  avatarHint: {
+    color: colors.textMuted,
+    fontFamily: fonts.body,
+    fontSize: 13,
+  },
+  avatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: spacing[3],
+    paddingHorizontal: spacing[2],
+  },
+  avatarCell: {
+    width: 56,
+    height: 56,
+    borderRadius: radii.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarCheck: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.bg,
+  },
+});

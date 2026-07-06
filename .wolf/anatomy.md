@@ -184,6 +184,7 @@
 ## apps/mobile/app/(app)/
 
 - `settings-language.tsx` — LANGUAGES (~629 tok)
+- `settings-promo.tsx` — Promo code redemption screen: Input + Button, success/error states (~2100 tok)
 - `trailers.tsx` — TrailersScreen (~5534 tok)
 - `watchlist-triage.tsx` — WatchlistTriageScreen (~3178 tok)
 
@@ -229,6 +230,20 @@
 - `hooks.ts` — Origin country ISO-3166 alpha-2 filter (e.g. "TR", "US", "KR"). (~3579 tok)
 
 ## apps/mobile/src/features/catalogue/__tests__/
+
+
+## apps/mobile/src/features/entitlements/
+
+- `hooks.ts` — useEntitlements, useStartDiscoverySession, useRequireEntitlement, useRedeemPromoCode (~93 tok + promo)
+- `entitlementGates.ts` — Pure gate logic: requireEntitlement + normalizeEntitlements
+- `constants.ts` — FREE_ENTITLEMENTS, SAFE_FREE_SNAPSHOT, PLAN_NAMES, PLAN_CARDS
+- `types.ts` — PlanId, DiscoveryMode, FlixyEntitlements, EntitlementSnapshot, DiscoverySessionResult, PromoRedemption types
+- `promoCodes.ts` — Pure parseRedemptionResult: validates redeem_promo_code RPC JSONB into typed result
+
+## apps/mobile/src/features/entitlements/__tests__/
+
+- `entitlementGates.test.ts` — Gate logic tests
+- `promoCodes.test.ts` — parseRedemptionResult unit tests (perpetual, timed, failure reasons, coercion)
 
 
 ## apps/mobile/src/features/deck/

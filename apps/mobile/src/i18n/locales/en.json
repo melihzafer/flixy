@@ -353,6 +353,8 @@
     "languageSub": "App language",
     "accountManagement": "Account management",
     "accountManagementSub": "Sign-in, password, subscription",
+    "promoCode": "Promo code",
+    "promoCodeSub": "Redeem a code for plan access",
     "preferences": "Preferences",
     "services": "Streaming services",
     "servicesCount": "{{count}} selected",
@@ -374,8 +376,7 @@
     "editProfile": {
       "title": "Edit profile",
       "subtitle": "Set the name, handle, and avatar shown inside Flixy.",
-      "changePhoto": "Change photo",
-      "changeAvatar": "Change avatar image",
+      "avatarHint": "Pick your cinema avatar",
       "displayName": "Display name",
       "handle": "Handle",
       "handleHint": "Lowercase letters, numbers, and underscores.",
@@ -383,10 +384,6 @@
       "handleInvalid": "Use 3–20 lowercase letters, numbers, or underscores.",
       "nameRequired": "Display name can't be empty.",
       "save": "Save profile",
-      "permissionTitle": "Permission required",
-      "permissionBody": "Permission to access your photos is required to update your avatar.",
-      "errorTitle": "Something went wrong",
-      "errorBody": "Failed to pick or process the image. Please try again.",
       "saved": "Profile saved."
     },
     "account": {
@@ -456,6 +453,29 @@
       "catalogueSub": "If a title is missing or wrong, send the title name and region to support.",
       "catalogueValue": "Report",
       "support": "Support"
+    },
+    "promo": {
+      "title": "Promo code",
+      "subtitle": "Redeem a code to unlock or extend a Flixy plan.",
+      "label": "Promo code",
+      "placeholder": "Enter your code",
+      "submit": "Redeem code",
+      "submitting": "Redeeming",
+      "successTitle": "You are unlocked",
+      "successBodyPerpetual": "Flixy {{plan}} is now active with no expiry.",
+      "successBodyTimed": "Flixy {{plan}} is active for {{days}} days.",
+      "successCta": "Got it",
+      "anonymousHint": "Create an account first to redeem a promo code.",
+      "errors": {
+        "invalid_promo_code": "That code is not valid. Check it and try again.",
+        "promo_inactive": "This code is not active yet.",
+        "promo_expired": "This code has expired.",
+        "promo_sold_out": "This code has reached its redemption limit.",
+        "promo_already_redeemed": "You have already redeemed this code.",
+        "auth_required": "Sign in to redeem a promo code.",
+        "promo_unavailable": "Promo redemption is unavailable right now. Try again later.",
+        "promo_unknown_error": "Something went wrong. Try again or contact support."
+      }
     }
   },
   "display": {

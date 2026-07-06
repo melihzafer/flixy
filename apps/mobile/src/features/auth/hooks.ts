@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Session, User } from '@supabase/supabase-js';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import Constants from 'expo-constants';
@@ -13,7 +12,7 @@ import type {
   UpdatePasswordInput,
 } from '@flixy/shared';
 
-import { CREDENTIALS_KEY, localDb } from '../../lib/localDb';
+import { localDb } from '../../lib/localDb';
 import { logger } from '../../lib/logger';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
 import { useAnonSwipeStore } from '../../stores/anonSwipe';
@@ -191,7 +190,7 @@ export function useSignIn() {
       if (!cred) {
         throw new Error('No account found with this email.');
       }
-      if (cred.passwordHash !== input.password) {
+      if (!(await localDb.verifyCredential(email, input.password))) {
         throw new Error('Incorrect password.');
       }
 
@@ -244,11 +243,6 @@ export function useSignOut() {
 
       // Keep on-device data so the same email can sign back in and pick up
       // where they left off. The session is the only thing that goes.
-      if (isSupabaseConfigured) {
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        return;
-      }
       await setLocalSession({ session: null, user: null, isAnonymous: false });
     },
     onSuccess: () => {
@@ -277,14 +271,7 @@ export function useDeleteLocalAccount() {
       }
       if (email && !session?.isAnonymous) {
         const normalized = email.toLowerCase();
-        if (normalized) {
-          const cred = await localDb.getCredential(normalized);
-          if (cred) {
-            // Drop the credential too so the email can never sign in again
-            // on this device.
-            await AsyncStorage.removeItem(CREDENTIALS_KEY);
-          }
-        }
+        if (normalized) await localDb.deleteCredential(normalized);
       }
       await setLocalSession({ session: null, user: null, isAnonymous: false });
     },

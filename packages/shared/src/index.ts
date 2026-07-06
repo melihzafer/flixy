@@ -8,6 +8,7 @@ export * from './schemas/title';
 export * from './schemas/auth';
 export * from './schemas/onboarding';
 export * from './schemas/swipe';
+export * from './schemas/tasteEvent';
 export * from './schemas/deck';
 export * from './schemas/watchlist';
 export * from './composer';

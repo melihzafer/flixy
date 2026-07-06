@@ -88,6 +88,86 @@ describe('buildTasteSignal', () => {
     expect(taste.positiveGenres.drama).toBeCloseTo(3);
     expect(taste.positiveGenres.comedy).toBeCloseTo(3);
   });
+
+  it('weights trailer watches above detail opens but below save and top pick', () => {
+    const taste = buildTasteSignal(
+      [
+        { direction: 'right', itemId: 'saved', genres: ['comedy'], occurredAt: daysAgo(0) },
+        { direction: 'up', itemId: 'top', genres: ['action'], occurredAt: daysAgo(0) },
+      ],
+      {
+        now: NOW,
+        tasteEvents: [
+          {
+            eventId: 'detail',
+            itemId: 'detail-title',
+            itemType: 'movie',
+            genres: ['drama'],
+            occurredAt: daysAgo(0),
+            eventType: 'open_details',
+          },
+          {
+            eventId: 'trailer',
+            itemId: 'trailer-title',
+            itemType: 'tv',
+            genres: ['sci_fi'],
+            occurredAt: daysAgo(0),
+            eventType: 'watch_trailer',
+          },
+        ],
+      },
+    );
+
+    expect(taste.positiveGenres.drama).toBeCloseTo(1);
+    expect(taste.positiveGenres.sci_fi).toBeCloseTo(2);
+    expect(taste.positiveGenres.comedy).toBeCloseTo(3);
+    expect(taste.positiveGenres.action).toBeCloseTo(4);
+  });
+
+  it('applies the same 30-day decay to local taste events', () => {
+    const taste = buildTasteSignal([], {
+      now: NOW,
+      tasteEvents: [
+        {
+          eventId: 'old-detail',
+          itemId: 'title',
+          itemType: 'movie',
+          genres: ['drama'],
+          occurredAt: daysAgo(TASTE_DECAY_DAYS),
+          eventType: 'open_details',
+        },
+      ],
+    });
+    expect(taste.positiveGenres.drama).toBeCloseTo(1 / Math.E, 5);
+  });
+
+  it('keeps a pass stronger than weak detail opens for the same item', () => {
+    const taste = buildTasteSignal(
+      [
+        {
+          direction: 'left',
+          itemId: 'passed',
+          genres: ['horror'],
+          occurredAt: daysAgo(1),
+        },
+      ],
+      {
+        now: NOW,
+        tasteEvents: [
+          {
+            eventId: 'detail-after-pass',
+            itemId: 'passed',
+            itemType: 'movie',
+            genres: ['horror'],
+            occurredAt: daysAgo(0),
+            eventType: 'open_details',
+          },
+        ],
+      },
+    );
+    expect(taste.positiveGenres.horror).toBeUndefined();
+    expect(taste.negativeGenres.horror).toBeGreaterThan(0);
+  });
 });
 
 describe('withColdStartPrior', () => {

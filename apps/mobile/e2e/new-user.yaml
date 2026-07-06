@@ -6,6 +6,7 @@ appId: app.flixy.mobile
     clearState: true
 - assertVisible: "Flixy"
 - tapOn: "Continue with email"
+- evalScript: ${output.timestamp = new Date().getTime()}
 - inputText: "qa+${output.timestamp}@flixy.app"
 - pressKey: Tab
 - inputText: "Test1234!"

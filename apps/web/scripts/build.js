@@ -8,6 +8,7 @@ const webDir = path.resolve(__dirname, '..');
 const mobileDir = path.resolve(webDir, '../mobile');
 const distDir = path.resolve(webDir, 'dist');
 const publicDir = path.resolve(webDir, 'public');
+const MAX_PRECACHE_BYTES = 10 * 1024 * 1024;
 
 function cleanDir(dir) {
   if (fs.existsSync(dir)) {
@@ -81,25 +82,46 @@ function build() {
       return `/${relPath}`;
     })
     .filter((asset) => {
-      // Exclude service worker, maps, vercel config, and duplicate static html if desired
+      // Navigation uses network-first with /index.html as its offline shell, so
+      // generated route HTML is redundant in the install cache.
       return (
         !asset.endsWith('sw.js') &&
         !asset.endsWith('.map') &&
+        !asset.endsWith('.html') &&
         !asset.endsWith('vercel.json') &&
-        asset !== '/index.html' // index.html is handled explicitly in sw
+        asset !== '/index.html'
       );
     });
 
   // Include core paths explicitly
   const precacheAssets = [
-    '/',
-    '/index.html',
-    '/manifest.json',
-    '/manifest.webmanifest',
-    '/favicon.ico',
-    '/apple-touch-icon.png',
-    ...relativeAssets,
+    ...new Set([
+      '/',
+      '/index.html',
+      '/manifest.json',
+      '/manifest.webmanifest',
+      '/favicon.ico',
+      '/apple-touch-icon.png',
+      '/privacy.html',
+      '/terms.html',
+      ...relativeAssets,
+    ]),
   ];
+  const precacheBytes = precacheAssets.reduce((total, asset) => {
+    const relativePath = asset === '/' ? 'index.html' : asset.slice(1);
+    const assetPath = path.resolve(distDir, relativePath);
+    return total + (fs.existsSync(assetPath) ? fs.statSync(assetPath).size : 0);
+  }, 0);
+  if (precacheBytes > MAX_PRECACHE_BYTES) {
+    throw new Error(
+      `PWA precache is ${(precacheBytes / 1024 / 1024).toFixed(2)} MiB; limit is ${
+        MAX_PRECACHE_BYTES / 1024 / 1024
+      } MiB.`,
+    );
+  }
+  log(
+    `PWA precache: ${precacheAssets.length} entries, ${(precacheBytes / 1024 / 1024).toFixed(2)} MiB`,
+  );
 
   // 7. Write the Service Worker
   log('Writing sw.js...');
@@ -155,13 +177,12 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
       return fetch(event.request).then((response) => {
-        // Cache external assets like TMDB poster images dynamically
+        // Cache only public static assets. Never cache authenticated API
+        // responses: Cache Storage keys do not vary by Authorization header,
+        // which could expose one user's data to another session.
         if (
           response.status === 200 &&
-          (url.origin === self.location.origin ||
-            url.hostname.includes('tmdb.org') ||
-            url.hostname.includes('supabase') ||
-            url.hostname.includes('google-fonts'))
+          (url.origin === self.location.origin || url.hostname === 'image.tmdb.org')
         ) {
           const responseToCache = response.clone();
           caches.open(CACHE_NAME).then((cache) => {

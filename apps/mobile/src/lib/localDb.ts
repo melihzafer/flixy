@@ -1,3 +1,4 @@
+import type { TasteEvent, TasteEventType } from '@flixy/shared';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 
@@ -24,6 +25,10 @@ export type LocalSwipe = {
   filters_snapshot: Record<string, unknown>;
   is_undone?: boolean;
   genres?: string[];
+};
+
+export type LocalTasteEvent = TasteEvent & {
+  userId: string;
 };
 
 export type LocalProfile = {
@@ -58,8 +63,8 @@ const SWIPES_KEY = 'flixy.local_db.swipes.v3';
 const PREFS_KEY = 'flixy.local_db.prefs.v3';
 const PROFILE_KEY = 'flixy.local_db.profile.v3';
 const CREDENTIALS_KEY = 'flixy.local_db.credentials.v3';
-
-export { CREDENTIALS_KEY };
+const TASTE_EVENTS_KEY = 'flixy.local_db.taste_events.v1';
+const LOCAL_PASSWORD_HASH_PREFIX = 'sha256:';
 
 const SCHEMA_VERSION = 1;
 
@@ -68,6 +73,7 @@ let swipesCache: LocalSwipe[] = [];
 let prefsCache: Record<string, LocalPreferences> = {};
 let profileCache: Record<string, LocalProfile> = {};
 let credentialsCache: Record<string, LocalCredential> = {};
+let tasteEventsCache: LocalTasteEvent[] = [];
 let dbHydrated = false;
 
 // Migration shim for versioned AsyncStorage JSON structures
@@ -110,6 +116,9 @@ async function hydrateDb() {
 
     const cr = await AsyncStorage.getItem(CREDENTIALS_KEY);
     if (cr) credentialsCache = parseVersionedData<Record<string, LocalCredential>>(cr, {});
+
+    const te = await AsyncStorage.getItem(TASTE_EVENTS_KEY);
+    if (te) tasteEventsCache = parseVersionedData<LocalTasteEvent[]>(te, []);
 
     dbHydrated = true;
   } catch (e) {
@@ -157,6 +166,21 @@ async function persistCredentials() {
   }
 }
 
+async function persistTasteEvents() {
+  try {
+    await AsyncStorage.setItem(TASTE_EVENTS_KEY, wrapVersionedData(tasteEventsCache));
+  } catch (e) {
+    console.error('Failed to persist taste events', e);
+  }
+}
+
+async function hashLocalPassword(password: string): Promise<string> {
+  const digest = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, password);
+  return `${LOCAL_PASSWORD_HASH_PREFIX}${digest}`;
+}
+
+const TASTE_EVENT_DEDUPE_MS = 15 * 60 * 1000;
+
 export const localDb = {
   // Clear in-memory caches to prevent session leakage on logout
   async clearUserMemory(): Promise<void> {
@@ -164,6 +188,7 @@ export const localDb = {
     swipesCache = [];
     prefsCache = {};
     profileCache = {};
+    tasteEventsCache = [];
     dbHydrated = false;
   },
 
@@ -189,18 +214,73 @@ export const localDb = {
     for (const [id, profile] of Object.entries(profileCache)) {
       if (id !== userId) nextProfiles[id] = profile;
     }
+    const nextTasteEvents = tasteEventsCache.filter((event) => event.userId !== userId);
 
     watchlistCache = nextWatchlist;
     swipesCache = nextSwipes;
     prefsCache = nextPrefs;
     profileCache = nextProfiles;
+    tasteEventsCache = nextTasteEvents;
 
-    await Promise.all([persistWatchlist(), persistSwipes(), persistPrefs(), persistProfiles()]);
+    await Promise.all([
+      persistWatchlist(),
+      persistSwipes(),
+      persistPrefs(),
+      persistProfiles(),
+      persistTasteEvents(),
+    ]);
   },
 
   async getSwipes(userId: string): Promise<LocalSwipe[]> {
     await hydrateDb();
     return swipesCache.filter((s) => s.user_id === userId);
+  },
+
+  async getTasteEvents(userId: string): Promise<LocalTasteEvent[]> {
+    await hydrateDb();
+    return tasteEventsCache.filter((event) => event.userId === userId);
+  },
+
+  async recordTasteEvent(input: {
+    userId: string;
+    itemId: string;
+    itemType: 'movie' | 'tv';
+    genres: string[];
+    eventType: TasteEventType;
+    occurredAt?: string;
+  }): Promise<LocalTasteEvent | null> {
+    await hydrateDb();
+    const occurredAt = input.occurredAt ?? new Date().toISOString();
+    const occurredMs = new Date(occurredAt).getTime();
+    const duplicate = tasteEventsCache.some((event) => {
+      if (
+        event.userId !== input.userId ||
+        event.itemId !== input.itemId ||
+        event.eventType !== input.eventType
+      ) {
+        return false;
+      }
+      const priorMs = new Date(event.occurredAt).getTime();
+      return (
+        Number.isFinite(occurredMs) &&
+        Number.isFinite(priorMs) &&
+        Math.abs(occurredMs - priorMs) < TASTE_EVENT_DEDUPE_MS
+      );
+    });
+    if (duplicate) return null;
+
+    const event: LocalTasteEvent = {
+      eventId: Crypto.randomUUID(),
+      userId: input.userId,
+      itemId: input.itemId,
+      itemType: input.itemType,
+      genres: [...input.genres],
+      occurredAt,
+      eventType: input.eventType,
+    };
+    tasteEventsCache.push(event);
+    await persistTasteEvents();
+    return event;
   },
 
   async getWatchlist(userId: string): Promise<LocalWatchlistItem[]> {
@@ -357,25 +437,54 @@ export const localDb = {
     return credentialsCache[email.toLowerCase()] || null;
   },
 
-  async saveCredential(email: string, passwordHash: string, userId: string): Promise<void> {
+  async saveCredential(email: string, password: string, userId: string): Promise<void> {
     await hydrateDb();
     const normalized = email.toLowerCase();
     const existing = credentialsCache[normalized];
     credentialsCache[normalized] = {
       email: normalized,
-      passwordHash,
+      passwordHash: await hashLocalPassword(password),
       userId,
       createdAt: existing?.createdAt ?? new Date().toISOString(),
     };
     await persistCredentials();
   },
 
-  async updatePassword(email: string, newPasswordHash: string): Promise<void> {
+  async verifyCredential(email: string, password: string): Promise<boolean> {
+    await hydrateDb();
+    const normalized = email.toLowerCase();
+    const credential = credentialsCache[normalized];
+    if (!credential) return false;
+
+    const expected = await hashLocalPassword(password);
+    if (credential.passwordHash === expected) return true;
+
+    // Migrate development credentials written before hashes were introduced.
+    if (!credential.passwordHash.startsWith(LOCAL_PASSWORD_HASH_PREFIX)) {
+      const matchesLegacyValue = credential.passwordHash === password;
+      if (matchesLegacyValue) {
+        credential.passwordHash = expected;
+        await persistCredentials();
+      }
+      return matchesLegacyValue;
+    }
+    return false;
+  },
+
+  async updatePassword(email: string, newPassword: string): Promise<void> {
     await hydrateDb();
     const cred = credentialsCache[email.toLowerCase()];
     if (cred) {
-      cred.passwordHash = newPasswordHash;
+      cred.passwordHash = await hashLocalPassword(newPassword);
       await persistCredentials();
     }
+  },
+
+  async deleteCredential(email: string): Promise<void> {
+    await hydrateDb();
+    const normalized = email.toLowerCase();
+    if (!(normalized in credentialsCache)) return;
+    delete credentialsCache[normalized];
+    await persistCredentials();
   },
 };

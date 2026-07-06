@@ -87,7 +87,17 @@ const COUNTRIES = [
   { id: 'MX', label: 'filters.countries.MX' },
 ] as const;
 
-export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+export function FilterSheet({
+  visible,
+  onClose,
+  advancedAllowed = true,
+  onAdvancedBlocked,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  advancedAllowed?: boolean;
+  onAdvancedBlocked?: () => void;
+}) {
   const { t } = useTranslation();
   const {
     forYou,
@@ -184,6 +194,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
   };
 
   const toggleVibe = (id: string) => {
+    if (!advancedAllowed) {
+      onAdvancedBlocked?.();
+      return;
+    }
     const next = new Set(selVibes);
     if (next.has(id)) next.delete(id);
     else next.add(id);
@@ -192,6 +206,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
   };
 
   const selectCountry = (id: string) => {
+    if (!advancedAllowed) {
+      onAdvancedBlocked?.();
+      return;
+    }
     setSelCountry((prev) => (prev === id ? null : id));
     setSelForYou(false);
   };
@@ -369,6 +387,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                   accessibilityRole="button"
                   accessibilityState={{ selected: isOn }}
                   onPress={() => {
+                    if (!advancedAllowed) {
+                      onAdvancedBlocked?.();
+                      return;
+                    }
                     setSelMood(isOn ? null : m.id);
                     setSelForYou(false);
                   }}
@@ -643,6 +665,10 @@ export function FilterSheet({ visible, onClose }: { visible: boolean; onClose: (
                   accessibilityRole="button"
                   accessibilityState={{ selected: isOn }}
                   onPress={() => {
+                    if (!advancedAllowed) {
+                      onAdvancedBlocked?.();
+                      return;
+                    }
                     setYearRange(id);
                     setSelForYou(false);
                   }}

@@ -4,25 +4,19 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Check, ChevronLeft, Heart, Play, Share2, Star, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Linking,
-  Pressable,
-  ScrollView,
-  Share,
-  StatusBar,
-  View,
-  useWindowDimensions,
-} from 'react-native';
+import { Linking, Pressable, ScrollView, StatusBar, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 
 import { ActionButton } from '../../../src/components/ActionButton';
+import { Screen } from '../../../src/components/Screen';
+import { ShareCardModal } from '../../../src/components/ShareCardModal';
 import { Text } from '../../../src/components/Text';
 import { toTitleDisplay } from '../../../src/features/catalogue/display';
 import { useTitle } from '../../../src/features/catalogue/hooks';
 import { useProfile } from '../../../src/features/profile/hooks';
 import { useRecordSwipe } from '../../../src/features/swipe/hooks';
+import { useRecordTasteEvent } from '../../../src/features/taste/hooks';
 import { events } from '../../../src/features/telemetry/events';
 import { FALLBACK_STREAMING_SERVICES } from '../../../src/lib/fallbackCatalogue';
 import { colors, fonts } from '../../../src/theme/tokens';
@@ -34,14 +28,19 @@ export default function TitleDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: title, isLoading, isError, refetch } = useTitle(id ?? null);
   const recordSwipe = useRecordSwipe();
+  const recordTasteEvent = useRecordTasteEvent();
   const { data: profile } = useProfile();
   const { width: screenWidth } = useWindowDimensions();
-  const [sharing, setSharing] = useState(false);
+  const [showShareCard, setShowShareCard] = useState(false);
   const [trailerPlaying, setTrailerPlaying] = useState(false);
 
   useEffect(() => {
     if (id) events.detailViewed(id);
   }, [id]);
+
+  useEffect(() => {
+    if (title) void recordTasteEvent('open_details', title);
+  }, [recordTasteEvent, title]);
 
   useEffect(() => {
     if (title && !title.trailerKey) {
@@ -51,59 +50,61 @@ export default function TitleDetail() {
 
   if (isLoading) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: '#0A0A0B',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
-      >
-        <Text tone="muted" style={{ fontFamily: fonts.bodyMedium, fontSize: 14 }}>
-          {t('common.loading')}
-        </Text>
-      </View>
+      <Screen scroll={false}>
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Text tone="muted" style={{ fontFamily: fonts.bodyMedium, fontSize: 14 }}>
+            {t('common.loading')}
+          </Text>
+        </View>
+      </Screen>
     );
   }
 
   if (isError || !title) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: '#0A0A0B',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 16,
-          padding: 24,
-        }}
-      >
-        <Text
+      <Screen scroll={false}>
+        <View
           style={{
-            color: colors.textMuted,
-            fontFamily: fonts.bodyMedium,
-            fontSize: 14,
-            textAlign: 'center',
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 16,
+            padding: 24,
           }}
         >
-          {t('deck.errorTitle', 'Connection failed')}
-        </Text>
-        <Pressable
-          onPress={() => refetch()}
-          style={({ pressed }) => ({
-            paddingVertical: 10,
-            paddingHorizontal: 20,
-            backgroundColor: pressed ? colors.surface3 : colors.surface2,
-            borderRadius: 10,
-            borderWidth: 1,
-            borderColor: colors.border2,
-          })}
-        >
-          <Text style={{ color: colors.text, fontFamily: fonts.bodySemi, fontSize: 13 }}>
-            {t('common.retry')}
+          <Text
+            style={{
+              color: colors.textMuted,
+              fontFamily: fonts.bodyMedium,
+              fontSize: 14,
+              textAlign: 'center',
+            }}
+          >
+            {t('deck.errorTitle', 'Connection failed')}
           </Text>
-        </Pressable>
-      </View>
+          <Pressable
+            onPress={() => refetch()}
+            style={({ pressed }) => ({
+              paddingVertical: 10,
+              paddingHorizontal: 20,
+              backgroundColor: pressed ? colors.surface3 : colors.surface2,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: colors.border2,
+            })}
+          >
+            <Text style={{ color: colors.text, fontFamily: fonts.bodySemi, fontSize: 13 }}>
+              {t('common.retry')}
+            </Text>
+          </Pressable>
+        </View>
+      </Screen>
     );
   }
 
@@ -176,6 +177,7 @@ export default function TitleDetail() {
   const openTrailer = async () => {
     if (!title.trailerKey) return;
     events.trailerOpened(title.id);
+    void recordTasteEvent('watch_trailer', title);
     setTrailerPlaying(true);
   };
 
@@ -189,42 +191,15 @@ export default function TitleDetail() {
     await Linking.openURL(offer.deepLink);
   };
 
-  const shareTitle = async () => {
-    if (sharing) return;
-    setSharing(true);
-    try {
-      // Text + link share. The previous flow downloaded the poster and passed
-      // a local file:// URI as `url`, which Android ignores entirely and any
-      // network hiccup surfaced as "Share failed" — the button looked broken.
-      const tmdbUrl = title.tmdbId
-        ? `https://www.themoviedb.org/${title.kind === 'tv' ? 'tv' : 'movie'}/${title.tmdbId}`
-        : undefined;
-      const trailerUrl = title.trailerKey
-        ? `https://www.youtube.com/watch?v=${title.trailerKey}`
-        : undefined;
-      const link = tmdbUrl ?? trailerUrl;
-      const message = [
-        `Flixy pick: ${display.title}${display.year ? ` (${display.year})` : ''}`,
-        link,
-      ]
-        .filter(Boolean)
-        .join('\n');
+  const shareUrl = title.tmdbId
+    ? `https://www.themoviedb.org/${title.kind === 'tv' ? 'tv' : 'movie'}/${title.tmdbId}`
+    : title.trailerKey
+      ? `https://www.youtube.com/watch?v=${title.trailerKey}`
+      : null;
 
-      events.titleShared({ titleId: title.id, hasImage: false });
-      await Share.share({
-        title: `Flixy: ${display.title}`,
-        message,
-        // iOS-only; Android reads the link from the message above.
-        url: link,
-      });
-    } catch {
-      Alert.alert(
-        t('detail.shareErrorTitle', 'Share failed'),
-        t('detail.shareErrorBody', 'Sharing could not be started. Please try again.'),
-      );
-    } finally {
-      setSharing(false);
-    }
+  const openShareCard = () => {
+    events.titleShared({ titleId: title.id, hasImage: !!display.posterUrl });
+    setShowShareCard(true);
   };
 
   return (
@@ -559,8 +534,7 @@ export default function TitleDetail() {
       </Pressable>
 
       <Pressable
-        onPress={shareTitle}
-        disabled={sharing}
+        onPress={openShareCard}
         style={({ pressed }) => ({
           position: 'absolute',
           top: Math.max(16, insets.top, StatusBar.currentHeight ?? 0) + 12,
@@ -576,12 +550,10 @@ export default function TitleDetail() {
           justifyContent: 'center',
           flexDirection: 'row',
           gap: 5,
-          opacity: sharing ? 0.58 : 1,
           paddingHorizontal: 11,
         })}
         accessibilityRole="button"
         accessibilityLabel={t('detail.share', 'Share this title with Flixy')}
-        accessibilityState={{ busy: sharing, disabled: sharing }}
       >
         <Text
           allowFontScaling={false}
@@ -597,6 +569,13 @@ export default function TitleDetail() {
         </Text>
         <Share2 size={16} color={colors.onAccent} strokeWidth={2.4} />
       </Pressable>
+
+      <ShareCardModal
+        visible={showShareCard}
+        onClose={() => setShowShareCard(false)}
+        display={display}
+        shareUrl={shareUrl}
+      />
     </View>
   );
 }

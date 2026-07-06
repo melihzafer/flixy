@@ -8,6 +8,7 @@ import {
   HelpCircle,
   Languages,
   Shield,
+  Ticket,
   Tv,
   UserCircle2,
 } from 'lucide-react-native';
@@ -17,6 +18,8 @@ import { StyleSheet, View } from 'react-native';
 import { SettingsRow } from '../../src/components/ListRow';
 import { SettingsGroup, SettingsPage } from '../../src/components/SettingsPage';
 import { Text } from '../../src/components/Text';
+import { PLAN_NAMES } from '../../src/features/entitlements/constants';
+import { useEntitlements } from '../../src/features/entitlements/hooks';
 import { useStreamingServices, useUserPreferences } from '../../src/features/onboarding/hooks';
 import { toProfilePreferenceDisplay } from '../../src/features/profile/display';
 import { useProfile } from '../../src/features/profile/hooks';
@@ -34,6 +37,7 @@ export default function Settings() {
   const { t } = useTranslation();
   const { data: profile } = useProfile();
   const { data: prefs } = useUserPreferences();
+  const { data: entitlementSnapshot } = useEntitlements();
   const { data: services } = useStreamingServices(profile?.region);
   const selectedServiceCount = prefs?.selected_services?.length ?? 0;
   const selectedGenreCount = prefs?.selected_genres?.length ?? 0;
@@ -93,6 +97,20 @@ export default function Settings() {
       </View>
 
       <SettingsGroup title={t('settings.account')}>
+        <SettingsRow
+          label="Flixy plan"
+          value={PLAN_NAMES[entitlementSnapshot?.plan_id ?? 'free']}
+          subtitle="Discovery access and smarter features"
+          onPress={() => open('subscription', '/(app)/paywall')}
+        />
+        <SettingsRow
+          label={t('settings.promoCode', 'Promo code')}
+          value={t('settings.open', 'Open')}
+          subtitle={t('settings.promoCodeSub', 'Redeem a code for plan access')}
+          leading={<SettingsIcon Icon={Ticket} tone="accent" />}
+          accessibilityLabel={t('settings.promoCode', 'Promo code')}
+          onPress={() => open('promo', '/(app)/settings-promo')}
+        />
         <SettingsRow
           label={t('settings.profileSummary', 'Profile summary')}
           value={display.profileSummary}

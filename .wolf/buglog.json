@@ -3083,6 +3083,23 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-07-06T09:01:28.373Z"
+    },
+    {
+      "id": "bug-171",
+      "timestamp": "2026-07-06T12:00:00+03:00",
+      "error_message": "Initial subscription integration typecheck failed because the removed per-swipe quota import was still referenced by the obsolete DeckLimitState helper.",
+      "file": "apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "root_cause": "The active deck path was migrated to discovery-session quota enforcement, but the dead hourly/daily limit component remained in the file.",
+      "fix": "Removed the obsolete DeckLimitState and LimitPill implementation; the deck now has a single session-complete state driven by start_discovery_session.",
+      "tags": [
+        "subscription",
+        "discovery-session",
+        "typecheck",
+        "dead-code"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T12:00:00+03:00"
     }
   ]
 }

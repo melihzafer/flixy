@@ -10,6 +10,11 @@ import { TitleSchema } from './title';
 export const DeckCardSourceSchema = z.enum(['personalized', 'trending', 'fresh', 'exploration']);
 export type DeckCardSource = z.infer<typeof DeckCardSourceSchema>;
 
+export const RuleFactorSchema = z.object({
+  factor: z.string(),
+  contribution: z.number(),
+});
+
 export const RuleTraceSchema = z.object({
   personalization: z.number(),
   popularity: z.number(),
@@ -19,6 +24,8 @@ export const RuleTraceSchema = z.object({
   exploration: z.boolean().default(false),
   /** Which feed-mix slice placed this card in the deck (default keeps old persisted traces parseable). */
   source: DeckCardSourceSchema.default('personalized'),
+  positiveFactors: z.array(RuleFactorSchema).default([]),
+  negativeFactors: z.array(RuleFactorSchema).default([]),
   finalScore: z.number(),
 });
 export type RuleTrace = z.infer<typeof RuleTraceSchema>;

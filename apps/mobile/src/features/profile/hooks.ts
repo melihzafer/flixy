@@ -1,6 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import * as FileSystem from 'expo-file-system/legacy';
-import * as ImageManipulator from 'expo-image-manipulator';
 import { z } from 'zod';
 
 import { HandleSchema, LanguageCodeSchema, RegionCodeSchema } from '@flixy/shared';
@@ -124,45 +122,4 @@ export async function isHandleAvailable(handle: string, currentUserId: string | 
   const safe = HandleSchema.parse(handle);
   const taken = await localDb.isHandleTaken(safe, currentUserId || '');
   return !taken;
-}
-
-/**
- * Downscale and save avatar locally, returning a persistent file:// URI.
- */
-export async function uploadLocalAvatar(userId: string, sourceUri: string): Promise<string> {
-  try {
-    const dir = `${FileSystem.documentDirectory}avatars/`;
-
-    // Ensure directory exists
-    const dirInfo = await FileSystem.getInfoAsync(dir);
-    if (!dirInfo.exists) {
-      await FileSystem.makeDirectoryAsync(dir, { intermediates: true });
-    }
-
-    // Downscale and compress
-    const manipResult = await ImageManipulator.manipulateAsync(
-      sourceUri,
-      [{ resize: { width: 300, height: 300 } }],
-      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG },
-    );
-
-    const filename = `${userId}-${Date.now()}.jpg`;
-    const destinationUri = `${dir}${filename}`;
-    await FileSystem.copyAsync({
-      from: manipResult.uri,
-      to: destinationUri,
-    });
-
-    return destinationUri;
-  } catch (error) {
-    logger.error('Failed to save avatar locally', { error: String(error) });
-    throw error;
-  }
-}
-
-/**
- * Legacy unused Supabase upload method, kept for backwards compatibility stub.
- */
-export async function uploadAvatar() {
-  return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&h=150&q=80';
 }

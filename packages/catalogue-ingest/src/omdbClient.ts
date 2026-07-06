@@ -3,6 +3,8 @@
 // so we cache aggressively in tmdb_ingest_cache (same table — namespaced
 // keys) and only re-enrich after `OMDB_REENRICH_DAYS` days.
 
+import { fetchWithTimeout } from './http';
+
 export type OmdbDetail = {
   imdbRating: string | null;
   imdbVotes: string | null;
@@ -43,7 +45,7 @@ export class OmdbClient {
     url.searchParams.set('tomatoes', 'false');
     url.searchParams.set('plot', 'short');
 
-    const response = await this.fetchImpl(url.toString(), {
+    const response = await fetchWithTimeout(this.fetchImpl, url.toString(), {
       headers: { accept: 'application/json' },
     });
     if (!response.ok) {

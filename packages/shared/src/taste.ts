@@ -1,4 +1,5 @@
 import type { TasteSignal } from './schemas/swipe';
+import type { TasteEvent as LocalTasteEvent, TasteEventType } from './schemas/tasteEvent';
 
 /**
  * Taste signal builder — turns raw swipe history into the weighted,
@@ -29,6 +30,11 @@ export const SWIPE_TASTE_WEIGHTS: Record<string, number> = {
 /** e-folding time for swipe influence: a 30-day-old swipe weighs 1/e ≈ 37%. */
 export const TASTE_DECAY_DAYS = 30;
 
+export const LOCAL_TASTE_EVENT_WEIGHTS: Record<TasteEventType, number> = {
+  open_details: 1,
+  watch_trailer: 2,
+};
+
 /**
  * Positive weight granted to each onboarding-selected genre so brand-new
  * users get genre-aware ranking instead of pure popularity. Swipes accumulate
@@ -39,8 +45,9 @@ export const COLD_START_GENRE_PRIOR = 1.5;
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-export type TasteEvent = {
+export type SwipeTasteEvent = {
   direction: string;
+  itemId?: string | null;
   genres?: readonly string[] | null;
   /** ISO timestamp of the swipe; missing/invalid timestamps get full weight. */
   occurredAt?: string | null;
@@ -57,8 +64,8 @@ export type TasteEvent = {
  * byte-compatible with the previous count-based signal.
  */
 export function buildTasteSignal(
-  events: readonly TasteEvent[],
-  opts: { now?: Date } = {},
+  events: readonly SwipeTasteEvent[],
+  opts: { now?: Date; tasteEvents?: readonly LocalTasteEvent[] } = {},
 ): TasteSignal {
   const now = opts.now ?? new Date();
   const positiveGenres: Record<string, number> = {};
@@ -81,6 +88,35 @@ export function buildTasteSignal(
     const bucket = weight >= 0 ? positiveGenres : negativeGenres;
     for (const genre of event.genres) {
       bucket[genre] = (bucket[genre] ?? 0) + decayed;
+    }
+  }
+
+  const activePasses = new Map<string, number>();
+  for (const event of events) {
+    if (event.isUndone || event.direction !== 'left' || !event.itemId) continue;
+    const occurredMs = event.occurredAt ? new Date(event.occurredAt).getTime() : Number.NaN;
+    activePasses.set(event.itemId, Number.isFinite(occurredMs) ? occurredMs : now.getTime());
+  }
+
+  for (const event of opts.tasteEvents ?? []) {
+    const weight = LOCAL_TASTE_EVENT_WEIGHTS[event.eventType];
+    if (weight == null || event.genres.length === 0) continue;
+    const occurredMs = new Date(event.occurredAt).getTime();
+    const passMs = activePasses.get(event.itemId);
+    // A detail open never reverses an explicit pass. A later trailer watch is
+    // deliberate enough to override the earlier weak dislike.
+    if (
+      passMs != null &&
+      (event.eventType === 'open_details' || !Number.isFinite(occurredMs) || occurredMs <= passMs)
+    ) {
+      continue;
+    }
+    const daysOld = Number.isFinite(occurredMs)
+      ? Math.max(0, (now.getTime() - occurredMs) / MS_PER_DAY)
+      : 0;
+    const decayed = weight * Math.exp(-daysOld / TASTE_DECAY_DAYS);
+    for (const genre of event.genres) {
+      positiveGenres[genre] = (positiveGenres[genre] ?? 0) + decayed;
     }
   }
 

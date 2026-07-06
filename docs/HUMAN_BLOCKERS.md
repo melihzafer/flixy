@@ -81,7 +81,8 @@ profiles did not declare these variables — so the APK shipped with empty crede
 then throws `TMDB_API_KEY is not configured` and `supabase.ts` falls back to `disabledClient()`.
 **Fix applied in repo:** `eas.json` now maps each build profile to an EAS `environment`
 (`development`/`preview`/`production`), so EAS auto-injects environment-scoped variables at build
-time. A build-time guard in `app.config.ts` also warns in the EAS build log when these are missing.
+time. A build-time guard in `app.config.ts` refuses preview/production builds when these are missing,
+preventing an install that silently falls back to development-only local auth.
 **Action (required before the next build):** create the variables in EAS for each environment you
 build. These are safe to mark `sensitive`; the Supabase URL/anon key are client-public by design,
 the TMDB token should be kept out of the repo. Run for `preview` and `production`:
@@ -93,12 +94,24 @@ eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --valu
 eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_OAUTH_REDIRECT_URI --value flixy:///auth/callback
 ```
 Repeat with `--environment production`. Then rebuild: `eas build --profile preview --platform android`.
-Verify with `eas env:list --environment preview` and confirm the build log shows no `[flixy] WARNING`.
+Verify with `eas env:list --environment preview`; the build cannot proceed while required values are
+missing.
 
 ### HB-008 — Rotate Cloudflare R2 credentials shared in chat
 **Status:** Pending
 **Blocks:** Safe production R2 export automation
 **Action:** Rotate the R2 access key and Cloudflare API token that were pasted into chat/session logs. Store the new values only in `.env.local`, CI secrets, or a password manager; never commit them.
+
+## HB-010 — Subscription billing and entitlement deployment
+**Status:** Pending
+**Blocks:** Paid Bronze/Gold purchases and remote quota enforcement
+**Action:**
+1. Migration `0024_subscription_entitlements.sql` was applied on 2026-07-06. Keep linked Supabase credentials available for future entitlement migrations.
+2. Configure Apple products `flixy_bronze_monthly`, `flixy_bronze_yearly`, `flixy_gold_monthly`, and `flixy_gold_yearly`.
+3. Configure matching Google Play subscriptions.
+4. Create the RevenueCat project (or approved native billing service), map products to `bronze` and `gold`, and configure webhook-driven `user_subscriptions` updates.
+5. Store provider keys and webhook secrets in EAS/Supabase secrets. Do not add them to `.env` files or source control.
+6. Keep Platinum unavailable for purchase until shared discovery ships.
 
 ## RESOLVED
 

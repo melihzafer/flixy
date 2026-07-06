@@ -110,41 +110,42 @@ export default function WatchlistTriageScreen() {
 
   if (isError) {
     return (
-      <View
-        style={{
-          flex: 1,
-          backgroundColor: colors.bg,
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 24,
-          gap: 12,
-        }}
-      >
-        <Text
+      <Screen scroll={false}>
+        <View
           style={{
-            fontFamily: fonts.display,
-            fontSize: 24,
-            color: colors.text,
-            textAlign: 'center',
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 24,
+            gap: 12,
           }}
         >
-          {t('watchlist.errorTitle', "Couldn't load watchlist")}
-        </Text>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => refetch()}
-          style={{
-            paddingHorizontal: 20,
-            paddingVertical: 10,
-            backgroundColor: colors.accent,
-            borderRadius: 12,
-          }}
-        >
-          <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold }}>
-            {t('common.retry', 'Retry')}
+          <Text
+            style={{
+              fontFamily: fonts.display,
+              fontSize: 24,
+              color: colors.text,
+              textAlign: 'center',
+            }}
+          >
+            {t('watchlist.errorTitle', "Couldn't load watchlist")}
           </Text>
-        </Pressable>
-      </View>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => refetch()}
+            style={{
+              paddingHorizontal: 20,
+              paddingVertical: 10,
+              backgroundColor: colors.accent,
+              borderRadius: 12,
+            }}
+          >
+            <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold }}>
+              {t('common.retry', 'Retry')}
+            </Text>
+          </Pressable>
+        </View>
+      </Screen>
     );
   }
 
