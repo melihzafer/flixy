@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T09:02:12.944Z
-> Files: 31 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T13:58:34.614Z
+> Files: 33 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -232,24 +232,16 @@
 ## apps/mobile/src/features/catalogue/__tests__/
 
 
-## apps/mobile/src/features/entitlements/
-
-- `hooks.ts` — useEntitlements, useStartDiscoverySession, useRequireEntitlement, useRedeemPromoCode (~93 tok + promo)
-- `entitlementGates.ts` — Pure gate logic: requireEntitlement + normalizeEntitlements
-- `constants.ts` — FREE_ENTITLEMENTS, SAFE_FREE_SNAPSHOT, PLAN_NAMES, PLAN_CARDS
-- `types.ts` — PlanId, DiscoveryMode, FlixyEntitlements, EntitlementSnapshot, DiscoverySessionResult, PromoRedemption types
-- `promoCodes.ts` — Pure parseRedemptionResult: validates redeem_promo_code RPC JSONB into typed result
-
-## apps/mobile/src/features/entitlements/__tests__/
-
-- `entitlementGates.test.ts` — Gate logic tests
-- `promoCodes.test.ts` — parseRedemptionResult unit tests (perpetual, timed, failure reasons, coercion)
-
-
 ## apps/mobile/src/features/deck/
 
 - `FilterSheet.tsx` — MOODS — renders modal (~4610 tok)
 - `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~7158 tok)
+
+## apps/mobile/src/features/entitlements/
+
+
+## apps/mobile/src/features/entitlements/__tests__/
+
 
 ## apps/mobile/src/features/notifications/
 
@@ -344,6 +336,7 @@
 ## packages/shared/src/schemas/
 
 - `deck.ts` — A scored deck candidate plus the rule trace explaining why it landed in the (~1343 tok)
+- `tasteEvent.ts` — Zod schemas: TasteEventTypeSchema, TasteEventSchema (~142 tok)
 - `title.ts` — Zod schemas: TitleKindSchema, OfferTypeSchema, TitleAvailabilitySchema, TitleSchema (~502 tok)
 
 ## packages/shared/src/schemas/__tests__/

@@ -13,6 +13,7 @@ import { Text } from '../../../src/components/Text';
 import { toTitleDisplay } from '../../../src/features/catalogue/display';
 import { useTitlesQuery } from '../../../src/features/catalogue/hooks';
 import { getSearchUiState, useSearchTitles } from '../../../src/features/search/hooks';
+import { useRecordTasteEvent } from '../../../src/features/taste/hooks';
 import { events } from '../../../src/features/telemetry/events';
 import { colors, fonts } from '../../../src/theme/tokens';
 
@@ -323,6 +324,7 @@ function SearchListHeader({
 
 function SearchRow({ title }: { title: Title }) {
   const display = toTitleDisplay(title);
+  const recordTasteEvent = useRecordTasteEvent();
   return (
     <Pressable
       testID="search-result-row"
@@ -330,6 +332,9 @@ function SearchRow({ title }: { title: Title }) {
       accessibilityLabel={`Open ${display.title} details${display.year ? `, ${display.year}` : ''}`}
       onPress={() => {
         events.searchResultOpened(title.id);
+        // Opening a result the user searched for is a deliberate interest
+        // signal — stronger than a passive detail open from the deck.
+        void recordTasteEvent('search_match_open', title);
         router.push({ pathname: '/(app)/title/[id]', params: { id: title.id } });
       }}
       style={{

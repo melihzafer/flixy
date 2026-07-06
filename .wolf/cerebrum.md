@@ -70,6 +70,8 @@
 
 - [2026-07-06] For You algorithm architecture: taste semantics live in `packages/shared/src/taste.ts` (SWIPE_TASTE_WEIGHTS up+4/right+3/down+0.5/left-1, 30-day exp decay, COLD_START_GENRE_PRIOR from onboarding genres) and feed composition in `composer.ts` (deterministic 60/20/10/10 personalized/trending/fresh/exploration mix via MIX_SLOT_PATTERN, trace.source + diagnostics.sources for explainability). Change weights/quotas there, never inline in hooks. 'down' (Seen) is a WEAK POSITIVE, not a dislike.
 
+- [2026-07-06] Local taste events are the recommendation-relevant behavior store (PostHog is analytics-only): `schemas/tasteEvent.ts` enum (open_details +1, watch_trailer +2, share +2.5, search_match_open +1.5), persisted via `localDb.recordTasteEvent` (15-min dedup per title+type, 400-event/user cap), consumed by `buildTasteSignal({tasteEvents})` with the same 30-day decay. Pass-override rule: only open_details can never reverse a pass; later trailer/share/search opens do. Record new engagement signals through `useRecordTasteEvent`, never PostHog alone.
+
 ## Do-Not-Repeat
 
 <!-- Mistakes made and corrected. Each entry prevents the same mistake recurring. -->

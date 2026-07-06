@@ -76,7 +76,6 @@ export default function TrailersScreen() {
   };
 
   const handleLike = (title: Title, index: number) => {
-    events.titleShared({ titleId: title.id, hasImage: false }); // track interaction
     recordSwipe.mutate({
       titleId: title.id,
       direction: 'right',
@@ -127,6 +126,7 @@ export default function TrailersScreen() {
         ? `https://www.themoviedb.org/${title.kind === 'tv' ? 'tv' : 'movie'}/${title.tmdbId}`
         : '';
     events.titleShared({ titleId: title.id, hasImage: !!display.posterUrl });
+    void recordTasteEvent('share', title);
     setShareItem({ display, url: url || null, titleId: title.id });
   };
 

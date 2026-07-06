@@ -33,6 +33,8 @@ export const TASTE_DECAY_DAYS = 30;
 export const LOCAL_TASTE_EVENT_WEIGHTS: Record<TasteEventType, number> = {
   open_details: 1,
   watch_trailer: 2,
+  share: 2.5,
+  search_match_open: 1.5,
 };
 
 /**
@@ -103,8 +105,9 @@ export function buildTasteSignal(
     if (weight == null || event.genres.length === 0) continue;
     const occurredMs = new Date(event.occurredAt).getTime();
     const passMs = activePasses.get(event.itemId);
-    // A detail open never reverses an explicit pass. A later trailer watch is
-    // deliberate enough to override the earlier weak dislike.
+    // A detail open never reverses an explicit pass. A later trailer watch,
+    // share, or search-result open is deliberate enough to override the
+    // earlier weak dislike.
     if (
       passMs != null &&
       (event.eventType === 'open_details' || !Number.isFinite(occurredMs) || occurredMs <= passMs)

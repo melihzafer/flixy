@@ -7,6 +7,7 @@ import {
   type ComposeResult,
   buildTasteSignal,
   composeDeck,
+  debugRecommendation,
   moodToFilter,
   vibesToGenres,
   withColdStartPrior,
@@ -685,6 +686,16 @@ export function useDeck(options: UseDeckOptions = {}) {
     if (candidatesQuery.isFetching || !candidatesQuery.data) return;
     setRefillPage((p) => p + 1);
   }, [deck?.cards.length, refillPage, candidatesQuery.isFetching, candidatesQuery.data]);
+
+  // Development-only: print the trace (score, source slice, top factors) for
+  // the cards the user is about to see, so a ranking surprise can be explained
+  // without attaching a debugger. debugRecommendation no-ops outside __DEV__.
+  useEffect(() => {
+    if (!deck || deck.cards.length === 0) return;
+    for (const card of deck.cards.slice(0, 3)) {
+      debugRecommendation(card);
+    }
+  }, [deck]);
 
   useEffect(() => {
     if (!diagnostics) return;
