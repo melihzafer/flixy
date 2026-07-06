@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T14:52:59.637Z
-> Files: 12 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T21:55:53.533Z
+> Files: 19 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -186,6 +186,7 @@
 
 ## apps/mobile/app/(app)/(tabs)/
 
+- `deck.tsx` — DeckScreen (~12082 tok)
 
 ## apps/mobile/app/(app)/title/
 
@@ -224,6 +225,12 @@
 
 ## apps/mobile/src/features/deck/
 
+- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~8034 tok)
+- `queueFilter.ts` — Live filter for the deck screen's append-only card queue. (~352 tok)
+
+## apps/mobile/src/features/deck/__tests__/
+
+- `queueFilter.test.ts` — Declares mkCard (~661 tok)
 
 ## apps/mobile/src/features/entitlements/
 
@@ -257,6 +264,7 @@
 
 ## apps/mobile/src/features/watchlist/
 
+- `hooks.ts` — Watchlist read/write APIs (FSD section 3.7). Reads come from (~1229 tok)
 
 ## apps/mobile/src/features/watchlist/__tests__/
 
@@ -314,9 +322,11 @@
 
 ## packages/shared/src/
 
+- `composer.ts` — 7-layer deck composer (FSD section 3.5.3). Pure function: takes a candidate (~6340 tok)
 
 ## packages/shared/src/__tests__/
 
+- `composer.test.ts` — Declares mkTitle (~6353 tok)
 
 ## packages/shared/src/schemas/
 

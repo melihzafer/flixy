@@ -30,6 +30,7 @@ import { useSession } from '../../../src/features/auth/useSession';
 import { FilterSheet } from '../../../src/features/deck/FilterSheet';
 import { useDeckFilters } from '../../../src/features/deck/filterStore';
 import { type DeckDiagnostics, useDeck } from '../../../src/features/deck/hooks';
+import { filterRemainingCards } from '../../../src/features/deck/queueFilter';
 import {
   useRequireEntitlement,
   useStartDiscoverySession,
@@ -77,7 +78,7 @@ export default function DeckScreen() {
     [kinds, minYear, maxYear, forYou],
   );
 
-  const { deck, diagnostics, filterKey, isLoading, isError, error, refetch } = useDeck({
+  const { deck, diagnostics, filterKey, excludeIds, isLoading, isError, error, refetch } = useDeck({
     mood: activeMood,
     vibes,
     country,
@@ -116,6 +117,10 @@ export default function DeckScreen() {
   // of the underlying `cards` array can't snap a different card under the user.
   const [swipedIds, setSwipedIds] = useState<string[]>([]);
   const swipedSet = useMemo(() => new Set(swipedIds), [swipedIds]);
+  // Every title swiped this session, including later-undone ones. Exclusion
+  // filtering skips touched titles so Undo restores the card immediately even
+  // while the exclusion set still (stale) contains it.
+  const touchedIdsRef = useRef<Set<string>>(new Set());
   const position = swipedIds.length;
   const lastEventRef = useRef<SwipeEvent | null>(null);
   const nudgeFired = useRef(false);
@@ -178,9 +183,14 @@ export default function DeckScreen() {
       cardQueueIds.map((id) => cardQueue.byId.get(id)).filter((card): card is DeckCard => !!card),
     [cardQueue.byId, cardQueueIds],
   );
+  // Beyond session swipes, also honor the LIVE exclusion set: a queued card
+  // can become excluded mid-session (saved to the watchlist from search or
+  // title detail) and must stop being dealt. `swipedSet` is in the deps, so
+  // this recomputes on every commit/undo even though touchedIdsRef mutates
+  // silently.
   const remaining = useMemo(
-    () => queuedCards.filter((c) => !swipedSet.has(c.title.id)),
-    [queuedCards, swipedSet],
+    () => filterRemainingCards(queuedCards, swipedSet, excludeIds, touchedIdsRef.current),
+    [queuedCards, swipedSet, excludeIds],
   );
   const sessionCardLimit =
     discoverySession?.allowed && discoverySession.cards_limit != null
@@ -201,6 +211,7 @@ export default function DeckScreen() {
       const card = remaining[0];
       if (!card || sessionRemaining <= 0 || !discoverySession?.allowed) return;
       const swipeIndex = swipedIds.length;
+      touchedIdsRef.current.add(card.title.id);
       try {
         const ev = await recordSwipe.mutateAsync({
           titleId: card.title.id,

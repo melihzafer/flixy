@@ -3296,6 +3296,202 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-07-06T14:52:59.650Z"
+    },
+    {
+      "id": "bug-185",
+      "timestamp": "2026-07-06T21:51:24.012Z",
+      "error_message": "Type error",
+      "file": "packages/shared/src/composer.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:51:24.012Z"
+    },
+    {
+      "id": "bug-186",
+      "timestamp": "2026-07-06T21:51:43.786Z",
+      "error_message": "Missing guard clause",
+      "file": "packages/shared/src/composer.ts",
+      "root_cause": "No early return/throw for edge case: t.genres.length === 0",
+      "fix": "Added guard clause: if (t.genres.length === 0)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:51:43.786Z"
+    },
+    {
+      "id": "bug-187",
+      "timestamp": "2026-07-06T21:51:56.355Z",
+      "error_message": "Significant refactor of ",
+      "file": "packages/shared/src/composer.ts",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 14→22 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:51:56.355Z"
+    },
+    {
+      "id": "bug-188",
+      "timestamp": "2026-07-06T21:52:37.633Z",
+      "error_message": "Null/undefined access in ",
+      "file": "packages/shared/src/__tests__/composer.test.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:52:37.633Z"
+    },
+    {
+      "id": "bug-189",
+      "timestamp": "2026-07-06T21:53:36.897Z",
+      "error_message": "Missing error handling in function",
+      "file": "apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:53:36.897Z"
+    },
+    {
+      "id": "bug-190",
+      "timestamp": "2026-07-06T21:53:56.022Z",
+      "error_message": "Wrong condition in logic",
+      "file": "apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "Condition was: if (pooledCandidates.length === 0 && firstPageCandidat)",
+      "fix": "Changed to: if (!canCompose)",
+      "tags": [
+        "auto-detected",
+        "logic-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:53:56.022Z"
+    },
+    {
+      "id": "bug-191",
+      "timestamp": "2026-07-06T21:54:53.585Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→8 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:54:53.585Z"
+    },
+    {
+      "id": "bug-192",
+      "timestamp": "2026-07-06T21:55:45.195Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "root_cause": "2 lines replaced/restructured",
+      "fix": "Rewrote 4→9 lines (2 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:55:45.195Z"
+    },
+    {
+      "id": "bug-193",
+      "timestamp": "2026-07-06T21:55:47.117Z",
+      "error_message": "Wrong reference: try should be touchedIdsRef",
+      "file": "apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "root_cause": "Used \"try\" instead of \"touchedIdsRef\"",
+      "fix": "Changed try → touchedIdsRef",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:55:47.117Z"
+    },
+    {
+      "id": "bug-194",
+      "timestamp": "2026-07-06T21:55:53.550Z",
+      "error_message": "Wrong return value",
+      "file": "apps/mobile/src/features/watchlist/hooks.ts",
+      "root_cause": "Was returning: () => qc.invalidateQueries({ queryKey: ['watchlist",
+      "fix": "Now returns: () => {",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:55:53.550Z"
+    },
+    {
+      "id": "bug-195",
+      "timestamp": "2026-07-06T21:59:34.699Z",
+      "error_message": "User: watchlist titles keep showing up in the deck / For You feed",
+      "file": "apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "Deck composed before the deck_exclusions query resolved (empty excludeIds), and the screen card queue is append-only so leaked cards were never removed. Watchlist mutations also never invalidated deck_exclusions, and exclusions only used local-device swipes (web vs APK never shared pass history).",
+      "fix": "Gated composition on exclusions/taste readiness (canCompose), merged remote Supabase swipes into deck_exclusions, exposed excludeIds from useDeck and live-filter the queued cards via filterRemainingCards (touchedIds guard keeps Undo instant), invalidated deck_exclusions from watchlist mutations.",
+      "tags": [
+        "deck",
+        "for-you",
+        "watchlist",
+        "exclusions",
+        "race-condition"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:59:34.699Z"
+    },
+    {
+      "id": "bug-196",
+      "timestamp": "2026-07-06T21:59:34.699Z",
+      "error_message": "User: categories I pass keep showing up in For You",
+      "file": "packages/shared/src/composer.ts",
+      "root_cause": "Personalization normalized (pos-neg) by totalSwipes, so genre dislikes diluted to invisibility as history grew; trending slots (20%) ranked purely by popularity ignoring taste; exploration slots sampled the BOTTOM of the score order — exactly where disliked titles sit.",
+      "fix": "Scale-free per-genre affinity (pos-neg)/(pos+neg+1) with evidence-gated confidence; dislikedGenres() detection (neg>=2.5 and neg>2*pos, decays out in ~30d); For You hard-excludes titles whose EVERY genre is disliked; trending/fresh/exploration pools restricted to non-negative personalization.",
+      "tags": [
+        "composer",
+        "for-you",
+        "taste",
+        "dislike",
+        "algorithm"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T21:59:34.699Z"
     }
   ]
 }
