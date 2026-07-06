@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T21:55:53.533Z
-> Files: 19 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T22:09:25.773Z
+> Files: 21 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -176,7 +176,7 @@
 
 ## apps/mobile/app/
 
-- `_layout.tsx` — Holds the native splash screen until the auth session has actually resolved, (~1668 tok)
+- `_layout.tsx` — Holds the native splash screen until the auth session has actually resolved, (~1834 tok)
 
 ## apps/mobile/app/(app)/
 
@@ -186,7 +186,7 @@
 
 ## apps/mobile/app/(app)/(tabs)/
 
-- `deck.tsx` — DeckScreen (~12082 tok)
+- `deck.tsx` — DeckScreen (~12381 tok)
 
 ## apps/mobile/app/(app)/title/
 
@@ -225,7 +225,7 @@
 
 ## apps/mobile/src/features/deck/
 
-- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~8034 tok)
+- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~8343 tok)
 - `queueFilter.ts` — Live filter for the deck screen's append-only card queue. (~352 tok)
 
 ## apps/mobile/src/features/deck/__tests__/
@@ -283,11 +283,13 @@
 
 ## apps/mobile/src/lib/
 
+- `localDb.ts` — A card the user actually SAW at the top of the deck but did not swipe. (~4948 tok)
 - `pwaInstall.ts` — PWA "Add to Home Screen" install-prompt persistence. (~624 tok)
 - `pwaInstallPlatform.ts` — Flixy ships as a native APK (Platform.OS === 'ios' | 'android') and as a (~506 tok)
 
 ## apps/mobile/src/lib/__tests__/
 
+- `localDb.test.ts` — store: makeWatchlistItem (~5232 tok)
 - `pwaInstall.test.ts` — Declares store (~538 tok)
 
 ## apps/mobile/src/stores/
@@ -322,7 +324,7 @@
 
 ## packages/shared/src/
 
-- `composer.ts` — 7-layer deck composer (FSD section 3.5.3). Pure function: takes a candidate (~6340 tok)
+- `composer.ts` — 7-layer deck composer (FSD section 3.5.3). Pure function: takes a candidate (~6482 tok)
 
 ## packages/shared/src/__tests__/
 

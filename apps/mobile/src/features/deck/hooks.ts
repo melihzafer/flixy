@@ -146,6 +146,17 @@ const MAX_PAGES_PER_SESSION = 10;
 const DECK_PAGE_SIZE = 20;
 
 /**
+ * Per-app-launch salt mixed into the composer's userSeed. The composed feed is
+ * deliberately deterministic for a given set of inputs (deck stability
+ * invariant), which also meant two consecutive app opens produced the exact
+ * same deck — TMDB's popularity order barely moves hour to hour. Salting the
+ * jitter seed per launch keeps ordering rock-stable WITHIN a session while
+ * giving every fresh open a visibly re-shuffled arrangement of near-tied
+ * cards. Real preference gaps still dominate the jitter magnitude.
+ */
+const LAUNCH_SEED = `${Date.now().toString(36)}-${Math.floor(Math.random() * 0xffffffff).toString(36)}`;
+
+/**
  * Deck queries (FSD section 3.5). Wraps the catalogue query with the on-device
  * 7-layer composer and the user's current taste signal + cool-down sets.
  */
@@ -250,10 +261,11 @@ function useDeckExclusions() {
       // The watchlist read is NOT best-effort: composing a deck without it is
       // exactly the "my watchlist keeps showing up" bug. Let the query throw
       // and retry instead of silently proceeding with an empty exclusion set.
-      const [swipes, watchlist, remoteSwipes] = await Promise.all([
+      const [swipes, watchlist, remoteSwipes, impressions] = await Promise.all([
         localDb.getSwipes(userId),
         watchlistStore.getWatchlist(userId),
         fetchRemoteSwipeRows(userId),
+        localDb.getRecentImpressions(userId),
       ]);
 
       const excludeIds = new Set<string>();
@@ -279,6 +291,12 @@ function useDeckExclusions() {
       }
       for (const row of watchlist) {
         excludeIds.add(String(row.title_id));
+      }
+      // Cards the user SAW at the top of the deck but never swiped. These are
+      // not excluded — only cooldown-demoted by the composer — so a fresh app
+      // open leads with unseen titles instead of replaying yesterday's deck.
+      for (const titleId of impressions) {
+        shownLast7d.add(titleId);
       }
 
       return { excludeIds, passedRecently, shownLast7d };
@@ -521,7 +539,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       excludeIds: exclusions.excludeIds,
       targetSize: 50,
       recommendationScores,
-      userSeed: userId,
+      userSeed: userId ? `${userId}:${LAUNCH_SEED}` : null,
       vibes: forYou ? null : (options.vibes ?? null),
       preferredCountries: forYou ? null : options.country ? [options.country] : null,
       forYou,

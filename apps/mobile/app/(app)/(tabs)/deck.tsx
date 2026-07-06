@@ -46,6 +46,7 @@ import {
   useUndoSwipe,
 } from '../../../src/features/swipe/hooks';
 import { events } from '../../../src/features/telemetry/events';
+import { localDb } from '../../../src/lib/localDb';
 import { ANON_UPGRADE_THRESHOLD, useAnonSwipeStore } from '../../../src/stores/anonSwipe';
 import { colors, fonts } from '../../../src/theme/tokens';
 
@@ -205,6 +206,22 @@ export default function DeckScreen() {
   // effect) hasn't synced yet. Without this guard the empty state flashes for a
   // frame before the cards mount — the "no cards then cards" glitch.
   const isHydratingQueue = cards.length > 0 && cardQueueIds.length === 0;
+
+  // Impression log: whichever card is dealt to the TOP of the stack counts as
+  // "seen". The exclusion builder folds recent impressions into shownLast7d,
+  // so unswiped cards from this session get cooldown-demoted on the next app
+  // open instead of leading the deck again (the "same deck every time I open
+  // the app" complaint). Fire-and-forget; never blocks the swipe loop.
+  // Guarded on the card actually being on screen: while the session-complete
+  // or loading views cover the stack, the top of `remaining` was never seen.
+  const isCardOnScreen =
+    !isLoading && !isHydratingQueue && discoverySession?.allowed === true && sessionRemaining > 0;
+  const topCardId = isCardOnScreen ? (remaining[0]?.title.id ?? null) : null;
+  const impressionUserId = authState?.user?.id ?? null;
+  useEffect(() => {
+    if (!topCardId || !impressionUserId) return;
+    void localDb.recordImpression(impressionUserId, topCardId).catch(() => undefined);
+  }, [topCardId, impressionUserId]);
 
   const handleCommit = useCallback(
     async (dir: SwipeDirection) => {

@@ -116,8 +116,16 @@ export default function RootLayout() {
               // - 'taste_signal' / 'swipes': derived from fast local storage
               //   reads (and time-bucketed quotas); persisting them only
               //   resurrects stale values that trigger a deck recompose.
+              // - ['titles','query']: deck discover pages. Restoring them
+              //   replays the exact same candidate window (and therefore the
+              //   exact same deck) on every cold open until the 1h staleTime
+              //   lapses. Cold opens should always pull fresh candidates; the
+              //   offline path falls back to the bundled catalogue. Detail
+              //   ('title') and byIds caches stay persisted — reusing those is
+              //   pure win.
               shouldDehydrateQuery: (query) =>
                 !NEVER_PERSIST_QUERY_ROOTS.has(String(query.queryKey[0])) &&
+                !(query.queryKey[0] === 'titles' && query.queryKey[1] === 'query') &&
                 defaultShouldDehydrateQuery(query),
             },
           }}

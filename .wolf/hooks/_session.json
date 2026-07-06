@@ -33,8 +33,8 @@
       "first_read": "2026-07-06T21:46:41.765Z"
     },
     "/home/user/flixy/apps/mobile/app/(app)/(tabs)/deck.tsx": {
-      "count": 1,
-      "tokens": 0,
+      "count": 2,
+      "tokens": 12293,
       "first_read": "2026-07-06T21:46:42.171Z"
     },
     "/home/user/flixy/supabase/migrations/0018_recommendations.sql": {
@@ -61,6 +61,26 @@
       "count": 1,
       "tokens": 0,
       "first_read": "2026-07-06T21:52:10.974Z"
+    },
+    "/home/user/flixy/apps/mobile/src/features/catalogue/hooks.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-07-06T22:04:11.335Z"
+    },
+    "/home/user/flixy/apps/mobile/src/lib/localDb.ts": {
+      "count": 2,
+      "tokens": 0,
+      "first_read": "2026-07-06T22:05:39.949Z"
+    },
+    "/home/user/flixy/apps/mobile/app/_layout.tsx": {
+      "count": 1,
+      "tokens": 1668,
+      "first_read": "2026-07-06T22:05:48.848Z"
+    },
+    "/home/user/flixy/apps/mobile/src/lib/__tests__/localDb.test.ts": {
+      "count": 1,
+      "tokens": 0,
+      "first_read": "2026-07-06T22:08:16.553Z"
     }
   },
   "files_written": [
@@ -207,20 +227,131 @@
       "action": "edit",
       "tokens": 115,
       "at": "2026-07-06T21:55:53.546Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/localDb.ts",
+      "action": "edit",
+      "tokens": 46,
+      "at": "2026-07-06T22:06:22.210Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/localDb.ts",
+      "action": "edit",
+      "tokens": 105,
+      "at": "2026-07-06T22:06:25.279Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/localDb.ts",
+      "action": "edit",
+      "tokens": 102,
+      "at": "2026-07-06T22:06:31.454Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/localDb.ts",
+      "action": "edit",
+      "tokens": 86,
+      "at": "2026-07-06T22:06:37.632Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/localDb.ts",
+      "action": "edit",
+      "tokens": 357,
+      "at": "2026-07-06T22:06:44.103Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/localDb.ts",
+      "action": "edit",
+      "tokens": 36,
+      "at": "2026-07-06T22:06:50.364Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/localDb.ts",
+      "action": "edit",
+      "tokens": 164,
+      "at": "2026-07-06T22:06:54.521Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/localDb.ts",
+      "action": "edit",
+      "tokens": 373,
+      "at": "2026-07-06T22:07:06.863Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 158,
+      "at": "2026-07-06T22:07:16.382Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 135,
+      "at": "2026-07-06T22:07:23.936Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 210,
+      "at": "2026-07-06T22:07:32.366Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 32,
+      "at": "2026-07-06T22:07:36.768Z"
+    },
+    {
+      "file": "/home/user/flixy/packages/shared/src/composer.ts",
+      "action": "edit",
+      "tokens": 191,
+      "at": "2026-07-06T22:07:45.415Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/_layout.tsx",
+      "action": "edit",
+      "tokens": 281,
+      "at": "2026-07-06T22:07:51.125Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 58,
+      "at": "2026-07-06T22:07:57.716Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 284,
+      "at": "2026-07-06T22:08:08.067Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/lib/__tests__/localDb.test.ts",
+      "action": "edit",
+      "tokens": 516,
+      "at": "2026-07-06T22:08:27.147Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 174,
+      "at": "2026-07-06T22:09:25.787Z"
     }
   ],
   "edit_counts": {
-    "packages/shared/src/composer.ts": 4,
+    "packages/shared/src/composer.ts": 5,
     "packages/shared/src/__tests__/composer.test.ts": 1,
-    "apps/mobile/src/features/deck/hooks.ts": 11,
+    "apps/mobile/src/features/deck/hooks.ts": 15,
     "apps/mobile/src/features/deck/queueFilter.ts": 1,
     "apps/mobile/src/features/deck/__tests__/queueFilter.test.ts": 1,
-    "apps/mobile/app/(app)/(tabs)/deck.tsx": 5,
-    "apps/mobile/src/features/watchlist/hooks.ts": 1
+    "apps/mobile/app/(app)/(tabs)/deck.tsx": 8,
+    "apps/mobile/src/features/watchlist/hooks.ts": 1,
+    "apps/mobile/src/lib/localDb.ts": 8,
+    "apps/mobile/app/_layout.tsx": 1,
+    "apps/mobile/src/lib/__tests__/localDb.test.ts": 1
   },
-  "anatomy_hits": 0,
-  "anatomy_misses": 12,
-  "repeated_reads_warned": 0,
+  "anatomy_hits": 1,
+  "anatomy_misses": 15,
+  "repeated_reads_warned": 2,
   "cerebrum_warnings": 0,
   "stop_count": 0
 }

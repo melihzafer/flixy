@@ -314,9 +314,19 @@ function hashString(input: string): number {
   return hash >>> 0;
 }
 
+/**
+ * Deterministic per-(seed, title) jitter in [0, USER_JITTER_SCALE). Sized to
+ * re-shuffle near-tied cards (TMDB page-1 titles frequently clamp to the same
+ * popularity score) without ever overturning a real preference gap —
+ * personalization/availability/cooldown contributions are all ≥ 0.1.
+ * The seed carries a per-app-launch salt upstream, so each open deals a
+ * visibly different arrangement while staying stable within the session.
+ */
+const USER_JITTER_SCALE = 0.05;
+
 function userJitter(titleId: string, userSeed?: string | null): number {
   if (!userSeed) return 0;
-  return (hashString(`${userSeed}:${titleId}`) / 0xffffffff) * 0.015;
+  return (hashString(`${userSeed}:${titleId}`) / 0xffffffff) * USER_JITTER_SCALE;
 }
 
 type ScoredCandidate = { title: Title; trace: RuleTrace };
