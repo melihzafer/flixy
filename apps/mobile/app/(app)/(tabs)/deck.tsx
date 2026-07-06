@@ -74,7 +74,7 @@ export default function DeckScreen() {
     [kinds, minYear, maxYear, forYou],
   );
 
-  const { deck, diagnostics, isLoading, isError, error, refetch } = useDeck({
+  const { deck, diagnostics, filterKey, isLoading, isError, error, refetch } = useDeck({
     mood: activeMood,
     vibes,
     country,
@@ -106,17 +106,35 @@ export default function DeckScreen() {
   const dismissAnonPrompt = useAnonSwipeStore((s) => s.dismissPrompt);
 
   const cards: DeckCard[] = deck?.cards ?? [];
-  const [cardQueueIds, setCardQueueIds] = useState<string[]>([]);
+  // Display queue: append-only within a filter context. The composed deck is
+  // re-sorted whenever an async input lands (taste signal, exclusions, remote
+  // recommendations, page refills, background refetches), and a recomposition
+  // can drop a title out of the top-N slice entirely. If the queue mirrored
+  // the latest compose, the card the user is looking at could vanish and be
+  // replaced by a different movie 1–2s after first paint. Instead: ids keep
+  // their queued order forever, cards that fall out of later compositions stay
+  // renderable via the accumulated byId cache, and the whole queue is rebuilt
+  // only when the user actually changes filters (filterKey) or the deck runs
+  // out.
+  const [cardQueue, setCardQueue] = useState<{
+    key: string;
+    ids: string[];
+    byId: Map<string, DeckCard>;
+  }>({ key: filterKey, ids: [], byId: new Map() });
   useEffect(() => {
-    if (cards.length === 0) {
-      setCardQueueIds((prev) => (prev.length === 0 ? prev : []));
-      return;
-    }
+    setCardQueue((prev) => {
+      const sameKey = prev.key === filterKey;
+      if (cards.length === 0) {
+        if (sameKey && prev.ids.length === 0) return prev;
+        return { key: filterKey, ids: [], byId: new Map() };
+      }
 
-    setCardQueueIds((prev) => {
-      const availableIds = new Set(cards.map((card) => card.title.id));
-      const kept = prev.filter((id) => availableIds.has(id));
-      const queued = new Set(kept);
+      const base = sameKey ? prev.ids : [];
+      const byId = sameKey ? new Map(prev.byId) : new Map<string, DeckCard>();
+      for (const card of cards) {
+        byId.set(card.title.id, card);
+      }
+      const queued = new Set(base);
       const appended = cards
         .map((card) => card.title.id)
         .filter((id) => {
@@ -124,15 +142,20 @@ export default function DeckScreen() {
           queued.add(id);
           return true;
         });
-      const next = [...kept, ...appended];
-      return sameStringArray(prev, next) ? prev : next;
+      const next = [...base, ...appended];
+      const unchanged =
+        sameKey &&
+        sameStringArray(prev.ids, next) &&
+        cards.every((card) => prev.byId.get(card.title.id) === card);
+      return unchanged ? prev : { key: filterKey, ids: next, byId };
     });
-  }, [cards]);
+  }, [cards, filterKey]);
 
-  const cardById = useMemo(() => new Map(cards.map((card) => [card.title.id, card])), [cards]);
+  const cardQueueIds = cardQueue.ids;
   const queuedCards = useMemo(
-    () => cardQueueIds.map((id) => cardById.get(id)).filter((card): card is DeckCard => !!card),
-    [cardById, cardQueueIds],
+    () =>
+      cardQueueIds.map((id) => cardQueue.byId.get(id)).filter((card): card is DeckCard => !!card),
+    [cardQueue.byId, cardQueueIds],
   );
   const remaining = useMemo(
     () => queuedCards.filter((c) => !swipedSet.has(c.title.id)),

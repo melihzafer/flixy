@@ -24,11 +24,20 @@ const EMPTY_SESSION: AuthSession = {
 
 let currentSession: AuthSession = EMPTY_SESSION;
 
+/**
+ * Whether the persisted local session has been read from storage at least
+ * once. Until then `currentSession` is a placeholder EMPTY_SESSION that must
+ * never be replayed to subscribers: writing it into the query cache would flip
+ * `useSession().isLoading` to false with a null session while the real session
+ * is still loading, flashing the auth screen before the home redirect.
+ */
+let isSessionHydrated = false;
+
 const listeners = new Set<(session: AuthSession) => void>();
 
 export function subscribeToSession(callback: (session: AuthSession) => void) {
   listeners.add(callback);
-  callback(currentSession);
+  if (isSessionHydrated) callback(currentSession);
   return () => {
     listeners.delete(callback);
   };
@@ -65,11 +74,13 @@ async function getSupabaseSession(): Promise<AuthSession> {
       });
       await supabase.auth.signOut();
       currentSession = EMPTY_SESSION;
+      isSessionHydrated = true;
       return currentSession;
     }
     throw error;
   }
   currentSession = sessionFromSupabase(data.session);
+  isSessionHydrated = true;
   return currentSession;
 }
 
@@ -82,6 +93,7 @@ export async function getLocalSession(): Promise<AuthSession> {
   } catch (e) {
     logger.warn('auth.local_session load failed', { message: (e as Error).message });
   }
+  isSessionHydrated = true;
   return currentSession;
 }
 
@@ -91,6 +103,7 @@ export function getSessionSnapshot(): Promise<AuthSession> {
 
 export async function setLocalSession(session: AuthSession) {
   currentSession = session;
+  isSessionHydrated = true;
   notifyListeners();
   try {
     await AsyncStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));

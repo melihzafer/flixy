@@ -537,3 +537,19 @@
 | 18:21 | Fixed key UX and edge-case issues identified in audit | apps/mobile | Added parallel TMDb trailer queries, pulsing scroll signifier chevron, and active filters integration in Watchlist Roulette | ~5k |
 
 
+
+## Session: 2026-07-06 08:19
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 08:24 | Edited apps/mobile/src/features/auth/useSession.ts | added 1 condition(s) | ~214 |
+| 08:24 | Edited apps/mobile/src/features/auth/useSession.ts | modified getSupabaseSession() | ~266 |
+| 08:24 | Edited apps/mobile/src/features/auth/useSession.ts | modified setLocalSession() | ~40 |
+| 08:24 | Edited apps/mobile/app/_layout.tsx | CSS: persist | ~271 |
+| 08:25 | Edited apps/mobile/app/_layout.tsx | 4→6 lines | ~80 |
+| 08:25 | Edited apps/mobile/src/features/deck/hooks.ts | expanded (+6 lines) | ~88 |
+| 08:25 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | 7→7 lines | ~49 |
+| 08:26 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | added 1 condition(s) | ~618 |
+| 08:29 | Edited apps/mobile/src/features/catalogue/hooks.ts | added optional chaining | ~191 |
+| 08:30 | Created apps/mobile/src/features/auth/__tests__/useSession.test.ts | — | ~1381 |
+| 2026-07-06 | Startup stabilization: fixed login flash (session hydration gate in useSession), deck poster swap (append-only card queue per filterKey + NEVER_PERSIST_QUERY_ROOTS dehydration blocklist), wrong-title detail placeholder (id-guarded placeholderData in useTitle); added useSession hydration race regression tests | useSession.ts, app/_layout.tsx, deck/hooks.ts, deck.tsx, catalogue/hooks.ts, useSession.test.ts | 75/75 tests pass, typecheck+biome clean | ~90k |

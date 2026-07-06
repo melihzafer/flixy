@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-06-25T14:00:04.489Z
-> Files: 20 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T08:30:30.354Z
+> Files: 25 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -179,7 +179,7 @@
 
 ## apps/mobile/app/
 
-- `_layout.tsx` — Holds the native splash screen until the auth session has actually resolved, (~1300 tok)
+- `_layout.tsx` — Holds the native splash screen until the auth session has actually resolved, (~1480 tok)
 
 ## apps/mobile/app/(app)/
 
@@ -187,10 +187,9 @@
 - `trailers.tsx` — TrailersScreen for popular trailer-first vertical paging feed (~2000 tok)
 - `watchlist-triage.tsx` — WatchlistTriageScreen for swipe-triaging backlog items (~1800 tok)
 
-
 ## apps/mobile/app/(app)/(tabs)/
 
-- `deck.tsx` — DeckScreen (~9012 tok)
+- `deck.tsx` — DeckScreen (~10288 tok)
 - `watchlist.tsx` — FILTERS (~6472 tok)
 
 ## apps/mobile/app/(app)/title/
@@ -218,14 +217,16 @@
 
 ## apps/mobile/src/features/auth/
 
+- `useSession.ts` — Whether the persisted local session has been read from storage at least (~1175 tok)
 
 ## apps/mobile/src/features/auth/__tests__/
 
+- `useSession.test.ts` — Regression tests for the startup session hydration race (login flash). (~1381 tok)
 
 ## apps/mobile/src/features/catalogue/
 
 - `display.ts` — Exports TitleDisplay, toTitleDisplay (~676 tok)
-- `hooks.ts` — Exports CatalogueFallbackReason, CatalogueDiagnostics, TitleQueryResult, TITLE_QUERY_RESULT_SHAPE_VE (~3092 tok)
+- `hooks.ts` — Origin country ISO-3166 alpha-2 filter (e.g. "TR", "US", "KR"). (~3579 tok)
 
 ## apps/mobile/src/features/catalogue/__tests__/
 
@@ -233,7 +234,7 @@
 ## apps/mobile/src/features/deck/
 
 - `FilterSheet.tsx` — MOODS — renders modal (~4610 tok)
-- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~6184 tok)
+- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~7075 tok)
 
 ## apps/mobile/src/features/notifications/
 
@@ -298,11 +299,9 @@
 ## apps/web/
 
 
-
 ## docs/
 
 - `BRAINSTORM_FILTERS_FEATURES.md` — Brainstorming blueprint for advanced filtering and features (~1800 tok)
-
 
 ## packages/catalogue-ingest/
 

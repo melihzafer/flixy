@@ -2,6 +2,30 @@
   "version": 1,
   "bugs": [
     {
+      "id": "bug-109",
+      "timestamp": "2026-07-06T00:00:00Z",
+      "error_message": "Startup glitches: (1) Login screen flashes 1-2s before redirecting to Home for already-signed-in users. (2) Deck posters render one movie then swap to another movie 1-2s after first paint. (3) Opening a title detail briefly shows the previously viewed movie.",
+      "file": "apps/mobile/src/features/auth/useSession.ts; apps/mobile/app/_layout.tsx; apps/mobile/src/features/deck/hooks.ts; apps/mobile/app/(app)/(tabs)/deck.tsx; apps/mobile/src/features/catalogue/hooks.ts",
+      "root_cause": "(1) useSession's local-path effect subscribed via subscribeToSession, which synchronously replayed the module-level placeholder EMPTY_SESSION into the query cache before AsyncStorage hydration — isLoading flipped to false with a null session, the root gate redirected to /(auth)/welcome, then useAuthRedirect bounced to Home once the real session loaded. (2a) The persisted query cache dehydrated 'deck_exclusions' whose data holds Sets; JSON serializes Sets to {}, so a restored entry had zero exclusions AND skipped the loading gate — the deck composed with already-swiped titles, then swapped them out when fresh exclusions arrived. (2b) deck.tsx's display queue dropped any queued id missing from the latest recomposition (kept = prev.filter(availableIds.has)) and cardById only mapped the latest compose — late-arriving taste/exclusions/recommendations re-sorted the top-50 slice and could evict the visible top card. (3) useTitle used blanket placeholderData: keepPreviousData; in TanStack v5 placeholder data reports status success, so the detail screen rendered the previous title id's data instead of its loading state.",
+      "fix": "(1) Added module-level isSessionHydrated; subscribeToSession only replays the current session to new subscribers after getLocalSession/getSupabaseSession/setLocalSession has resolved once — during 'checking' the session query stays pending, splash stays up. (2a) _layout.tsx dehydration now blocks NEVER_PERSIST_QUERY_ROOTS = auth, deck_exclusions, taste_signal, swipes (all local-source or Set/time-derived). (2b) Deck display queue is append-only per filterKey: ids never leave the queue, evicted cards stay renderable via an accumulated byId map, and the queue only rebuilds when filterKey changes or the deck is genuinely empty; useDeck now exposes filterKey. (3) useTitle placeholderData now only reuses previous data when the previous query's id (queryKey[3]) matches the current id, i.e. language changes of the same title.",
+      "tags": [
+        "startup",
+        "auth",
+        "login-flash",
+        "splash",
+        "deck",
+        "poster-swap",
+        "query-persistence",
+        "sets-json",
+        "keepPreviousData",
+        "tanstack-query",
+        "state-machine"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T00:00:00Z"
+    },
+    {
       "id": "bug-107",
       "timestamp": "2026-06-12T20:30:00+03:00",
       "error_message": "Audit found three real settings/profile defects: (1) edit-profile.tsx has separate handle and display name inputs but useUpdateProfile only persists `name`, so the handle is silently dropped. (2) isHandleAvailable / isHandleTaken compares the candidate handle against `name` only, with no separate `handle` field, so two distinct handles were always treated as the same when their names matched. (3) settings-language.tsx writes profile.language but never calls i18n.changeLanguage, so the UI never re-renders in the saved language until the device locale matches. (4) welcome.tsx `handleAnon` skipped the root gate (`router.replace('/(app)')`) when isSupabaseConfigured is false, bypassing onboarding for anon users entirely.",
@@ -2768,6 +2792,54 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-06-25T13:59:31.902Z"
+    },
+    {
+      "id": "bug-154",
+      "timestamp": "2026-07-06T08:24:52.007Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/app/_layout.tsx",
+      "root_cause": "4 lines replaced/restructured",
+      "fix": "Rewrote 7→15 lines (4 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:24:52.007Z"
+    },
+    {
+      "id": "bug-155",
+      "timestamp": "2026-07-06T08:26:15.324Z",
+      "error_message": "Missing guard clause",
+      "file": "apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "root_cause": "No early return/throw for edge case: cards.length === 0",
+      "fix": "Added guard clause: if (cards.length === 0)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:26:15.324Z"
+    },
+    {
+      "id": "bug-156",
+      "timestamp": "2026-07-06T08:29:04.211Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/src/features/catalogue/hooks.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:29:04.211Z"
     }
   ]
 }

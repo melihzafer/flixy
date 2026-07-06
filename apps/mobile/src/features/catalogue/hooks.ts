@@ -167,7 +167,13 @@ export function useTitle(id: string | null | undefined) {
   return useQuery({
     queryKey: ['title', TITLE_QUERY_CACHE_VERSION_KEY, getTmdbLanguage(), id],
     enabled: !!id,
-    placeholderData: keepPreviousData,
+    // Only reuse previous data across a language change of the SAME title
+    // (key index 3 is the id). Blanket keepPreviousData would briefly render
+    // the previously viewed movie's poster/details when opening a different
+    // title, because placeholder data reports `success` and skips the loading
+    // state.
+    placeholderData: (previousData, previousQuery) =>
+      previousQuery?.queryKey[3] === id ? previousData : undefined,
     staleTime: 1000 * 60 * 60 * 24, // 24 hours
     queryFn: async () => {
       if (!id) return null;

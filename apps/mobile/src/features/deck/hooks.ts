@@ -710,6 +710,12 @@ export function useDeck(options: UseDeckOptions = {}) {
   return {
     deck,
     diagnostics,
+    /**
+     * Identity of the active filter context. Changes only when the user
+     * actually changes filters — consumers use it to know when the visible
+     * card stack should be rebuilt vs. kept stable across recompositions.
+     */
+    filterKey,
     isLoading:
       isSessionLoading ||
       isPrefsLoading ||

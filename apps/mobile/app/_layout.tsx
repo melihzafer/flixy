@@ -49,6 +49,8 @@ LogBox.ignoreLogs([
   /Method writeAsStringAsync imported from "expo-file-system" is deprecated/,
 ]);
 
+const NEVER_PERSIST_QUERY_ROOTS = new Set(['auth', 'deck_exclusions', 'taste_signal', 'swipes']);
+
 function AppSideEffects() {
   useAuthDeepLink();
   useI18nLanguage();
@@ -107,11 +109,19 @@ export default function RootLayout() {
             persister: queryPersister,
             maxAge: 1000 * 60 * 60 * 24 * 7,
             dehydrateOptions: {
-              // Never persist the auth session: a stale cached value would flash
-              // the wrong screen (auth ⇄ home) on launch before the live session
-              // resolves. It must be re-derived fresh every cold start.
+              // Never persist:
+              // - 'auth': a stale cached session would flash the wrong screen
+              //   (auth ⇄ home) on launch before the live session resolves.
+              // - 'deck_exclusions': its data holds Sets, which JSON-serialize
+              //   to {} — a restored entry silently loses every exclusion AND
+              //   skips the loading gate, so the deck composes with already
+              //   swiped titles and visibly swaps them out seconds later.
+              // - 'taste_signal' / 'swipes': derived from fast local storage
+              //   reads (and time-bucketed quotas); persisting them only
+              //   resurrects stale values that trigger a deck recompose.
               shouldDehydrateQuery: (query) =>
-                query.queryKey[0] !== 'auth' && defaultShouldDehydrateQuery(query),
+                !NEVER_PERSIST_QUERY_ROOTS.has(String(query.queryKey[0])) &&
+                defaultShouldDehydrateQuery(query),
             },
           }}
         >
