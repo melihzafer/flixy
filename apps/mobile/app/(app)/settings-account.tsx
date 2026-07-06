@@ -5,6 +5,8 @@ import { SettingsRow } from '../../src/components/ListRow';
 import { SettingsPage } from '../../src/components/SettingsPage';
 import { useSignOut } from '../../src/features/auth/hooks';
 import { useSession } from '../../src/features/auth/useSession';
+import { PLAN_NAMES } from '../../src/features/entitlements/constants';
+import { useEntitlements } from '../../src/features/entitlements/hooks';
 import { events } from '../../src/features/telemetry/events';
 
 const WELCOME_ROUTE = '/(auth)/welcome' as const;
@@ -12,6 +14,7 @@ const WELCOME_ROUTE = '/(auth)/welcome' as const;
 export default function SettingsAccount() {
   const { t } = useTranslation();
   const { data: auth } = useSession();
+  const { data: entitlementSnapshot } = useEntitlements();
   const signOut = useSignOut();
   const email = auth?.user?.email ?? t('settingsPages.account.noEmail', 'No email connected');
   const connected =
@@ -49,7 +52,7 @@ export default function SettingsAccount() {
         value={
           auth?.isAnonymous
             ? t('profile.row.accountPreview', 'Preview')
-            : t('profile.row.accountFree', 'Free')
+            : PLAN_NAMES[entitlementSnapshot?.plan_id ?? 'free']
         }
       />
       <SettingsRow

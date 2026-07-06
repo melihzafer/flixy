@@ -65,16 +65,17 @@
     "skip": "Atla",
     "save": "Kaydet",
     "loading": "Yükleniyor…",
-    "retry": "Tekrar dene"
+    "retry": "Tekrar dene",
+    "comingSoon": "Çok yakında"
   },
   "deck": {
     "title": "Keşfet",
     "loadingTitle": "Bu akşamlık seçimler hazırlanıyor",
-    "loadingHint": "Deste oluşturuluyor\u2026",
+    "loadingHint": "Deste oluşturuluyor…",
     "errorTitle": "Bir şeyler ters gitti",
     "emptyTitle": "Hepsini gördün",
     "emptyHint": "Daha fazla öneri için filtreleri genişlet.",
-    "syncing": "{{count}} kaydırma eşitleniyor\u2026",
+    "syncing": "{{count}} kaydırma eşitleniyor…",
     "actionPass": "Geç",
     "actionAdd": "Ekle",
     "actionTop": "Öncelikli",
@@ -96,6 +97,39 @@
       "thisHour": "Bu saat",
       "today": "Bugün",
       "openWatchlist": "İzleme listesini aç"
+    },
+    "editMoodFilter": "Aktif ruh hali filtresini düzenle: {{mood}}",
+    "personalize": "Desteni kişiselleştir",
+    "personalizeA11y": "Desteni kişiselleştir",
+    "a11y": {
+      "pass": "Bu başlığı geç",
+      "seen": "Bu başlığı izlendi işaretle",
+      "save": "Bu başlığı kaydet",
+      "top": "Bu başlığı öne çıkar",
+      "info": "Başlık detaylarını aç",
+      "broadenFilters": "Deste sonuçlarını genişletmek için filtreleri aç",
+      "clearFilters": "Tüm filtreleri temizle ve tekrar dene",
+      "retryCatalogue": "Canlı kataloğu tekrar yükle",
+      "changeServices": "Seçili servisleri değiştirmek için filtreleri aç",
+      "openDeckFilters": "Deste filtrelerini aç"
+    },
+    "empty": {
+      "filteredTitle": "Filtrelerin çok dar.",
+      "filteredHint": "Ruh hali, yıl, tür veya servis filtrelerini temizlemeyi dene.",
+      "filteredPrimary": "Filtreleri genişlet",
+      "serviceTitle": "Bu servislerde eşleşme yok.",
+      "serviceHint": "Bölgenin katalog verisi var, ancak seçili servisler için henüz yok.",
+      "servicePrimary": "Servisleri değiştir",
+      "fallbackTitle": "Çevrimdışı seçimler",
+      "fallbackHint": "Sunucuya bağlanılamadı. İndirilen seçimlerde kaydırmaya devam edebilir veya tekrar deneyebilirsin.",
+      "fallbackPrimary": "Kataloğu dene",
+      "exhaustedTitle": "Bu desteyi tükettin.",
+      "exhaustedHint": "Kaydırmaların ve izleme listen tüm kartları eledi. Katalog yenilendikten sonra tekrar kontrol et.",
+      "defaultTitle": "Kaydıracak kalmadı.",
+      "defaultHint": "Filtrelerini genişlet veya izleme listeni kontrol et.",
+      "clearFilters": "Filtreleri temizle",
+      "filters": "Filtreler",
+      "reset": "Sıfırla"
     }
   },
   "watchlist": {
@@ -240,6 +274,19 @@
       "surreal": "Sürreal"
     }
   },
+  "trailers": {
+    "loadingHint": "Canlı fragman akışı hazırlanıyor…",
+    "errorTitle": "Fragmanlar yüklenemedi",
+    "errorHint": "Ağ bağlantını kontrol et ve tekrar dene.",
+    "playHint": "Fragmanı izlemek için dokun",
+    "title": "Fragmanlar",
+    "swipeUp": "Sonraki için yukarı kaydır",
+    "playA11y": "{{title}} fragmanını oynat",
+    "addWatchlistA11y": "İzleme listesine ekle",
+    "skipA11y": "Bu başlığı geç",
+    "shareA11y": "Bu başlığı paylaş",
+    "backA11y": "Keşfet'e dön"
+  },
   "search": {
     "title": "Ara",
     "placeholder": "Başlık ara…",
@@ -267,7 +314,44 @@
     "avatarLabel": "Profil fotoğrafı",
     "changeAvatar": "Fotoğrafı değiştir",
     "permissionDenied": "Fotoğraf izni verilmedi.",
-    "uploadFailed": "Bu görsel yüklenemedi. Daha küçük bir tane dene."
+    "uploadFailed": "Bu görsel yüklenemedi. Daha küçük bir tane dene.",
+    "anonymousBanner": {
+      "title": "Anonim gezinirken",
+      "body": "Ücretsiz hesap oluşturarak izleme listeni, zevk profilin ve kaydırma geçmişini cihazlar arasında kaydedebilirsin.",
+      "signUp": "Ücretsiz kayıt ol",
+      "signIn": "Giriş yap"
+    },
+    "stats": {
+      "saved": "Kaydedilen",
+      "seen": "İzlenen",
+      "swipes": "Kaydırma"
+    },
+    "section": {
+      "streaming": "Yayın servisleri",
+      "content": "İçerik tercihleri",
+      "notifications": "Bildirimler",
+      "account": "Hesap"
+    },
+    "row": {
+      "genres": "Favori türler",
+      "region": "Bölge",
+      "language": "Dil",
+      "recommendations": "Öneriler",
+      "streaming": "Yayın servisleri",
+      "streamingAdd": "Ekle",
+      "account": "Hesap yönetimi",
+      "accountFree": "Ücretsiz",
+      "accountPreview": "Önizleme",
+      "email": "E-posta",
+      "signOut": "Çıkış yap",
+      "signingOut": "Çıkış yapılıyor",
+      "signIn": "Giriş yap",
+      "signUpFree": "Ücretsiz kayıt ol",
+      "settings": "Ayarlar",
+      "editProfile": "Profili düzenle"
+    },
+    "on": "Açık",
+    "off": "Kapalı"
   },
   "settings": {
     "title": "Ayarlar",
@@ -285,7 +369,21 @@
     "about": "Hakkında",
     "version": "Uygulama sürümü",
     "privacy": "Gizlilik politikası",
-    "terms": "Kullanım şartları"
+    "terms": "Kullanım şartları",
+    "subtitle": "Sinemadan çıkmadan Flixy'yi ayarla.",
+    "profileSummary": "Profil özeti",
+    "profileSummarySub": "Görünen ad ve kullanıcı adını düzenle",
+    "regionSub": "Kullanılabilirlik için kullanılır",
+    "languageSub": "Uygulama dili",
+    "accountManagement": "Hesap yönetimi",
+    "accountManagementSub": "Giriş, parola, abonelik",
+    "promoCode": "Promo kodu",
+    "promoCodeSub": "Plan erişimi için kod kullan",
+    "notificationsSub": "Bildirim, e-posta ve sıklık",
+    "help": "Yardım & destek",
+    "signOut": "Çıkış yap",
+    "open": "Aç",
+    "read": "Oku"
   },
   "onboarding": {
     "welcomeTitle": "Flixy'ye hoş geldin",
@@ -327,5 +425,137 @@
     "adventure": "Macera",
     "history": "Tarih",
     "music": "Müzik"
+  },
+  "settingsPages": {
+    "editProfile": {
+      "title": "Profili düzenle",
+      "subtitle": "Flixy'de görünen ad, kullanıcı adı ve avatarı ayarla.",
+      "avatarHint": "Sinema avatarını seç",
+      "displayName": "Görünen ad",
+      "handle": "Kullanıcı adı",
+      "handleHint": "Küçük harf, rakam ve alt çizgi.",
+      "handleTaken": "Bu kullanıcı adı zaten alınmış.",
+      "handleInvalid": "3–20 karakter: küçük harf, rakam veya alt çizgi kullan.",
+      "nameRequired": "Görünen ad boş olamaz.",
+      "save": "Profili kaydet",
+      "saved": "Profil kaydedildi."
+    },
+    "account": {
+      "title": "Hesap",
+      "subtitle": "Giriş ve hesap erişimini yönet.",
+      "email": "E-posta",
+      "noEmail": "Bağlı e-posta yok",
+      "connected": "Bağlı hesaplar",
+      "subscription": "Abonelik",
+      "changePassword": "Parola değiştir",
+      "changePasswordValue": "Cihazda",
+      "logOut": "Çıkış yap",
+      "signingOut": "Çıkış yapılıyor"
+    },
+    "language": {
+      "title": "Dil",
+      "subtitle": "Uygulama metinlerini ve katalog tercihini kontrol eder."
+    },
+    "region": {
+      "title": "Bölge",
+      "subtitle": "Yayın kullanılabilirliği ve katalog alaka düzeyi için kullanılır."
+    },
+    "services": {
+      "title": "Yayın servisleri",
+      "subtitle": "Güncel tut ki Keşfet sadece izleyebileceğin başlıkları önersin.",
+      "save": "Servisleri kaydet",
+      "cancel": "İptal",
+      "saving": "Kaydediliyor…"
+    },
+    "genres": {
+      "title": "Favori türler",
+      "subtitle": "{{min}}-{{max}} arası seç. Keşfet yine de sürprizlere yer bırakır.",
+      "save": "Türleri kaydet",
+      "cancel": "İptal",
+      "saving": "Kaydediliyor…"
+    },
+    "notifications": {
+      "title": "Bildirimler",
+      "subtitle": "Flixy'yi varsayılan olarak sessiz tut. Sadece istediğin hatırlatıcıları aç.",
+      "push": "Anlık",
+      "pushSub": "Yeni kullanılabilirlik ve izleme listesi hatırlatıcıları.",
+      "email": "E-posta",
+      "emailComingSoon": "E-posta özetleri çok yakında.",
+      "frequencyComingSoon": "Özel sıklık, e-posta özetleriyle birlikte geliyor."
+    },
+    "privacy": {
+      "title": "Gizlilik",
+      "subtitle": "Zevk profilin önerilere yardım etmeli, seni şaşırtmamalı.",
+      "policy": "Gizlilik politikası",
+      "export": "Veriyi dışa aktar",
+      "exportSub": "Yerel dışa aktarma henüz etkin değil. Sıfırlayıp yeniden kurarak temiz bir başlangıç yapabilirsin.",
+      "delete": "Hesabı sil",
+      "deleteSub": "Profilini, izleme listeni, kaydırma geçmişini ve kayıtlı girişini bu cihazdan kaldırır.",
+      "deleting": "Siliniyor",
+      "deleteValue": "Bu cihazda sil",
+      "deleteTitle": "Hesabını silmek istediğine emin misin?",
+      "deleteBody": "Bu, profilini, izleme listeni, kaydırma geçmişini ve kayıtlı girişini bu cihazda kalıcı olarak siler. Bu işlem geri alınamaz.",
+      "deleteConfirm": "Sil"
+    },
+    "help": {
+      "title": "Yardım & destek",
+      "subtitle": "Mevcut sürüm için hızlı yanıtlar.",
+      "recs": "Öneriler nasıl çalışır",
+      "recsSub": "Geç, kaydet, öne çıkar ve izlendi eylemleri sonraki desteyi ayarlar.",
+      "recsValue": "Kaydırma sinyali",
+      "catalogue": "Katalog sorunları",
+      "catalogueSub": "Bir başlık eksik veya hatalıysa, başlık adını ve bölgeni desteğe gönder.",
+      "catalogueValue": "Bildir",
+      "support": "Destek"
+    },
+    "promo": {
+      "title": "Promo kodu",
+      "subtitle": "Flixy planını açmak veya uzatmak için kod kullan.",
+      "label": "Promo kodu",
+      "placeholder": "Kodunu gir",
+      "submit": "Kodu kullan",
+      "submitting": "Kullanılıyor",
+      "successTitle": "Hesabın açıldı",
+      "successBodyPerpetual": "Flixy {{plan}} artık süresiz aktif.",
+      "successBodyTimed": "Flixy {{plan}} {{days}} gün boyunca aktif.",
+      "successCta": "Tamam",
+      "anonymousHint": "Promo kodu kullanmak için önce hesap oluştur.",
+      "errors": {
+        "invalid_promo_code": "Bu kod geçerli değil. Kontrol edip tekrar dene.",
+        "promo_inactive": "Bu kod henüz aktif değil.",
+        "promo_expired": "Bu kodun süresi dolmuş.",
+        "promo_sold_out": "Bu kod kullanım sınırına ulaştı.",
+        "promo_already_redeemed": "Bu kodu zaten kullandın.",
+        "auth_required": "Promo kodu kullanmak için giriş yap.",
+        "promo_unavailable": "Promo kullanımı şu an kullanılamıyor. Daha sonra tekrar dene.",
+        "promo_unknown_error": "Bir şeyler ters gitti. Tekrar dene veya desteğe başvur."
+      }
+    }
+  },
+  "display": {
+    "nameNotSet": "Ad belirtilmemiş",
+    "anonymousPreview": "Anonim önizleme",
+    "addProfileDetails": "Profil detayları ekle",
+    "handleNotSet": "Kullanıcı adı belirtilmemiş",
+    "previewMode": "Önizleme modu",
+    "noAccountYet": "Henüz hesap yok",
+    "regionNotSet": "Bölge belirtilmemiş",
+    "languageNotSet": "Dil belirtilmemiş",
+    "noServices": "Servis seçilmemiş",
+    "noGenres": "Tür seçilmemiş"
+  },
+  "pwaInstall": {
+    "genericTitle": "Flixy'yi ana ekranına ekle",
+    "genericDescription": "Daha hızlı açılır, tam ekran çalışır ve normal bir uygulama gibi hissettirir.",
+    "installCta": "Ana ekrana ekle",
+    "laterCta": "Daha sonra",
+    "iosTitle": "iPhone'da ana ekrana ekle",
+    "iosDescription": "Safari'de paylaş butonuna dokun, ardından \"Ana Ekrana Ekle\" seçeneğini seç.",
+    "iosStep1": "Safari'de aç",
+    "iosStep2": "Paylaş ikonuna dokun",
+    "iosStep3": "\"Ana Ekrana Ekle\" seç",
+    "iosStep4": "Onayla",
+    "iosCta": "Anladım",
+    "close": "Kapat"
   }
 }

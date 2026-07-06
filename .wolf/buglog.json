@@ -3100,6 +3100,202 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-07-06T12:00:00+03:00"
+    },
+    {
+      "id": "bug-173",
+      "timestamp": "2026-07-06T14:02:26.225Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/app/(app)/settings.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:02:26.225Z"
+    },
+    {
+      "id": "bug-174",
+      "timestamp": "2026-07-06T14:02:47.292Z",
+      "error_message": "CSS fix: data",
+      "file": "apps/mobile/app/(app)/settings-account.tsx",
+      "root_cause": "data: auth → entitlementSnapshot",
+      "fix": "Changed data: auth → entitlementSnapshot",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:02:47.292Z"
+    },
+    {
+      "id": "bug-175",
+      "timestamp": "2026-07-06T14:02:51.269Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/app/(app)/settings-account.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:02:51.269Z"
+    },
+    {
+      "id": "bug-112",
+      "timestamp": "2026-07-06T00:00:00Z",
+      "error_message": "User redeemed a promo code (turned into Gold) but the account plan status still showed Free after redemption.",
+      "file": "apps/mobile/app/(app)/settings.tsx; apps/mobile/app/(app)/settings-account.tsx",
+      "root_cause": "The 'Account management' row in settings.tsx and the 'Subscription' row in settings-account.tsx both rendered a hardcoded t('profile.row.accountFree') 'Free' value for any non-anonymous user, instead of reading the resolved plan from useEntitlements(). The promo redemption RPC correctly created an active Gold user_subscriptions row and useEntitlements was invalidated, but these two UI surfaces never consulted the entitlement snapshot — so they always showed 'Free' regardless of the real plan.",
+      "fix": "Both rows now read PLAN_NAMES[entitlementSnapshot?.plan_id ?? 'free'] from useEntitlements(), while anon users still fall back to 'Preview'. settings-account.tsx gained the useEntitlements hook + PLAN_NAMES import.",
+      "tags": [
+        "entitlements",
+        "promo-code",
+        "subscription",
+        "settings",
+        "ui",
+        "plan-status",
+        "hardcoded-value"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T00:00:00Z"
+    },
+    {
+      "id": "bug-177",
+      "timestamp": "2026-07-06T14:13:32.644Z",
+      "error_message": "CSS fix: name",
+      "file": "apps/mobile/src/components/CustomTabBar.tsx",
+      "root_cause": "name: 'profile', Icon: UserRound, label: 'Profile' → 'profile', Icon: UserRound, labelKey: 'profile.title'",
+      "fix": "Changed name: 'profile', Icon: UserRound, label: 'Profile' → 'profile', Icon: UserRound, labelKey: 'profile.title'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:13:32.644Z"
+    },
+    {
+      "id": "bug-178",
+      "timestamp": "2026-07-06T14:16:10.917Z",
+      "error_message": "Incorrect value in code",
+      "file": "apps/mobile/src/i18n/locales/en.json",
+      "root_cause": "Had \"search\"",
+      "fix": "Changed to \"trailers\"",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "json"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:16:10.917Z"
+    },
+    {
+      "id": "bug-179",
+      "timestamp": "2026-07-06T14:16:43.564Z",
+      "error_message": "Incorrect value in code",
+      "file": "apps/mobile/app/(app)/trailers.tsx",
+      "root_cause": "Had `Play trailer for ${item.title}`",
+      "fix": "Changed to 'trailers.playA11y'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 5,
+      "last_seen": "2026-07-06T14:17:16.561Z"
+    },
+    {
+      "id": "bug-180",
+      "timestamp": "2026-07-06T14:16:50.808Z",
+      "error_message": "CSS fix: title",
+      "file": "apps/mobile/app/(app)/trailers.tsx",
+      "root_cause": "title: item.title → item.title,",
+      "fix": "Changed title: item.title → item.title,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:16:50.808Z"
+    },
+    {
+      "id": "bug-181",
+      "timestamp": "2026-07-06T14:17:20.993Z",
+      "error_message": "Wrong reference: Trailers should be t",
+      "file": "apps/mobile/app/(app)/trailers.tsx",
+      "root_cause": "Used \"Trailers\" instead of \"t\"",
+      "fix": "Changed Trailers → t",
+      "tags": [
+        "auto-detected",
+        "wrong-reference",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:17:20.993Z"
+    },
+    {
+      "id": "bug-182",
+      "timestamp": "2026-07-06T14:48:53.376Z",
+      "error_message": "Missing guard clause",
+      "file": "apps/mobile/src/hooks/usePwaInstallPrompt.ts",
+      "root_cause": "No early return/throw for edge case: cancelled || isStandaloneDisplayMode(",
+      "fix": "Added guard clause: if (cancelled || isStandaloneDisplayMode()",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:48:53.376Z"
+    },
+    {
+      "id": "bug-183",
+      "timestamp": "2026-07-06T14:51:44.412Z",
+      "error_message": "Wrong return value",
+      "file": "apps/mobile/src/lib/pwaInstallPlatform.ts",
+      "root_cause": "Was returning: false;",
+      "fix": "Now returns: true; // TEMP_DEBUG_FORCE_IOS",
+      "tags": [
+        "auto-detected",
+        "return-value",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-06T14:52:49.634Z"
+    },
+    {
+      "id": "bug-184",
+      "timestamp": "2026-07-06T14:52:59.650Z",
+      "error_message": "Significant refactor of ",
+      "file": "apps/mobile/src/hooks/usePwaInstallPrompt.ts",
+      "root_cause": "25 lines replaced/restructured",
+      "fix": "Rewrote 35→11 lines (25 removed)",
+      "tags": [
+        "auto-detected",
+        "refactor",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T14:52:59.650Z"
     }
   ]
 }

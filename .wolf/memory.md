@@ -8,6 +8,7 @@
 | 16:00 | Completed full e2e implementation pass | apps/mobile, supabase/migrations, PRODUCT.md, DESIGN.md | Push token migration, real cold-start swipes, anonymous preview nudge, search/watchlist/settings/detail hardening, mobile unit test, expanded Maestro flow; lint/typecheck/test/export pass | ~52000 |
 | 16:55 | Completed mobile failure audit and rebuild phases | apps/mobile, packages/shared, .wolf/buglog.json | OAuth callback hardening, catalogue diagnostics, shared auth/UI rows, profile/settings/watchlist trust fixes; typecheck/test/lint pass | ~62000 |
 | 17:45 | Planned brand-locked rebuild and crash/auth repair | docs/ui-images, .wolf/flixy-brand-rebuild-plan.md, plan.md | Reference images reviewed; likely stale query-cache deck crash identified; new tracked plan created | ~21000 |
+| 16:47 | Translated 165 missing Turkish i18n keys (deck a11y/empty, profile stats/section/row, settings, settingsPages, display) to match EN | apps/mobile/src/i18n/locales/tr.json | EN=448, TR=448 keys now equal; no stale keys in TR | ~12000 |
 | 17:51 | Completed brand reference audit and Flixv search | docs/ui-images, apps/mobile, apps/web, .wolf/flixy-brand-rebuild-plan.md | No Flixv found outside .wolf tracking; brand constraints recorded | ~17000 |
 | 17:52 | Hardened deck/catalogue crash path | apps/mobile/src/features/catalogue/hooks.ts, apps/mobile/src/features/deck/hooks.ts, packages/shared/src/composer.ts | Query cache bumped to v2; legacy title arrays normalize; composer guards invalid candidates; focused tests/typechecks pass | ~18000 |
 | 17:52 | Hardened Google OAuth/session return handling | apps/mobile/src/features/auth, apps/mobile/app.config.ts, .wolf/buglog.json | Browser results classified, Android deep-link session grace added, PKCE callback deduped, token-safe logs/tests added; auth tests/typecheck/lint pass | ~30000 |
@@ -594,3 +595,66 @@
 | 2026-07-06 | UX audit: fixed mobile safe-area top padding across all screens. Screen.tsx now floors paddingTop to Math.max(insets.top, 16) so 0-inset devices get breathing room. Wrapped 5 bypass states (trailers loading/error, title detail loading/error, watchlist-triage error) with Screen. | apps/mobile/src/components/Screen.tsx; apps/mobile/app/(app)/trailers.tsx; apps/mobile/app/(app)/title/[id].tsx; apps/mobile/app/(app)/watchlist-triage.tsx | typecheck + 111 tests + Biome green | ~12k |
 | 2026-07-06 | Replaced photo upload with curated 8-icon cinema avatar set. Created avatars.tsx (Film, Clapperboard, Camera, Ticket, Star, Award, Tv, Sparkles — each with unique color). Updated edit-profile with avatar grid picker, profile.tsx with AvatarIcon. Removed uploadLocalAvatar/uploadAvatar, ImagePicker/ImageManipulator/FileSystem imports from hooks. | apps/mobile/src/features/profile/avatars.tsx (new); apps/mobile/app/(app)/edit-profile.tsx; apps/mobile/app/(app)/(tabs)/profile.tsx; apps/mobile/src/features/profile/hooks.ts; apps/mobile/src/i18n/locales/en.json | typecheck + 111 tests + Biome green | ~22k |
 | 2026-07-06 | Fixed broken share button: replaced fragile Share.share() + stuck sharing state with ShareCardModal bottom sheet. Shows poster + title + meta + link preview + 'Share via apps' and 'Copy link' buttons. Applied to both title detail and trailers screens. | apps/mobile/src/components/ShareCardModal.tsx (new); apps/mobile/app/(app)/title/[id].tsx; apps/mobile/app/(app)/trailers.tsx | typecheck + 111 tests + Biome green | ~18k |
+
+## Session: 2026-07-06 17:00
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:02 | Edited apps/mobile/app/(app)/settings.tsx | added nullish coalescing | ~144 |
+| 17:02 | Edited apps/mobile/app/(app)/settings-account.tsx | added 2 import(s) | ~131 |
+| 17:02 | Edited apps/mobile/app/(app)/settings-account.tsx | 3→4 lines | ~47 |
+| 17:02 | Edited apps/mobile/app/(app)/settings-account.tsx | added nullish coalescing | ~79 |
+| 00:00 | Fixed promo code plan-status UI bug (showed Free after Gold redemption) | apps/mobile/app/(app)/settings.tsx, settings-account.tsx, .wolf/buglog.json, .wolf/cerebrum.md | Two hardcoded 'Free' rows now read useEntitlements() snapshot; typecheck + entitlements tests pass | ~14000 |
+
+## Session: 2026-07-06 17:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-06 17:06
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:13 | Edited apps/mobile/src/components/CustomTabBar.tsx | added 1 import(s) | ~247 |
+| 17:13 | Edited apps/mobile/src/components/CustomTabBar.tsx | 3→3 lines | ~39 |
+| 17:13 | Edited apps/mobile/src/components/CustomTabBar.tsx | inline fix | ~10 |
+| 17:16 | Edited apps/mobile/src/i18n/locales/en.json | 1→2 lines | ~9 |
+| 17:16 | Edited apps/mobile/src/i18n/locales/en.json | expanded (+12 lines) | ~145 |
+| 17:16 | Edited apps/mobile/app/(app)/trailers.tsx | "Play trailer for ${item.t" → "trailers.playA11y" | ~25 |
+| 17:16 | Edited apps/mobile/app/(app)/trailers.tsx | CSS: defaultValue | ~56 |
+| 17:16 | Edited apps/mobile/app/(app)/trailers.tsx | "Add to Watchlist" → "trailers.addWatchlistA11y" | ~26 |
+| 17:17 | Edited apps/mobile/app/(app)/trailers.tsx | "Skip" → "trailers.skipA11y" | ~23 |
+| 17:17 | Edited apps/mobile/app/(app)/trailers.tsx | "Share" → "trailers.shareA11y" | ~24 |
+| 17:17 | Edited apps/mobile/app/(app)/trailers.tsx | "Back to Discover" → "trailers.backA11y" | ~21 |
+| 17:17 | Edited apps/mobile/app/(app)/trailers.tsx | inline fix | ~13 |
+| 17:17 | Edited apps/mobile/app/(app)/trailers.tsx | inline fix | ~16 |
+
+## Session: 2026-07-06 17:26
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-06 17:27
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 17:33 | Created apps/mobile/src/lib/pwaInstall.ts | — | ~1045 |
+| 17:33 | Created apps/mobile/src/lib/__tests__/pwaInstall.test.ts | — | ~538 |
+| 17:33 | Created apps/mobile/src/hooks/usePwaInstallPrompt.ts | — | ~912 |
+| 17:34 | Created apps/mobile/src/components/PwaInstallModal.tsx | — | ~1822 |
+| 17:34 | Edited apps/mobile/src/components/PwaInstallModal.tsx | 12→10 lines | ~119 |
+| 17:34 | Edited apps/mobile/src/i18n/locales/en.json | expanded (+14 lines) | ~176 |
+| 17:34 | Edited apps/mobile/src/i18n/locales/tr.json | expanded (+14 lines) | ~189 |
+| 17:35 | Edited apps/mobile/app/_layout.tsx | added 1 import(s) | ~118 |
+| 17:35 | Edited apps/mobile/app/_layout.tsx | 4→5 lines | ~52 |
+| 17:36 | Created apps/mobile/src/lib/pwaInstall.ts | — | ~624 |
+| 17:36 | Created apps/mobile/src/lib/pwaInstallPlatform.ts | — | ~501 |
+| 17:36 | Edited apps/mobile/src/hooks/usePwaInstallPrompt.ts | reduced (-6 lines) | ~59 |
+| 17:48 | Edited apps/mobile/src/hooks/usePwaInstallPrompt.ts | expanded (+11 lines) | ~230 |
+| 17:49 | Edited apps/mobile/src/hooks/usePwaInstallPrompt.ts | expanded (+7 lines) | ~124 |
+| 17:49 | Edited apps/mobile/src/hooks/usePwaInstallPrompt.ts | 7→10 lines | ~86 |
+| 17:49 | Edited apps/mobile/src/hooks/usePwaInstallPrompt.ts | 8→11 lines | ~127 |
+| 17:51 | Edited apps/mobile/src/lib/pwaInstallPlatform.ts | modified isIosWebBrowser() | ~57 |
+| 17:52 | Edited apps/mobile/src/lib/pwaInstallPlatform.ts | modified isIosWebBrowser() | ~34 |
+| 17:52 | Edited apps/mobile/src/hooks/usePwaInstallPrompt.ts | reduced (-24 lines) | ~113 |
+| 17:54 | Built web-only PWA "Add to Home Screen" install modal (Chromium beforeinstallprompt + iOS manual instructions) | apps/mobile/src/lib/pwaInstall.ts, pwaInstallPlatform.ts, hooks/usePwaInstallPrompt.ts, components/PwaInstallModal.tsx, i18n en/tr, app/_layout.tsx | Verified live in Chrome dev server: Android/Chromium install+dismiss+cooldown and iOS manual-steps+dismiss all confirmed via synthetic beforeinstallprompt dispatch and forced-iOS render check; jest 115/115, tsc, biome clean | ~95000

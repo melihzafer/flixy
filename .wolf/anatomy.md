@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T09:02:12.944Z
-> Files: 31 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T14:52:59.637Z
+> Files: 12 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -155,8 +155,6 @@
 
 ## C:/Users/melih/.claude/projects/D--Projects-Flixy/memory/
 
-- `MEMORY.md` (~152 tok)
-- `project_flixy_localization.md` (~410 tok)
 
 ## UI_UX_Claude_Design/
 
@@ -169,7 +167,6 @@
 
 ## apps/mobile/
 
-- `app.config.ts` — Declares process (~1142 tok)
 
 ## apps/mobile/.expo/
 
@@ -179,30 +176,25 @@
 
 ## apps/mobile/app/
 
-- `_layout.tsx` — Holds the native splash screen until the auth session has actually resolved, (~1480 tok)
+- `_layout.tsx` — Holds the native splash screen until the auth session has actually resolved, (~1668 tok)
 
 ## apps/mobile/app/(app)/
 
-- `settings-language.tsx` — LANGUAGES (~629 tok)
-- `settings-promo.tsx` — Promo code redemption screen: Input + Button, success/error states (~2100 tok)
-- `trailers.tsx` — TrailersScreen (~5534 tok)
-- `watchlist-triage.tsx` — WatchlistTriageScreen (~3178 tok)
+- `settings-account.tsx` — WELCOME_ROUTE (~739 tok)
+- `settings.tsx` — Unified settings hub. Reachable from the Profile tab via the "Settings" row. (~3322 tok)
+- `trailers.tsx` — TrailersScreen (~6007 tok)
 
 ## apps/mobile/app/(app)/(tabs)/
 
-- `deck.tsx` — DeckScreen (~10378 tok)
-- `watchlist.tsx` — FILTERS (~6472 tok)
 
 ## apps/mobile/app/(app)/title/
 
-- `[id].tsx` — TitleDetail (~6068 tok)
 
 ## apps/mobile/app/(auth)/
 
 
 ## apps/mobile/app/(onboarding)/
 
-- `region.tsx` — REGIONS (~2012 tok)
 
 ## apps/mobile/e2e/
 
@@ -212,44 +204,32 @@
 
 ## apps/mobile/src/components/
 
+- `CustomTabBar.tsx` — TABS (~1214 tok)
+- `PwaInstallModal.tsx` — Web-only "Add to Home Screen" prompt. Renders nothing on the native APK (~1800 tok)
 
 ## apps/mobile/src/components/__tests__/
 
 
 ## apps/mobile/src/features/auth/
 
-- `useSession.ts` — Whether the persisted local session has been read from storage at least (~1175 tok)
 
 ## apps/mobile/src/features/auth/__tests__/
 
-- `useSession.test.ts` — Regression tests for the startup session hydration race (login flash). (~1381 tok)
 
 ## apps/mobile/src/features/catalogue/
 
-- `display.ts` — Exports TitleDisplay, toTitleDisplay (~676 tok)
-- `hooks.ts` — Origin country ISO-3166 alpha-2 filter (e.g. "TR", "US", "KR"). (~3579 tok)
 
 ## apps/mobile/src/features/catalogue/__tests__/
 
 
+## apps/mobile/src/features/deck/
+
+
 ## apps/mobile/src/features/entitlements/
 
-- `hooks.ts` — useEntitlements, useStartDiscoverySession, useRequireEntitlement, useRedeemPromoCode (~93 tok + promo)
-- `entitlementGates.ts` — Pure gate logic: requireEntitlement + normalizeEntitlements
-- `constants.ts` — FREE_ENTITLEMENTS, SAFE_FREE_SNAPSHOT, PLAN_NAMES, PLAN_CARDS
-- `types.ts` — PlanId, DiscoveryMode, FlixyEntitlements, EntitlementSnapshot, DiscoverySessionResult, PromoRedemption types
-- `promoCodes.ts` — Pure parseRedemptionResult: validates redeem_promo_code RPC JSONB into typed result
 
 ## apps/mobile/src/features/entitlements/__tests__/
 
-- `entitlementGates.test.ts` — Gate logic tests
-- `promoCodes.test.ts` — parseRedemptionResult unit tests (perpetual, timed, failure reasons, coercion)
-
-
-## apps/mobile/src/features/deck/
-
-- `FilterSheet.tsx` — MOODS — renders modal (~4610 tok)
-- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~7158 tok)
 
 ## apps/mobile/src/features/notifications/
 
@@ -271,8 +251,6 @@
 
 ## apps/mobile/src/features/swipe/
 
-- `hooks.ts` — High-level swipe API consumed by the deck screen. Wraps queue + haptics + (~3161 tok)
-- `SwipeCard.tsx` — Drag distance before the gesture hard-locks to one axis (no diagonals). (~5078 tok)
 
 ## apps/mobile/src/features/telemetry/
 
@@ -283,21 +261,26 @@
 ## apps/mobile/src/features/watchlist/__tests__/
 
 
+## apps/mobile/src/hooks/
+
+- `usePwaInstallPrompt.ts` — Wait for onboarding value before asking, per the UX research: never on the first paint. (~923 tok)
+
 ## apps/mobile/src/i18n/
 
-- `index.ts` — Exports ENABLED_LANGUAGES, EnabledLanguage, isLanguageEnabled (~562 tok)
 
 ## apps/mobile/src/i18n/locales/
 
-- `en.json` (~4953 tok)
-- `tr.json` (~2943 tok)
+- `en.json` (~5838 tok)
+- `tr.json` (~5953 tok)
 
 ## apps/mobile/src/lib/
 
-- `tmdb.ts` — Returns the current TMDB language tag (e.g. "tr-TR"). (~4414 tok)
+- `pwaInstall.ts` — PWA "Add to Home Screen" install-prompt persistence. (~624 tok)
+- `pwaInstallPlatform.ts` — Flixy ships as a native APK (Platform.OS === 'ios' | 'android') and as a (~506 tok)
 
 ## apps/mobile/src/lib/__tests__/
 
+- `pwaInstall.test.ts` — Declares store (~538 tok)
 
 ## apps/mobile/src/stores/
 
@@ -316,7 +299,6 @@
 
 ## docs/
 
-- `BRAINSTORM_FILTERS_FEATURES.md` — Brainstorming blueprint for advanced filtering and features (~1800 tok)
 
 ## packages/catalogue-ingest/
 
@@ -332,19 +314,12 @@
 
 ## packages/shared/src/
 
-- `composer.ts` — 7-layer deck composer (FSD section 3.5.3). Pure function: takes a candidate (~4708 tok)
-- `index.ts` (~132 tok)
-- `taste.ts` — Taste signal builder — turns raw swipe history into the weighted, (~1080 tok)
 
 ## packages/shared/src/__tests__/
 
-- `composer.test.ts` — Declares mkTitle (~4580 tok)
-- `taste.test.ts` — Declares NOW (~1215 tok)
 
 ## packages/shared/src/schemas/
 
-- `deck.ts` — A scored deck candidate plus the rule trace explaining why it landed in the (~1343 tok)
-- `title.ts` — Zod schemas: TitleKindSchema, OfferTypeSchema, TitleAvailabilitySchema, TitleSchema (~502 tok)
 
 ## packages/shared/src/schemas/__tests__/
 

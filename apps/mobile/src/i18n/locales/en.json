@@ -274,6 +274,19 @@
       "surreal": "Surreal"
     }
   },
+  "trailers": {
+    "loadingHint": "Curating live trailers feed…",
+    "errorTitle": "Couldn’t load trailers",
+    "errorHint": "Make sure your network is connected and try again.",
+    "playHint": "Tap to watch official trailer",
+    "title": "Trailers",
+    "swipeUp": "Swipe Up for Next",
+    "playA11y": "Play trailer for {{title}}",
+    "addWatchlistA11y": "Add to Watchlist",
+    "skipA11y": "Skip this title",
+    "shareA11y": "Share this title",
+    "backA11y": "Back to Discover"
+  },
   "search": {
     "title": "Search",
     "placeholder": "Search titles…",
@@ -530,5 +543,19 @@
     "adventure": "Adventure",
     "history": "History",
     "music": "Music"
+  },
+  "pwaInstall": {
+    "genericTitle": "Add Flixy to your home screen",
+    "genericDescription": "It opens faster, runs full-screen, and feels like a real app.",
+    "installCta": "Add to home screen",
+    "laterCta": "Not now",
+    "iosTitle": "Add to your Home Screen",
+    "iosDescription": "Tap the Share button in Safari, then choose \"Add to Home Screen\".",
+    "iosStep1": "Open in Safari",
+    "iosStep2": "Tap the Share icon",
+    "iosStep3": "Choose \"Add to Home Screen\"",
+    "iosStep4": "Confirm",
+    "iosCta": "Got it",
+    "close": "Close"
   }
 }

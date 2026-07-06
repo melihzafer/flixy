@@ -125,7 +125,7 @@ export default function Settings() {
           value={
             profile?.is_anonymous
               ? t('profile.row.accountPreview', 'Preview')
-              : t('profile.row.accountFree', 'Free')
+              : PLAN_NAMES[entitlementSnapshot?.plan_id ?? 'free']
           }
           subtitle={t('settings.accountManagementSub', 'Sign-in, password, subscription')}
           leading={<SettingsIcon Icon={Shield} />}

@@ -1,5 +1,6 @@
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Clapperboard, Heart, Search, UserRound } from 'lucide-react-native';
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -7,14 +8,15 @@ import { track } from '../../src/lib/analytics';
 import { colors, fonts } from '../../src/theme/tokens';
 
 const TABS = [
-  { name: 'deck', Icon: Clapperboard, label: 'Discover' },
-  { name: 'watchlist', Icon: Heart, label: 'Watchlist' },
-  { name: 'search', Icon: Search, label: 'Search' },
-  { name: 'profile', Icon: UserRound, label: 'Profile' },
+  { name: 'deck', Icon: Clapperboard, labelKey: 'deck.title' },
+  { name: 'watchlist', Icon: Heart, labelKey: 'watchlist.title' },
+  { name: 'search', Icon: Search, labelKey: 'search.title' },
+  { name: 'profile', Icon: UserRound, labelKey: 'profile.title' },
 ];
 
 export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
 
   return (
     <View
@@ -66,7 +68,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
             accessibilityRole="button"
             accessibilityState={isFocused ? { selected: true } : {}}
             accessibilityLabel={
-              (options.tabBarAccessibilityLabel as string | undefined) ?? tab.label
+              (options.tabBarAccessibilityLabel as string | undefined) ?? t(tab.labelKey)
             }
             testID={`${route.name}-button`}
             style={({ pressed }) => ({
@@ -114,7 +116,7 @@ export function CustomTabBar({ state, descriptors, navigation }: BottomTabBarPro
                   color: isFocused ? colors.accent : colors.textMuted,
                 }}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </Text>
             </View>
           </Pressable>

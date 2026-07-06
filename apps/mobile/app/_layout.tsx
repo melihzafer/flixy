@@ -21,7 +21,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect } from 'react';
-import { LogBox } from 'react-native';
+import { LogBox, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -29,6 +29,7 @@ import '../src/i18n';
 import '../src/theme/global.css';
 
 import { ErrorBoundary } from '../src/components/ErrorBoundary';
+import { PwaInstallModal } from '../src/components/PwaInstallModal';
 import { useAuthDeepLink } from '../src/features/auth/useAuthDeepLink';
 import { useI18nLanguage } from '../src/features/auth/useI18nLanguage';
 import { useSession } from '../src/features/auth/useSession';
@@ -124,6 +125,7 @@ export default function RootLayout() {
           <AppSideEffects />
           <SplashGate />
           <StatusBar style="light" />
+          {Platform.OS === 'web' ? <PwaInstallModal /> : null}
           <ErrorBoundary>
             <Stack
               screenOptions={{
