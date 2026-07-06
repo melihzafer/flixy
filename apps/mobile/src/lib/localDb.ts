@@ -51,6 +51,17 @@ export type LocalPreferences = {
   updated_at: string;
 };
 
+/**
+ * A card the user actually SAW at the top of the deck but did not swipe.
+ * Consumed by the deck exclusion builder as `shownLast7d` so the next app
+ * open leads with unseen titles instead of replaying yesterday's deck.
+ */
+export type LocalImpression = {
+  user_id: string;
+  title_id: string;
+  seen_at: string;
+};
+
 export type LocalCredential = {
   email: string;
   passwordHash: string;
@@ -64,6 +75,7 @@ const PREFS_KEY = 'flixy.local_db.prefs.v3';
 const PROFILE_KEY = 'flixy.local_db.profile.v3';
 const CREDENTIALS_KEY = 'flixy.local_db.credentials.v3';
 const TASTE_EVENTS_KEY = 'flixy.local_db.taste_events.v1';
+const IMPRESSIONS_KEY = 'flixy.local_db.impressions.v1';
 const LOCAL_PASSWORD_HASH_PREFIX = 'sha256:';
 
 const SCHEMA_VERSION = 1;
@@ -74,6 +86,7 @@ let prefsCache: Record<string, LocalPreferences> = {};
 let profileCache: Record<string, LocalProfile> = {};
 let credentialsCache: Record<string, LocalCredential> = {};
 let tasteEventsCache: LocalTasteEvent[] = [];
+let impressionsCache: LocalImpression[] = [];
 let dbHydrated = false;
 
 // Migration shim for versioned AsyncStorage JSON structures
@@ -119,6 +132,9 @@ async function hydrateDb() {
 
     const te = await AsyncStorage.getItem(TASTE_EVENTS_KEY);
     if (te) tasteEventsCache = parseVersionedData<LocalTasteEvent[]>(te, []);
+
+    const im = await AsyncStorage.getItem(IMPRESSIONS_KEY);
+    if (im) impressionsCache = parseVersionedData<LocalImpression[]>(im, []);
 
     dbHydrated = true;
   } catch (e) {
@@ -174,6 +190,33 @@ async function persistTasteEvents() {
   }
 }
 
+async function persistImpressions() {
+  try {
+    await AsyncStorage.setItem(IMPRESSIONS_KEY, wrapVersionedData(impressionsCache));
+  } catch (e) {
+    console.error('Failed to persist impressions', e);
+  }
+}
+
+/** Impressions older than this are useless to the deck cooldown — drop them. */
+const IMPRESSION_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
+/** Hard cap per user so the store can never grow unbounded. */
+const IMPRESSION_MAX_PER_USER = 500;
+
+function pruneImpressions(userId: string, nowMs: number): void {
+  const cutoff = nowMs - IMPRESSION_RETENTION_MS;
+  const kept: LocalImpression[] = [];
+  const mine: LocalImpression[] = [];
+  for (const imp of impressionsCache) {
+    const seenMs = new Date(imp.seen_at).getTime();
+    if (!Number.isFinite(seenMs) || seenMs < cutoff) continue;
+    if (imp.user_id === userId) mine.push(imp);
+    else kept.push(imp);
+  }
+  mine.sort((a, b) => new Date(b.seen_at).getTime() - new Date(a.seen_at).getTime());
+  impressionsCache = [...kept, ...mine.slice(0, IMPRESSION_MAX_PER_USER)];
+}
+
 async function hashLocalPassword(password: string): Promise<string> {
   const digest = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, password);
   return `${LOCAL_PASSWORD_HASH_PREFIX}${digest}`;
@@ -189,6 +232,7 @@ export const localDb = {
     prefsCache = {};
     profileCache = {};
     tasteEventsCache = [];
+    impressionsCache = [];
     dbHydrated = false;
   },
 
@@ -215,12 +259,14 @@ export const localDb = {
       if (id !== userId) nextProfiles[id] = profile;
     }
     const nextTasteEvents = tasteEventsCache.filter((event) => event.userId !== userId);
+    const nextImpressions = impressionsCache.filter((imp) => imp.user_id !== userId);
 
     watchlistCache = nextWatchlist;
     swipesCache = nextSwipes;
     prefsCache = nextPrefs;
     profileCache = nextProfiles;
     tasteEventsCache = nextTasteEvents;
+    impressionsCache = nextImpressions;
 
     await Promise.all([
       persistWatchlist(),
@@ -228,6 +274,7 @@ export const localDb = {
       persistPrefs(),
       persistProfiles(),
       persistTasteEvents(),
+      persistImpressions(),
     ]);
   },
 
@@ -281,6 +328,39 @@ export const localDb = {
     tasteEventsCache.push(event);
     await persistTasteEvents();
     return event;
+  },
+
+  /**
+   * Record that a title was dealt as the top card. Dedupes on
+   * (user, title) by refreshing seen_at; prunes to a 7-day window and a
+   * per-user cap on every write.
+   */
+  async recordImpression(userId: string, titleId: string, seenAt?: string): Promise<void> {
+    await hydrateDb();
+    const seen_at = seenAt ?? new Date().toISOString();
+    const existing = impressionsCache.find(
+      (imp) => imp.user_id === userId && imp.title_id === titleId,
+    );
+    if (existing) existing.seen_at = seen_at;
+    else impressionsCache.push({ user_id: userId, title_id: titleId, seen_at });
+    pruneImpressions(userId, new Date(seen_at).getTime());
+    await persistImpressions();
+  },
+
+  /** Title ids the user saw (top of deck) within the last `windowMs`. */
+  async getRecentImpressions(
+    userId: string,
+    windowMs: number = IMPRESSION_RETENTION_MS,
+  ): Promise<string[]> {
+    await hydrateDb();
+    const cutoff = Date.now() - windowMs;
+    const out: string[] = [];
+    for (const imp of impressionsCache) {
+      if (imp.user_id !== userId) continue;
+      const seenMs = new Date(imp.seen_at).getTime();
+      if (Number.isFinite(seenMs) && seenMs >= cutoff) out.push(imp.title_id);
+    }
+    return out;
   },
 
   async getWatchlist(userId: string): Promise<LocalWatchlistItem[]> {

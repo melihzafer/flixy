@@ -50,6 +50,43 @@ describe('localDb', () => {
     await localDb.clearUserMemory();
   });
 
+  describe('impressions', () => {
+    it('records and returns recent impressions per user', async () => {
+      await localDb.recordImpression('user-a', 'title-1');
+      await localDb.recordImpression('user-a', 'title-2');
+      await localDb.recordImpression('user-b', 'title-3');
+
+      const a = await localDb.getRecentImpressions('user-a');
+      const b = await localDb.getRecentImpressions('user-b');
+      expect(a.sort()).toEqual(['title-1', 'title-2']);
+      expect(b).toEqual(['title-3']);
+    });
+
+    it('dedupes repeat impressions of the same title', async () => {
+      await localDb.recordImpression('user-a', 'title-1');
+      await localDb.recordImpression('user-a', 'title-1');
+      const a = await localDb.getRecentImpressions('user-a');
+      expect(a).toEqual(['title-1']);
+    });
+
+    it('drops impressions older than the retention window', async () => {
+      const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
+      await localDb.recordImpression('user-a', 'old-title', eightDaysAgo);
+      // A fresh write triggers pruning of the stale entry.
+      await localDb.recordImpression('user-a', 'new-title');
+      const a = await localDb.getRecentImpressions('user-a');
+      expect(a).toEqual(['new-title']);
+    });
+
+    it('clearUser removes impressions for that user only', async () => {
+      await localDb.recordImpression('user-a', 'title-1');
+      await localDb.recordImpression('user-b', 'title-2');
+      await localDb.clearUser('user-a');
+      expect(await localDb.getRecentImpressions('user-a')).toEqual([]);
+      expect(await localDb.getRecentImpressions('user-b')).toEqual(['title-2']);
+    });
+  });
+
   describe('per-user isolation', () => {
     it('keeps watchlist data isolated to the owning user', async () => {
       const userA = 'user-a';

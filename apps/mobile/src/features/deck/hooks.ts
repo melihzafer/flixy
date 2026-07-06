@@ -146,6 +146,17 @@ const MAX_PAGES_PER_SESSION = 10;
 const DECK_PAGE_SIZE = 20;
 
 /**
+ * Per-app-launch salt mixed into the composer's userSeed. The composed feed is
+ * deliberately deterministic for a given set of inputs (deck stability
+ * invariant), which also meant two consecutive app opens produced the exact
+ * same deck — TMDB's popularity order barely moves hour to hour. Salting the
+ * jitter seed per launch keeps ordering rock-stable WITHIN a session while
+ * giving every fresh open a visibly re-shuffled arrangement of near-tied
+ * cards. Real preference gaps still dominate the jitter magnitude.
+ */
+const LAUNCH_SEED = `${Date.now().toString(36)}-${Math.floor(Math.random() * 0xffffffff).toString(36)}`;
+
+/**
  * Deck queries (FSD section 3.5). Wraps the catalogue query with the on-device
  * 7-layer composer and the user's current taste signal + cool-down sets.
  */
@@ -198,10 +209,43 @@ function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
   return { taste, isLoading: !!userId && isLoading };
 }
 
+/**
+ * Cross-device swipe history. The local DB only knows about swipes made on
+ * THIS device/browser — the same account on the APK and on the web otherwise
+ * re-serves everything the user already passed on the other platform.
+ * Best-effort: returns [] on any failure (local swipes still cover the
+ * current device).
+ */
+async function fetchRemoteSwipeRows(
+  userId: string,
+): Promise<Array<{ title_id: string; direction: string; occurred_at: string }>> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('swipes')
+      .select('title_id,direction,occurred_at')
+      .eq('user_id', userId)
+      .eq('is_undone', false)
+      .order('occurred_at', { ascending: false })
+      .limit(2000);
+    if (error) throw error;
+    return (data ?? []).map((row) => ({
+      title_id: String(row.title_id),
+      direction: String(row.direction),
+      occurred_at: String(row.occurred_at),
+    }));
+  } catch (error) {
+    logger.warn('remote swipe exclusions fetch failed; using local swipes only', {
+      message: (error as Error).message,
+    });
+    return [];
+  }
+}
+
 function useDeckExclusions() {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['deck_exclusions', userId],
     enabled: !!userId,
     queryFn: async () => {
@@ -214,30 +258,45 @@ function useDeckExclusions() {
       }
 
       const sinceMs = Date.now() - 7 * 24 * 60 * 60 * 1000;
-      const [swipes, watchlist] = await Promise.all([
+      // The watchlist read is NOT best-effort: composing a deck without it is
+      // exactly the "my watchlist keeps showing up" bug. Let the query throw
+      // and retry instead of silently proceeding with an empty exclusion set.
+      const [swipes, watchlist, remoteSwipes, impressions] = await Promise.all([
         localDb.getSwipes(userId),
         watchlistStore.getWatchlist(userId),
+        fetchRemoteSwipeRows(userId),
+        localDb.getRecentImpressions(userId),
       ]);
 
       const excludeIds = new Set<string>();
       const passedRecently = new Set<string>();
       const shownLast7d = new Set<string>();
 
-      for (const row of swipes) {
-        if (row.is_undone) continue;
-        const titleId = String(row.title_id);
-
+      const addSwipe = (titleId: string, direction: string, occurredAt: string) => {
         // Add to exclusions unconditionally to never repeat swiped titles
         excludeIds.add(titleId);
-
-        const occurredTime = new Date(row.occurred_at).getTime();
+        const occurredTime = new Date(occurredAt).getTime();
         if (occurredTime >= sinceMs) {
           shownLast7d.add(titleId);
-          if (row.direction === 'left') passedRecently.add(titleId);
+          if (direction === 'left') passedRecently.add(titleId);
         }
+      };
+
+      for (const row of swipes) {
+        if (row.is_undone) continue;
+        addSwipe(String(row.title_id), row.direction, row.occurred_at);
+      }
+      for (const row of remoteSwipes) {
+        addSwipe(row.title_id, row.direction, row.occurred_at);
       }
       for (const row of watchlist) {
         excludeIds.add(String(row.title_id));
+      }
+      // Cards the user SAW at the top of the deck but never swiped. These are
+      // not excluded — only cooldown-demoted by the composer — so a fresh app
+      // open leads with unseen titles instead of replaying yesterday's deck.
+      for (const titleId of impressions) {
+        shownLast7d.add(titleId);
       }
 
       return { excludeIds, passedRecently, shownLast7d };
@@ -250,7 +309,11 @@ function useDeckExclusions() {
       passedRecently: new Set<string>(),
       shownLast7d: new Set<string>(),
     },
+    /** True only when exclusions actually resolved — never compose without them. */
+    isReady: !userId || data != null,
     isLoading: !!userId && isLoading,
+    isError,
+    refetch,
   };
 }
 
@@ -366,7 +429,13 @@ export function useDeck(options: UseDeckOptions = {}) {
   const { data: prefs, isLoading: isPrefsLoading } = useUserPreferences();
   const { data: profile, isLoading: isProfileLoading } = useProfile();
   const { taste, isLoading: isTasteLoading } = useTasteSignal();
-  const { exclusions, isLoading: isExclusionsLoading } = useDeckExclusions();
+  const {
+    exclusions,
+    isReady: areExclusionsReady,
+    isLoading: isExclusionsLoading,
+    isError: isExclusionsError,
+    refetch: refetchExclusions,
+  } = useDeckExclusions();
   const moodFilter = moodToFilter(options.mood ?? null);
   const forYou = options.forYou === true;
   const [refillPage, setRefillPage] = useState(1);
@@ -470,7 +539,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       excludeIds: exclusions.excludeIds,
       targetSize: 50,
       recommendationScores,
-      userSeed: userId,
+      userSeed: userId ? `${userId}:${LAUNCH_SEED}` : null,
       vibes: forYou ? null : (options.vibes ?? null),
       preferredCountries: forYou ? null : options.country ? [options.country] : null,
       forYou,
@@ -487,7 +556,14 @@ export function useDeck(options: UseDeckOptions = {}) {
     ],
   );
 
+  // Never compose while exclusions/taste are still resolving: an early compose
+  // with empty exclusion sets leaks watchlist + already-swiped titles into the
+  // screen's append-only card queue, where no later recomposition can remove
+  // them. (This was the main "my watchlist keeps showing up" path.)
+  const canCompose = areExclusionsReady && !isTasteLoading;
+
   const primaryDeck = useMemo(() => {
+    if (!canCompose) return null;
     const pooledCandidates = candidatePoolKey === filterKey ? candidatePool : [];
     const firstPageCandidates = candidatesQuery.data?.titles ?? [];
     if (pooledCandidates.length === 0 && firstPageCandidates.length === 0) return null;
@@ -550,6 +626,7 @@ export function useDeck(options: UseDeckOptions = {}) {
     }
     return composeDeck({ ...composeOpts, candidates });
   }, [
+    canCompose,
     candidatePool,
     candidatePoolKey,
     candidatesQuery.data,
@@ -565,6 +642,7 @@ export function useDeck(options: UseDeckOptions = {}) {
   ]);
 
   const relaxedDeck = useMemo(() => {
+    if (!canCompose) return null;
     const pooledCandidates = candidatePoolKey === filterKey ? relaxedCandidatePool : [];
     const firstPageCandidates = relaxedCandidatesQuery.data?.titles ?? [];
     if (pooledCandidates.length === 0 && firstPageCandidates.length === 0) return null;
@@ -602,6 +680,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       candidates,
     });
   }, [
+    canCompose,
     candidatePoolKey,
     composeOpts,
     filterKey,
@@ -679,12 +758,19 @@ export function useDeck(options: UseDeckOptions = {}) {
   // again). Bounded by MAX_PAGES_PER_SESSION and gated on the current page
   // having settled so we advance one page at a time, never in a loop.
   useEffect(() => {
+    if (!canCompose) return;
     const remaining = deck?.cards.length ?? 0;
     if (remaining > DECK_REFILL_THRESHOLD) return;
     if (refillPage >= MAX_PAGES_PER_SESSION) return;
     if (candidatesQuery.isFetching || !candidatesQuery.data) return;
     setRefillPage((p) => p + 1);
-  }, [deck?.cards.length, refillPage, candidatesQuery.isFetching, candidatesQuery.data]);
+  }, [
+    canCompose,
+    deck?.cards.length,
+    refillPage,
+    candidatesQuery.isFetching,
+    candidatesQuery.data,
+  ]);
 
   useEffect(() => {
     if (!diagnostics) return;
@@ -703,8 +789,12 @@ export function useDeck(options: UseDeckOptions = {}) {
 
   const refetch = useCallback(async () => {
     setRefillPage(1);
-    await Promise.all([candidatesQuery.refetch(), relaxedCandidatesQuery.refetch()]);
-  }, [candidatesQuery, relaxedCandidatesQuery]);
+    await Promise.all([
+      candidatesQuery.refetch(),
+      relaxedCandidatesQuery.refetch(),
+      refetchExclusions(),
+    ]);
+  }, [candidatesQuery, relaxedCandidatesQuery, refetchExclusions]);
 
   return {
     deck,
@@ -715,6 +805,12 @@ export function useDeck(options: UseDeckOptions = {}) {
      * card stack should be rebuilt vs. kept stable across recompositions.
      */
     filterKey,
+    /**
+     * Live hard-exclusion set (swiped + watchlist title ids). The screen uses
+     * it to drop already-queued cards when a title becomes excluded
+     * mid-session (e.g. saved to the watchlist from search or title detail).
+     */
+    excludeIds: exclusions.excludeIds,
     isLoading:
       isSessionLoading ||
       isPrefsLoading ||
@@ -725,7 +821,9 @@ export function useDeck(options: UseDeckOptions = {}) {
       (hasStrictFilters &&
         (primaryDeck?.cards.length ?? 0) === 0 &&
         relaxedCandidatesQuery.isLoading),
-    isError: candidatesQuery.isError,
+    // A failed exclusions read is a deck-level error: composing without it
+    // would show the user their own watchlist and repeats.
+    isError: candidatesQuery.isError || isExclusionsError,
     error: candidatesQuery.error,
     refetch,
   };

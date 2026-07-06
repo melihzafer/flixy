@@ -658,3 +658,50 @@
 | 17:52 | Edited apps/mobile/src/lib/pwaInstallPlatform.ts | modified isIosWebBrowser() | ~34 |
 | 17:52 | Edited apps/mobile/src/hooks/usePwaInstallPrompt.ts | reduced (-24 lines) | ~113 |
 | 17:54 | Built web-only PWA "Add to Home Screen" install modal (Chromium beforeinstallprompt + iOS manual instructions) | apps/mobile/src/lib/pwaInstall.ts, pwaInstallPlatform.ts, hooks/usePwaInstallPrompt.ts, components/PwaInstallModal.tsx, i18n en/tr, app/_layout.tsx | Verified live in Chrome dev server: Android/Chromium install+dismiss+cooldown and iOS manual-steps+dismiss all confirmed via synthetic beforeinstallprompt dispatch and forced-iOS render check; jest 115/115, tsc, biome clean | ~95000
+
+## Session: 2026-07-06 21:45
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 21:51 | Edited packages/shared/src/composer.ts | expanded (+17 lines) | ~245 |
+| 21:51 | Edited packages/shared/src/composer.ts | added 1 condition(s) | ~820 |
+| 21:51 | Edited packages/shared/src/composer.ts | expanded (+8 lines) | ~371 |
+| 21:52 | Edited packages/shared/src/composer.ts | added 2 condition(s) | ~309 |
+| 21:52 | Edited packages/shared/src/__tests__/composer.test.ts | added optional chaining | ~1711 |
+| 21:53 | Edited apps/mobile/src/features/deck/hooks.ts | added error handling | ~967 |
+| 21:53 | Edited apps/mobile/src/features/deck/hooks.ts | 2→7 lines | ~63 |
+| 21:53 | Edited apps/mobile/src/features/deck/hooks.ts | added 1 condition(s) | ~194 |
+| 21:54 | Edited apps/mobile/src/features/deck/hooks.ts | added 1 condition(s) | ~171 |
+| 21:54 | Edited apps/mobile/src/features/deck/hooks.ts | 12→13 lines | ~67 |
+| 21:54 | Edited apps/mobile/src/features/deck/hooks.ts | added 1 condition(s) | ~116 |
+| 21:54 | Edited apps/mobile/src/features/deck/hooks.ts | expanded (+8 lines) | ~320 |
+| 21:54 | Edited apps/mobile/src/features/deck/hooks.ts | 2→2 lines | ~29 |
+| 21:54 | Edited apps/mobile/src/features/deck/hooks.ts | 6→7 lines | ~56 |
+| 21:54 | Edited apps/mobile/src/features/deck/hooks.ts | 6→7 lines | ~53 |
+| 21:54 | Edited apps/mobile/src/features/deck/hooks.ts | 4→8 lines | ~76 |
+| 21:55 | Created apps/mobile/src/features/deck/queueFilter.ts | — | ~352 |
+| 21:55 | Created apps/mobile/src/features/deck/__tests__/queueFilter.test.ts | — | ~661 |
+| 21:55 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | added 1 import(s) | ~46 |
+| 21:55 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | 7→7 lines | ~52 |
+| 21:55 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | 5→9 lines | ~170 |
+| 21:55 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | CSS: set | ~140 |
+| 21:55 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | 2→3 lines | ~30 |
+| 21:55 | Edited apps/mobile/src/features/watchlist/hooks.ts | modified useInvalidate() | ~115 |
+| 22:06 | Edited apps/mobile/src/lib/localDb.ts | 2→3 lines | ~46 |
+| 22:06 | Edited apps/mobile/src/lib/localDb.ts | 7→8 lines | ~105 |
+| 22:06 | Edited apps/mobile/src/lib/localDb.ts | expanded (+11 lines) | ~102 |
+| 22:06 | Edited apps/mobile/src/lib/localDb.ts | added 1 condition(s) | ~86 |
+| 22:06 | Edited apps/mobile/src/lib/localDb.ts | added 2 condition(s) | ~357 |
+| 22:06 | Edited apps/mobile/src/lib/localDb.ts | 5→6 lines | ~36 |
+| 22:06 | Edited apps/mobile/src/lib/localDb.ts | 16→19 lines | ~164 |
+| 22:07 | Edited apps/mobile/src/lib/localDb.ts | added nullish coalescing | ~373 |
+| 22:07 | Edited apps/mobile/src/features/deck/hooks.ts | 9→10 lines | ~158 |
+| 22:07 | Edited apps/mobile/src/features/deck/hooks.ts | modified for() | ~135 |
+| 22:07 | Edited apps/mobile/src/features/deck/hooks.ts | expanded (+11 lines) | ~210 |
+| 22:07 | Edited apps/mobile/src/features/deck/hooks.ts | 3→3 lines | ~32 |
+| 22:07 | Edited packages/shared/src/composer.ts | modified userJitter() | ~191 |
+| 22:07 | Edited apps/mobile/app/_layout.tsx | expanded (+8 lines) | ~281 |
+| 22:07 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | added 1 import(s) | ~58 |
+| 22:08 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | added optional chaining | ~284 |
+| 22:08 | Edited apps/mobile/src/lib/__tests__/localDb.test.ts | expanded (+37 lines) | ~516 |
+| 22:09 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | CSS: screen | ~174 |

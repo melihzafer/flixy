@@ -52,6 +52,23 @@ const MAX_CONSECUTIVE_SAME_GENRE = 3;
 const DEFAULT_TARGET_SIZE = 50;
 
 /**
+ * Disliked-genre detection. A genre counts as disliked when its decayed
+ * negative weight reaches ~3 recent passes AND clearly dominates whatever
+ * positive signal the genre has. Because taste weights are time-decayed
+ * (30-day e-folding), a dislike ages out on its own if the user stops
+ * passing the genre — this is a rolling verdict, not a permanent ban.
+ */
+export const DISLIKED_GENRE_MIN_NEGATIVE = 2.5;
+export const DISLIKED_GENRE_DOMINANCE = 2;
+/**
+ * Evidence mass (decayed positive+negative weight across a title's genres) at
+ * which the personalization score reaches full confidence. Keeps one stray
+ * pass from nuking a genre while letting 3+ consistent signals act at full
+ * strength.
+ */
+const AFFINITY_EVIDENCE_SATURATION = 5;
+
+/**
  * Feed mix slot pattern, repeated every 10 positions: 6 personalized,
  * 2 trending, 1 fresh (new release), 1 exploration — i.e. 60/20/10/10.
  * Unlisted positions are personalized. When a slice has nothing left the slot
@@ -142,6 +159,49 @@ function popularityScore(t: Title): number {
   return Math.min(1, t.popularity / 1000);
 }
 
+/**
+ * Per-title genre affinity in [-1, 1] plus the evidence mass behind it.
+ * Each genre contributes (pos - neg) / (pos + neg + 1) — a scale-free ratio —
+ * so the verdict on a genre does NOT dilute as unrelated swipes accumulate.
+ * (The previous formula divided by totalSwipes, which meant 10 passes on
+ * horror became invisible once the user had swiped 100 other titles, and
+ * popular horror kept resurfacing. That was the "categories I pass keep
+ * showing up" bug.)
+ */
+function genreAffinity(t: Title, taste: TasteSignal): { affinity: number; evidence: number } {
+  if (t.genres.length === 0) return { affinity: 0, evidence: 0 };
+  let sum = 0;
+  let evidence = 0;
+  for (const g of t.genres) {
+    const pos = taste.positiveGenres[g] ?? 0;
+    const neg = taste.negativeGenres[g] ?? 0;
+    sum += (pos - neg) / (pos + neg + 1);
+    evidence += pos + neg;
+  }
+  return { affinity: sum / t.genres.length, evidence };
+}
+
+/** Genres whose decayed negative weight dominates their positive weight. */
+export function dislikedGenres(taste: TasteSignal): Set<string> {
+  const out = new Set<string>();
+  for (const [genre, neg] of Object.entries(taste.negativeGenres)) {
+    const pos = taste.positiveGenres[genre] ?? 0;
+    if (neg >= DISLIKED_GENRE_MIN_NEGATIVE && neg > DISLIKED_GENRE_DOMINANCE * pos) {
+      out.add(genre);
+    }
+  }
+  return out;
+}
+
+/**
+ * A title is "disliked" only when EVERY genre it carries is disliked — a
+ * horror-comedy survives for a user who hates horror but loves comedy; the
+ * affinity score handles its ranking instead.
+ */
+function isDislikedTitle(t: Title, disliked: Set<string>): boolean {
+  return t.genres.length > 0 && t.genres.every((g) => disliked.has(g));
+}
+
 function personalizationScore(t: Title, taste: TasteSignal, recommendationScore?: number): number {
   let baseScore = 0;
   // Score whenever ANY genre signal exists — a cold-start prior (onboarding
@@ -152,21 +212,13 @@ function personalizationScore(t: Title, taste: TasteSignal, recommendationScore?
     Object.keys(taste.positiveGenres).length > 0 ||
     Object.keys(taste.negativeGenres).length > 0;
   if (hasSignal) {
-    let pos = 0;
-    let neg = 0;
-    for (const g of t.genres) {
-      pos += taste.positiveGenres[g] ?? 0;
-      neg += taste.negativeGenres[g] ?? 0;
-    }
-    // Normalize by total swipes so early swipes don't overpower, and clamp so
-    // an extreme genre profile can never fully drown popularity/availability.
-    baseScore = (pos - neg) / Math.max(1, taste.totalSwipes);
-    // Strong consistent dislike must matter even while cold-start weighting
-    // keeps the personalization weight low: amplify firmly negative genre
-    // signals so a repeatedly-passed genre drops below neutral titles instead
-    // of being carried by popularity.
-    if (baseScore < -0.5) baseScore *= 3;
-    baseScore = Math.max(-2, Math.min(2, baseScore));
+    // Scale-free affinity (repeated passes on a genre stay strong no matter
+    // how much unrelated history exists), gated by evidence so a single
+    // accidental swipe moves the score only slightly. Bounded to [-2, 2] so
+    // an extreme profile can never fully drown popularity/availability.
+    const { affinity, evidence } = genreAffinity(t, taste);
+    const confidence = Math.min(1, evidence / AFFINITY_EVIDENCE_SATURATION);
+    baseScore = 2 * affinity * confidence;
   }
 
   if (recommendationScore != null) {
@@ -262,9 +314,19 @@ function hashString(input: string): number {
   return hash >>> 0;
 }
 
+/**
+ * Deterministic per-(seed, title) jitter in [0, USER_JITTER_SCALE). Sized to
+ * re-shuffle near-tied cards (TMDB page-1 titles frequently clamp to the same
+ * popularity score) without ever overturning a real preference gap —
+ * personalization/availability/cooldown contributions are all ≥ 0.1.
+ * The seed carries a per-app-launch salt upstream, so each open deals a
+ * visibly different arrangement while staying stable within the session.
+ */
+const USER_JITTER_SCALE = 0.05;
+
 function userJitter(titleId: string, userSeed?: string | null): number {
   if (!userSeed) return 0;
-  return (hashString(`${userSeed}:${titleId}`) / 0xffffffff) * 0.015;
+  return (hashString(`${userSeed}:${titleId}`) / 0xffffffff) * USER_JITTER_SCALE;
 }
 
 type ScoredCandidate = { title: Title; trace: RuleTrace };
@@ -310,17 +372,25 @@ function mixFeed(scored: ScoredCandidate[], targetSize: number, now: Date): Scor
   if (targetCount === 0) return [];
 
   const byId = (a: ScoredCandidate, b: ScoredCandidate) => (a.title.id < b.title.id ? -1 : 1);
-  const byPopularity = [...scored].sort(
+  // Trending/fresh/exploration slots must not become a side door for genres
+  // the user is actively rejecting: a disliked-genre blockbuster used to walk
+  // straight back in through the popularity-sorted trending pool (2 of every
+  // 10 cards), and exploration sampled the BOTTOM of the score order — which
+  // is exactly where disliked titles sit. Restrict all three slices to
+  // non-negative personalization; the personalized backbone still carries
+  // whatever the pool has left.
+  const tasteEligible = scored.filter((c) => c.trace.personalization >= 0);
+  const byPopularity = [...tasteEligible].sort(
     (a, b) => b.title.popularity - a.title.popularity || byId(a, b),
   );
   const currentYear = now.getUTCFullYear();
   const freshPool = byPopularity.filter(
     (c) => c.title.releaseYear != null && c.title.releaseYear >= currentYear - FRESH_WINDOW_YEARS,
   );
-  // Exploration samples the lower half of the score order — titles the user
-  // would otherwise never reach — to break filter bubbles.
+  // Exploration samples the lower half of the (taste-eligible) score order —
+  // titles the user would otherwise never reach — to break filter bubbles.
   const explorationPool = strideSample(
-    scored.slice(Math.floor(scored.length / 2)),
+    tasteEligible.slice(Math.floor(tasteEligible.length / 2)),
     Math.max(1, Math.ceil(targetCount * EXPLORATION_RATIO)),
   );
 
@@ -395,7 +465,7 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
 
   // Hard exclude (Layer 1 residue): seen, watchlist, recent passes' hard list.
   const exclusions: Record<string, string[]> = {};
-  const eligible = candidates.filter((t) => {
+  let eligible = candidates.filter((t) => {
     if (!excludeIds.has(t.id)) return true;
     const reasons = ['exclude_ids'];
     if (passedRecently.has(t.id)) reasons.push('passed_recently');
@@ -403,6 +473,20 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
     exclusions[t.id] = reasons;
     return false;
   });
+
+  // For You hard suppression: a title made ONLY of genres the user keeps
+  // passing must not resurface at all — demotion is not enough when the
+  // catalogue keeps serving popular titles from that genre. Only applied in
+  // For You mode; with explicit manual filters the user asked for those
+  // genres, so demotion (personalization score) is the right tool there.
+  const disliked = forYou ? dislikedGenres(taste) : null;
+  if (disliked && disliked.size > 0) {
+    eligible = eligible.filter((t) => {
+      if (!isDislikedTitle(t, disliked)) return true;
+      exclusions[t.id] = ['disliked_genres'];
+      return false;
+    });
+  }
 
   const scored: Array<{ title: Title; trace: RuleTrace }> = eligible.map((t) => {
     const personalization = personalizationScore(t, taste, recommendationScores[t.id]);
