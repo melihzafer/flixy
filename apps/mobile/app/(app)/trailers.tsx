@@ -339,6 +339,11 @@ export default function TrailersScreen() {
                       rel: 0,
                       modestbranding: 1,
                       iv_load_policy: 3,
+                      mute: 1,
+                    }}
+                    webViewProps={{
+                      allowsInlineMediaPlayback: true,
+                      mediaPlaybackRequiresUserAction: false,
                     }}
                     onChangeState={(state: PLAYER_STATES) => {
                       if (state === PLAYER_STATES.PLAYING) {
