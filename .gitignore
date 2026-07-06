@@ -50,3 +50,6 @@ for_ADMIN.txt
 *_SECRETS.*
 secrets.txt
 *.apk
+
+# OpenWolf session-local hook state (rewritten every turn; not shared knowledge)
+.wolf/hooks/_session.json
