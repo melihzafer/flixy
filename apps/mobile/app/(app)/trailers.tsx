@@ -5,7 +5,14 @@ import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronLeft, Heart, Share2, Volume2, VolumeX, X } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, View, type ViewToken, useWindowDimensions } from 'react-native';
+import {
+  FlatList,
+  Platform,
+  Pressable,
+  View,
+  type ViewToken,
+  useWindowDimensions,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 
@@ -164,6 +171,17 @@ export default function TrailersScreen() {
     }),
     [height],
   );
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && titles && titles[activeIndex]) {
+      const activeTitle = titles[activeIndex];
+      if (activeTitle?.trailerKey && !watchedTitleIdsRef.current.has(activeTitle.id)) {
+        watchedTitleIdsRef.current.add(activeTitle.id);
+        void recordTasteEvent('watch_trailer', activeTitle);
+        events.trailerFeedStarted({ titleId: activeTitle.id });
+      }
+    }
+  }, [activeIndex, titles, recordTasteEvent]);
 
   if (isLoading) {
     return (
@@ -325,43 +343,56 @@ export default function TrailersScreen() {
                     backgroundColor: 'transparent',
                   }}
                 >
-                  <YoutubePlayer
-                    videoId={item.trailerKey}
-                    height={height}
-                    width={playerWidth}
-                    play={showPlayer}
-                    mute={muted}
-                    forceAndroidAutoplay
-                    initialPlayerParams={{
-                      preventFullScreen: true,
-                      controls: false,
-                      cc_load_policy: 0,
-                      rel: 0,
-                      modestbranding: 1,
-                      iv_load_policy: 3,
-                      mute: 1,
-                    }}
-                    webViewProps={{
-                      allowsInlineMediaPlayback: true,
-                      mediaPlaybackRequiresUserAction: false,
-                    }}
-                    onChangeState={(state: PLAYER_STATES) => {
-                      if (state === PLAYER_STATES.PLAYING) {
-                        if (!watchedTitleIdsRef.current.has(item.id)) {
-                          watchedTitleIdsRef.current.add(item.id);
-                          void recordTasteEvent('watch_trailer', item);
-                          events.trailerFeedStarted({ titleId: item.id });
+                  {Platform.OS === 'web' ? (
+                    <iframe
+                      src={`https://www.youtube.com/embed/${item.trailerKey}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&rel=0&modestbranding=1&iv_load_policy=3&enablejsapi=1`}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                      }}
+                      allow="autoplay; encrypted-media"
+                      title={item.title}
+                    />
+                  ) : (
+                    <YoutubePlayer
+                      videoId={item.trailerKey}
+                      height={height}
+                      width={playerWidth}
+                      play={showPlayer}
+                      mute={muted}
+                      forceAndroidAutoplay
+                      initialPlayerParams={{
+                        preventFullScreen: true,
+                        controls: false,
+                        cc_load_policy: 0,
+                        rel: 0,
+                        modestbranding: 1,
+                        iv_load_policy: 3,
+                        mute: 1,
+                      }}
+                      webViewProps={{
+                        allowsInlineMediaPlayback: true,
+                        mediaPlaybackRequiresUserAction: false,
+                      }}
+                      onChangeState={(state: PLAYER_STATES) => {
+                        if (state === PLAYER_STATES.PLAYING) {
+                          if (!watchedTitleIdsRef.current.has(item.id)) {
+                            watchedTitleIdsRef.current.add(item.id);
+                            void recordTasteEvent('watch_trailer', item);
+                            events.trailerFeedStarted({ titleId: item.id });
+                          }
+                        } else if (state === PLAYER_STATES.ENDED) {
+                          advanceFeed(index);
                         }
-                      } else if (state === PLAYER_STATES.ENDED) {
-                        advanceFeed(index);
-                      }
-                    }}
-                    onError={(e: unknown) => {
-                      setErroredIds((prev) => ({ ...prev, [item.id]: true }));
-                      events.trailerFeedError({ titleId: item.id, error: String(e) });
-                    }}
-                    webViewStyle={{ backgroundColor: 'transparent' }}
-                  />
+                      }}
+                      onError={(e: unknown) => {
+                        setErroredIds((prev) => ({ ...prev, [item.id]: true }));
+                        events.trailerFeedError({ titleId: item.id, error: String(e) });
+                      }}
+                      webViewStyle={{ backgroundColor: 'transparent' }}
+                    />
+                  )}
                 </View>
               ) : null}
 
