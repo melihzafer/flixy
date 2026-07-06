@@ -245,6 +245,26 @@ describe('localDb', () => {
       await expect(localDb.getTasteEvents('user-a')).resolves.toHaveLength(1);
     });
 
+    it('caps stored events per user, dropping the oldest first', async () => {
+      const base = new Date('2026-07-06T00:00:00.000Z').getTime();
+      for (let i = 0; i < 401; i++) {
+        await localDb.recordTasteEvent({
+          userId: 'user-a',
+          itemId: `title-${i}`,
+          itemType: 'movie',
+          genres: ['drama'],
+          eventType: 'open_details',
+          occurredAt: new Date(base + i * 60_000).toISOString(),
+        });
+      }
+
+      const events = await localDb.getTasteEvents('user-a');
+      expect(events).toHaveLength(400);
+      // The very first (oldest) event was pruned; the newest survives.
+      expect(events.some((e) => e.itemId === 'title-0')).toBe(false);
+      expect(events.some((e) => e.itemId === 'title-400')).toBe(true);
+    });
+
     it('survives an in-memory reset and rehydrates from AsyncStorage', async () => {
       await localDb.recordTasteEvent({
         userId: 'user-a',

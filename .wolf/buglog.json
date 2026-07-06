@@ -2,6 +2,27 @@
   "version": 1,
   "bugs": [
     {
+      "id": "bug-112",
+      "timestamp": "2026-07-06T00:00:00Z",
+      "error_message": "Trailers handleLike fired events.titleShared (mislabeled analytics: a Like is not a share, polluting PostHog share metrics); taste-event system lacked share/search signals and had unbounded AsyncStorage growth.",
+      "file": "apps/mobile/app/(app)/trailers.tsx; packages/shared/src/schemas/tasteEvent.ts; packages/shared/src/taste.ts; apps/mobile/src/lib/localDb.ts",
+      "root_cause": "Copy-paste analytics call in handleLike; taste-event enum only covered open_details/watch_trailer; recordTasteEvent had dedup but no retention cap.",
+      "fix": "Removed the mislabeled call (recordSwipe already emits swipe_committed); added share (+2.5) and search_match_open (+1.5) event types with pass-override semantics; MAX_TASTE_EVENTS_PER_USER=400 prune (oldest-first) in recordTasteEvent.",
+      "tags": [
+        "taste-events",
+        "analytics",
+        "share",
+        "search",
+        "storage-cap",
+        "recommendations"
+      ],
+      "related_bugs": [
+        "bug-111"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T00:00:00Z"
+    },
+    {
       "id": "bug-111",
       "timestamp": "2026-07-06T00:00:00Z",
       "error_message": "Taste signal counted 'down' (Seen) swipes as dislikes, poisoning the genre profile of users who honestly mark watched titles; all directions weighed equally; no time decay; onboarding genre selection unused in For You (pure popularity on cold start); strong repeated passes on a genre barely affected ranking during cold start.",

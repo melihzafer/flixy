@@ -168,6 +168,75 @@ describe('buildTasteSignal', () => {
     expect(taste.positiveGenres.horror).toBeUndefined();
     expect(taste.negativeGenres.horror).toBeGreaterThan(0);
   });
+
+  it('weights shares above trailer watches and search opens above detail opens', () => {
+    const taste = buildTasteSignal([], {
+      now: NOW,
+      tasteEvents: [
+        {
+          eventId: 'share',
+          itemId: 'shared-title',
+          itemType: 'movie',
+          genres: ['comedy'],
+          occurredAt: daysAgo(0),
+          eventType: 'share',
+        },
+        {
+          eventId: 'search',
+          itemId: 'searched-title',
+          itemType: 'tv',
+          genres: ['mystery'],
+          occurredAt: daysAgo(0),
+          eventType: 'search_match_open',
+        },
+      ],
+    });
+
+    // save (+3) > share (+2.5) > trailer (+2) > search open (+1.5) > detail (+1)
+    expect(taste.positiveGenres.comedy).toBeCloseTo(2.5);
+    expect(taste.positiveGenres.mystery).toBeCloseTo(1.5);
+  });
+
+  it('lets a later share override an earlier pass on the same item', () => {
+    const taste = buildTasteSignal(
+      [{ direction: 'left', itemId: 'title', genres: ['horror'], occurredAt: daysAgo(2) }],
+      {
+        now: NOW,
+        tasteEvents: [
+          {
+            eventId: 'share-after-pass',
+            itemId: 'title',
+            itemType: 'movie',
+            genres: ['horror'],
+            occurredAt: daysAgo(0),
+            eventType: 'share',
+          },
+        ],
+      },
+    );
+    expect(taste.positiveGenres.horror).toBeCloseTo(2.5);
+  });
+
+  it('skips a search open that happened before the decisive pass', () => {
+    const taste = buildTasteSignal(
+      [{ direction: 'left', itemId: 'title', genres: ['horror'], occurredAt: daysAgo(0) }],
+      {
+        now: NOW,
+        tasteEvents: [
+          {
+            eventId: 'search-before-pass',
+            itemId: 'title',
+            itemType: 'movie',
+            genres: ['horror'],
+            occurredAt: daysAgo(3),
+            eventType: 'search_match_open',
+          },
+        ],
+      },
+    );
+    expect(taste.positiveGenres.horror).toBeUndefined();
+    expect(taste.negativeGenres.horror).toBeGreaterThan(0);
+  });
 });
 
 describe('withColdStartPrior', () => {

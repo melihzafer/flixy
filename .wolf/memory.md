@@ -407,7 +407,6 @@
 | 15:10 | Edited apps/mobile/app/(app)/title/[id].tsx | inline fix | ~23 |
 | 15:10 | Edited apps/mobile/app/(app)/title/[id].tsx | 2→1 lines | ~16 |
 | 15:10 | Edited apps/mobile/app/(app)/title/[id].tsx | 2→1 lines | ~10 |
-<<<<<<< Updated upstream
 
 ## Session: 2026-06-20 15:45
 
@@ -419,7 +418,6 @@
 | 15:49 | Edited apps/mobile/app.config.ts | 5→3 lines | ~83 |
 | 16:10 | Diagnosed release-APK "couldn't connect to server": EAS builds shipped empty extra.tmdbApiKey/supabaseUrl because .env.local is gitignored and build profiles did not declare env vars. Added environment mapping to eas.json, build-time guard warn in app.config.ts, HB-009 doc with eas env:create commands. | apps/mobile/eas.json, apps/mobile/app.config.ts, docs/HUMAN_BLOCKERS.md | fixed (human must create EAS env vars + rebuild) | ~9k |
 | 15:51 | Session end: 4 writes across 3 files (eas.json, app.config.ts, HUMAN_BLOCKERS.md) | 7 reads | ~1317 tok |
-=======
 | 15:13 | Session end: 19 writes across 9 files (0018_recommendations.sql, embeddings.ts, index.ts, deno.json, README.md) | 40 reads | ~32577 tok |
 | 15:19 | Edited apps/mobile/app.config.ts | removed 3 lines | ~7 |
 | 15:21 | Edited apps/mobile/app.config.ts | 3→4 lines | ~21 |
@@ -429,7 +427,6 @@
 | 15:37 | Edited apps/mobile/eas.json | 7→8 lines | ~56 |
 | 15:38 | Session end: 23 writes across 11 files (0018_recommendations.sql, embeddings.ts, index.ts, deno.json, README.md) | 41 reads | ~33362 tok |
 | 16:00 | Session end: 23 writes across 11 files (0018_recommendations.sql, embeddings.ts, index.ts, deno.json, README.md) | 41 reads | ~33362 tok |
->>>>>>> Stashed changes
 
 ## Session: 2026-06-20 19:23
 
@@ -594,3 +591,20 @@
 | 2026-07-06 | UX audit: fixed mobile safe-area top padding across all screens. Screen.tsx now floors paddingTop to Math.max(insets.top, 16) so 0-inset devices get breathing room. Wrapped 5 bypass states (trailers loading/error, title detail loading/error, watchlist-triage error) with Screen. | apps/mobile/src/components/Screen.tsx; apps/mobile/app/(app)/trailers.tsx; apps/mobile/app/(app)/title/[id].tsx; apps/mobile/app/(app)/watchlist-triage.tsx | typecheck + 111 tests + Biome green | ~12k |
 | 2026-07-06 | Replaced photo upload with curated 8-icon cinema avatar set. Created avatars.tsx (Film, Clapperboard, Camera, Ticket, Star, Award, Tv, Sparkles — each with unique color). Updated edit-profile with avatar grid picker, profile.tsx with AvatarIcon. Removed uploadLocalAvatar/uploadAvatar, ImagePicker/ImageManipulator/FileSystem imports from hooks. | apps/mobile/src/features/profile/avatars.tsx (new); apps/mobile/app/(app)/edit-profile.tsx; apps/mobile/app/(app)/(tabs)/profile.tsx; apps/mobile/src/features/profile/hooks.ts; apps/mobile/src/i18n/locales/en.json | typecheck + 111 tests + Biome green | ~22k |
 | 2026-07-06 | Fixed broken share button: replaced fragile Share.share() + stuck sharing state with ShareCardModal bottom sheet. Shows poster + title + meta + link preview + 'Share via apps' and 'Copy link' buttons. Applied to both title detail and trailers screens. | apps/mobile/src/components/ShareCardModal.tsx (new); apps/mobile/app/(app)/title/[id].tsx; apps/mobile/app/(app)/trailers.tsx | typecheck + 111 tests + Biome green | ~18k |
+
+## Session: 2026-07-06 09:15
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-06 09:35
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+
+## Session: 2026-07-06 13:54
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
+| 13:58 | Edited packages/shared/src/schemas/tasteEvent.ts | 1→6 lines | ~34 |
+| 2026-07-06 | Taste-event gap fill on fresh branch after PR #25 merge: share (+2.5) + search_match_open (+1.5) event types, call sites (detail/trailers share cards, search rows), 400-event/user storage cap, dev debugRecommendation logging in useDeck, removed mislabeled titleShared in trailers handleLike; +4 tests | tasteEvent.ts, taste.ts, localDb.ts, deck/hooks.ts, search.tsx, trailers.tsx, [id].tsx | 178/178 tests green | ~55k |

@@ -180,6 +180,10 @@ async function hashLocalPassword(password: string): Promise<string> {
 }
 
 const TASTE_EVENT_DEDUPE_MS = 15 * 60 * 1000;
+// Storage stays bounded: only the newest engagement events per user are kept.
+// Old events would decay to ~0 influence anyway (30-day e-folding), so pruning
+// them costs the taste signal nothing.
+const MAX_TASTE_EVENTS_PER_USER = 400;
 
 export const localDb = {
   // Clear in-memory caches to prevent session leakage on logout
@@ -279,6 +283,20 @@ export const localDb = {
       eventType: input.eventType,
     };
     tasteEventsCache.push(event);
+
+    const mine = tasteEventsCache.filter((e) => e.userId === input.userId);
+    if (mine.length > MAX_TASTE_EVENTS_PER_USER) {
+      const keep = new Set(
+        [...mine]
+          .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
+          .slice(0, MAX_TASTE_EVENTS_PER_USER)
+          .map((e) => e.eventId),
+      );
+      tasteEventsCache = tasteEventsCache.filter(
+        (e) => e.userId !== input.userId || keep.has(e.eventId),
+      );
+    }
+
     await persistTasteEvents();
     return event;
   },

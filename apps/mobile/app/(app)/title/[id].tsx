@@ -199,6 +199,7 @@ export default function TitleDetail() {
 
   const openShareCard = () => {
     events.titleShared({ titleId: title.id, hasImage: !!display.posterUrl });
+    void recordTasteEvent('share', title);
     setShowShareCard(true);
   };
 
