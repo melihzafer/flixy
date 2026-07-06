@@ -608,3 +608,8 @@
 |------|--------|---------|---------|--------|
 | 13:58 | Edited packages/shared/src/schemas/tasteEvent.ts | 1→6 lines | ~34 |
 | 2026-07-06 | Taste-event gap fill on fresh branch after PR #25 merge: share (+2.5) + search_match_open (+1.5) event types, call sites (detail/trailers share cards, search rows), 400-event/user storage cap, dev debugRecommendation logging in useDeck, removed mislabeled titleShared in trailers handleLike; +4 tests | tasteEvent.ts, taste.ts, localDb.ts, deck/hooks.ts, search.tsx, trailers.tsx, [id].tsx | 178/178 tests green | ~55k |
+
+## Session: 2026-07-06 15:07
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
