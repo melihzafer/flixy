@@ -1103,10 +1103,37 @@ function DiscoverySessionComplete({
   onUpgrade: () => void;
   onOpenWatchlist: () => void;
 }) {
-  const resetLabel = new Date(periodEnd).toLocaleTimeString([], {
-    hour: '2-digit',
-    minute: '2-digit',
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const diff = new Date(periodEnd).getTime() - Date.now();
+    return Math.max(0, Math.floor(diff / 1000));
   });
+
+  useEffect(() => {
+    const diff = new Date(periodEnd).getTime() - Date.now();
+    setTimeLeft(Math.max(0, Math.floor(diff / 1000)));
+
+    const timer = setInterval(() => {
+      setTimeLeft(() => {
+        const nextDiff = new Date(periodEnd).getTime() - Date.now();
+        const nextTime = Math.max(0, Math.floor(nextDiff / 1000));
+        if (nextTime <= 0) {
+          clearInterval(timer);
+        }
+        return nextTime;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [periodEnd]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}m ${s}s`;
+  };
+
+  const showStartNext = canStartNext || timeLeft <= 0;
+
   return (
     <View
       style={{
@@ -1152,12 +1179,14 @@ function DiscoverySessionComplete({
         }}
       >
         {exhausted
-          ? `Your next daily reel opens after ${resetLabel}. Unlock unlimited discovery when you’re ready.`
+          ? timeLeft > 0
+            ? `Your next daily reel opens in ${formatTime(timeLeft)}. Unlock unlimited discovery when you’re ready.`
+            : 'Your next daily reel is ready! Start a fresh reel now.'
           : 'Start a fresh reel, revisit your picks, or unlock unlimited discovery.'}
       </Text>
       <Pressable
         accessibilityRole="button"
-        onPress={canStartNext ? onStartNext : onUpgrade}
+        onPress={showStartNext ? onStartNext : onUpgrade}
         style={({ pressed }) => ({
           width: '100%',
           maxWidth: 320,
@@ -1170,10 +1199,10 @@ function DiscoverySessionComplete({
         })}
       >
         <Text style={{ color: colors.onAccent, fontFamily: fonts.bodyBold }}>
-          {canStartNext ? 'Start another reel' : 'Explore Flixy plans'}
+          {showStartNext ? 'Start another reel' : 'Explore Flixy plans'}
         </Text>
       </Pressable>
-      {canStartNext ? (
+      {showStartNext ? (
         <Pressable
           accessibilityRole="button"
           onPress={onUpgrade}
