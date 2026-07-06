@@ -40,24 +40,34 @@ async function persist(pending: SwipeEvent[]): Promise<void> {
   }
 }
 
-export async function syncSwipeEvent(ev: SwipeEvent & { genres?: string[] }): Promise<void> {
-  if (isSupabaseConfigured) {
-    const { error } = await supabase.from('swipes').insert({
-      event_id: ev.eventId,
-      user_id: ev.userId,
-      title_id: ev.titleId,
-      direction: ev.direction,
-      occurred_at: ev.occurredAt,
-      session_id: ev.sessionId,
-      deck_position: ev.deckPosition,
-      region: ev.region,
-      filters_snapshot: ev.filtersSnapshot,
-    });
-    // event_id is the idempotency key. A duplicate means a previous ambiguous
-    // request succeeded and the queue can safely advance.
-    if (error && error.code !== '23505') throw error;
-  }
+/**
+ * Postgres error codes that will NEVER succeed on retry (constraint/typing/
+ * policy violations). Retrying them forever used to wedge the whole FIFO
+ * queue: one swipe with an invalid `session_id` (any surface outside a
+ * discovery session, e.g. title detail, after migration 0024 added the
+ * `swipes.session_id -> discovery_sessions` FK) blocked every later swipe
+ * from syncing OR being written locally — which meant no exclusions and no
+ * taste learning at all ("the movies I passed are being shown").
+ */
+const PERMANENT_SYNC_ERROR_CODES = new Set([
+  '23502', // not_null_violation
+  '23503', // foreign_key_violation
+  '23514', // check_violation
+  '22P02', // invalid_text_representation (bad uuid)
+  '42501', // insufficient_privilege (RLS)
+  '42703', // undefined_column
+]);
 
+export function isPermanentSwipeSyncError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null) return false;
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' && PERMANENT_SYNC_ERROR_CODES.has(code);
+}
+
+export async function syncSwipeEvent(ev: SwipeEvent & { genres?: string[] }): Promise<void> {
+  // Local-first, unconditionally: the device's own swipe history (taste
+  // signal, deck exclusions, quotas) must never depend on the network call
+  // succeeding. insertSwipe upserts by event_id, so retries are idempotent.
   await localDb.insertSwipe({
     event_id: ev.eventId,
     user_id: ev.userId,
@@ -70,6 +80,39 @@ export async function syncSwipeEvent(ev: SwipeEvent & { genres?: string[] }): Pr
     filters_snapshot: ev.filtersSnapshot,
     genres: ev.genres,
   });
+
+  if (!isSupabaseConfigured) return;
+
+  const { error } = await supabase.from('swipes').insert({
+    event_id: ev.eventId,
+    user_id: ev.userId,
+    title_id: ev.titleId,
+    direction: ev.direction,
+    occurred_at: ev.occurredAt,
+    // Only a server-created discovery session id satisfies the FK on
+    // swipes.session_id; app-launch session ids must sync as null.
+    // Legacy queued events predating `discoverySessionId` also land on null.
+    session_id: ev.discoverySessionId ?? null,
+    deck_position: ev.deckPosition,
+    region: ev.region,
+    filters_snapshot: ev.filtersSnapshot,
+  });
+  if (!error) return;
+  // event_id is the idempotency key. A duplicate means a previous ambiguous
+  // request succeeded and the queue can safely advance.
+  if (error.code === '23505') return;
+  if (isPermanentSwipeSyncError(error)) {
+    // The row can never be accepted as-is. The local copy above keeps
+    // on-device personalization correct; drop the event from the queue
+    // instead of blocking everything behind it forever.
+    logger.warn('swipe sync rejected permanently; keeping local copy only', {
+      code: error.code,
+      message: error.message,
+    });
+    events.swipeSyncFailed({ reason: `permanent:${error.code}`, queued: 0 });
+    return;
+  }
+  throw error;
 }
 
 export async function syncSwipeUndo(eventId: string): Promise<void> {

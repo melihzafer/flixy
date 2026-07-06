@@ -3593,6 +3593,76 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-07-06T22:10:03.062Z"
+    },
+    {
+      "id": "bug-203",
+      "timestamp": "2026-07-06T22:32:59.399Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/src/features/swipe/queue.ts",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check)",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T22:32:59.399Z"
+    },
+    {
+      "id": "bug-204",
+      "timestamp": "2026-07-06T22:33:24.884Z",
+      "error_message": "CSS fix: titleId",
+      "file": "apps/mobile/app/(app)/title/[id].tsx",
+      "root_cause": "titleId: title.id, direction: dir, deckPosition: 0 → title.id, direction: dir, deckPosition: 0, genres: title.genres",
+      "fix": "Changed titleId: title.id, direction: dir, deckPosition: 0 → title.id, direction: dir, deckPosition: 0, genres: title.genres",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T22:33:24.884Z"
+    },
+    {
+      "id": "bug-205",
+      "timestamp": "2026-07-06T22:34:30.892Z",
+      "error_message": "Missing guard clause",
+      "file": "apps/web/scripts/build.js",
+      "root_cause": "No early return/throw for edge case: 'serviceWorker' in navigator",
+      "fix": "Added guard clause: if ('serviceWorker' in navigator)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T22:34:30.892Z"
+    },
+    {
+      "id": "bug-206",
+      "timestamp": "2026-07-06T22:35:24.848Z",
+      "error_message": "User: nothing fixed, still same deck, movies I passed are being shown (after PR #27)",
+      "file": "apps/mobile/src/features/swipe/queue.ts",
+      "root_cause": "Migration 0024 added FK swipes.session_id -> discovery_sessions. Swipes recorded outside a discovery session (title detail/search) sent the random app-launch UUID as session_id -> permanent FK violation on Supabase insert. syncSwipeEvent wrote localDb only AFTER a successful remote insert and the FIFO queue retried the poisoned head forever, so NO swipe (not even valid deck swipes queued behind it) ever reached localDb or Supabase. Result: no exclusions, no taste learning, identical deck, passed movies reappearing.",
+      "fix": "syncSwipeEvent now writes localDb FIRST (idempotent by event_id); syncs session_id from a new SwipeEvent.discoverySessionId field (null outside discovery sessions); classifies permanent Postgres errors (23502/23503/23514/22P02/42501/42703) and resolves instead of throwing so the queue drops the event and self-heals; genres + discoverySessionId added to SwipeEventSchema so they survive queue hydration; detail screen now passes genres.",
+      "tags": [
+        "swipe-queue",
+        "supabase",
+        "fk-violation",
+        "queue-wedge",
+        "root-cause"
+      ],
+      "related_bugs": [
+        "bug-195",
+        "bug-196",
+        "bug-202"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T22:35:24.848Z"
     }
   ]
 }

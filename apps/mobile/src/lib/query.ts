@@ -20,6 +20,10 @@ export const queryClient = new QueryClient({
 
 export const queryPersister = createAsyncStoragePersister({
   storage: AsyncStorage,
-  key: 'flixy.query-cache.v2',
+  // v3: cache blobs written before the deck-freshness fix contain persisted
+  // ['titles','query'] discover pages. shouldDehydrateQuery only filters
+  // future WRITES — an old blob would still restore its stale deck once.
+  // Bumping the key orphans those blobs entirely.
+  key: 'flixy.query-cache.v3',
   throttleTime: 1000,
 });

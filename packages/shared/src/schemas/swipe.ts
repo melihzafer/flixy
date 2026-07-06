@@ -16,9 +16,18 @@ export const SwipeEventSchema = z.object({
   direction: SwipeDirectionSchema,
   occurredAt: z.string(),
   sessionId: z.string().uuid(),
+  /**
+   * Server-created discovery session id, when the swipe happened inside one
+   * (deck swipes). Swipes from other surfaces (title detail, search) carry
+   * null. This — never the app-launch `sessionId` — is what syncs to
+   * `swipes.session_id`, which has an FK to `discovery_sessions`.
+   */
+  discoverySessionId: z.string().uuid().nullable().optional(),
   deckPosition: z.number().int().nonnegative(),
   region: z.string().length(2),
   filtersSnapshot: z.record(z.unknown()).default({}),
+  /** Title genres at swipe time; feeds the local taste signal. Must survive queue hydration. */
+  genres: z.array(z.string()).optional(),
 });
 export type SwipeEvent = z.infer<typeof SwipeEventSchema>;
 
