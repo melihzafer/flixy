@@ -63,7 +63,7 @@
       "first_read": "2026-07-06T08:21:55.945Z"
     },
     "/home/user/flixy/apps/mobile/src/features/swipe/SwipeCard.tsx": {
-      "count": 1,
+      "count": 2,
       "tokens": 3243,
       "first_read": "2026-07-06T08:22:58.688Z"
     },
@@ -71,6 +71,21 @@
       "count": 1,
       "tokens": 0,
       "first_read": "2026-07-06T08:29:59.922Z"
+    },
+    "/home/user/flixy/apps/mobile/app/(app)/trailers.tsx": {
+      "count": 1,
+      "tokens": 2000,
+      "first_read": "2026-07-06T08:39:21.122Z"
+    },
+    "/home/user/flixy/apps/mobile/app/(app)/watchlist-triage.tsx": {
+      "count": 1,
+      "tokens": 1800,
+      "first_read": "2026-07-06T08:39:21.789Z"
+    },
+    "/home/user/flixy/apps/mobile/app/(app)/title/[id].tsx": {
+      "count": 2,
+      "tokens": 5523,
+      "first_read": "2026-07-06T08:40:35.673Z"
     }
   },
   "files_written": [
@@ -133,19 +148,137 @@
       "action": "create",
       "tokens": 1381,
       "at": "2026-07-06T08:30:30.365Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 395,
+      "at": "2026-07-06T08:42:40.782Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 643,
+      "at": "2026-07-06T08:43:00.239Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 82,
+      "at": "2026-07-06T08:43:12.003Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 30,
+      "at": "2026-07-06T08:43:17.972Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 29,
+      "at": "2026-07-06T08:43:18.343Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "action": "edit",
+      "tokens": 347,
+      "at": "2026-07-06T08:43:30.060Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/watchlist-triage.tsx",
+      "action": "edit",
+      "tokens": 199,
+      "at": "2026-07-06T08:43:38.558Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 123,
+      "at": "2026-07-06T08:43:48.707Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "action": "edit",
+      "tokens": 179,
+      "at": "2026-07-06T08:44:00.015Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 27,
+      "at": "2026-07-06T08:44:15.782Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 231,
+      "at": "2026-07-06T08:44:21.693Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 180,
+      "at": "2026-07-06T08:44:34.357Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 51,
+      "at": "2026-07-06T08:44:36.353Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
+      "action": "edit",
+      "tokens": 34,
+      "at": "2026-07-06T08:44:43.737Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/trailers.tsx",
+      "action": "edit",
+      "tokens": 590,
+      "at": "2026-07-06T08:45:16.761Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/trailers.tsx",
+      "action": "edit",
+      "tokens": 157,
+      "at": "2026-07-06T08:45:31.478Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/trailers.tsx",
+      "action": "edit",
+      "tokens": 173,
+      "at": "2026-07-06T08:45:35.037Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/title/[id].tsx",
+      "action": "edit",
+      "tokens": 373,
+      "at": "2026-07-06T08:45:57.251Z"
+    },
+    {
+      "file": "/home/user/flixy/apps/mobile/app/(app)/title/[id].tsx",
+      "action": "edit",
+      "tokens": 10,
+      "at": "2026-07-06T08:45:58.550Z"
     }
   ],
   "edit_counts": {
     "apps/mobile/src/features/auth/useSession.ts": 3,
     "apps/mobile/app/_layout.tsx": 2,
-    "apps/mobile/src/features/deck/hooks.ts": 1,
-    "apps/mobile/app/(app)/(tabs)/deck.tsx": 2,
+    "apps/mobile/src/features/deck/hooks.ts": 6,
+    "apps/mobile/app/(app)/(tabs)/deck.tsx": 4,
     "apps/mobile/src/features/catalogue/hooks.ts": 1,
-    "apps/mobile/src/features/auth/__tests__/useSession.test.ts": 1
+    "apps/mobile/src/features/auth/__tests__/useSession.test.ts": 1,
+    "apps/mobile/src/features/swipe/SwipeCard.tsx": 6,
+    "apps/mobile/app/(app)/watchlist-triage.tsx": 1,
+    "apps/mobile/app/(app)/trailers.tsx": 3,
+    "apps/mobile/app/(app)/title/[id].tsx": 2
   },
-  "anatomy_hits": 6,
+  "anatomy_hits": 9,
   "anatomy_misses": 8,
-  "repeated_reads_warned": 0,
+  "repeated_reads_warned": 2,
   "cerebrum_warnings": 0,
   "stop_count": 0
 }

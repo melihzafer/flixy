@@ -690,7 +690,10 @@ export default function DeckScreen() {
             style={{
               pointerEvents: 'box-none',
               position: 'absolute',
-              top: -24,
+              // Fully above the action bar (pill is 40 tall): overlapping the
+              // action buttons made Undo and Save/Seen fight for the same touch
+              // area.
+              top: -56,
               left: 0,
               right: 0,
               alignItems: 'center',
@@ -709,9 +712,11 @@ export default function DeckScreen() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 gap: 7,
-                backgroundColor: pressed ? 'rgba(255,77,28,0.16)' : 'rgba(245,245,240,0.06)',
+                // Solid chip: the pill floats over the card's bottom edge now,
+                // so a translucent fill would wash out against the poster.
+                backgroundColor: pressed ? 'rgba(30,16,12,0.94)' : 'rgba(10,10,11,0.88)',
                 borderWidth: 1,
-                borderColor: pressed ? colors.accentBorder : 'rgba(245,245,240,0.12)',
+                borderColor: pressed ? colors.accentBorder : 'rgba(245,245,240,0.16)',
               })}
             >
               <RotateCcw size={16} color={colors.accent} strokeWidth={2.3} />

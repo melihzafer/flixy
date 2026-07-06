@@ -282,6 +282,13 @@ export default function WatchlistTriageScreen() {
                     }
                     disabled={!isTop}
                     zIndex={10 - depth}
+                    allowUp
+                    overlayLabels={{
+                      right: 'Priority',
+                      left: 'Keep',
+                      down: 'Watched',
+                      up: 'Removed',
+                    }}
                   />
                 </View>
               );

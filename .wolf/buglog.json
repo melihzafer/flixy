@@ -2,6 +2,35 @@
   "version": 1,
   "bugs": [
     {
+      "id": "bug-110",
+      "timestamp": "2026-07-06T00:00:00Z",
+      "error_message": "User batch report: undo button overlaps deck action buttons; trailers play in a small horizontal strip; some trailers buttons don't work; watchlist/title share button doesn't work; For You deck composes once then claims exhausted; diagonal swipes possible; triage swipe-up (Remove) doesn't work; filter change should lazy-load first cards immediately.",
+      "file": "apps/mobile/src/features/swipe/SwipeCard.tsx; apps/mobile/app/(app)/(tabs)/deck.tsx; apps/mobile/src/features/deck/hooks.ts; apps/mobile/app/(app)/trailers.tsx; apps/mobile/app/(app)/title/[id].tsx; apps/mobile/app/(app)/watchlist-triage.tsx",
+      "root_cause": "(1) Undo pill absolutely positioned at top:-24 (height 40) overlapped the action bar buttons. (2) Trailers player was constrained to the top 40% band at 16:9. (3) The play-overlay container (absolute, bottom:25%, default pointerEvents) swallowed taps over the side Like button; Share.share url param is iOS-only so Android shares had no link. (4) Title-detail share downloaded the poster via FileSystem and passed a local file:// uri as Share url — Android ignores url and any download failure alerted 'Share failed'. (5) Deck refill effect required remaining > 0, so a deck that composed to 0 (common in For You after exclusions) never fetched the next page; MAX_PAGES_PER_SESSION=5 capped the pool at 100; recommendations RPCs gated initial render. (6) SwipeCard applied raw translations — diagonal drags possible. (7) SwipeCard clamped ty>=0 and never emitted 'up', but triage maps up→Remove — gesture dead.",
+      "fix": "(1) Undo pill moved to top:-56 with a solid dark chip background. (2) Player now fills the page (width×height letterboxed vertical). (3) Play overlay + info overlay pointerEvents='box-none'; YouTube link embedded in the share message. (4) Title share is text + TMDB/trailer link (url kept for iOS); FileSystem removed. (5) Refill triggers when remaining <= threshold INCLUDING 0, gated on !isFetching && data, page cap raised to 10; recommendations no longer gate isLoading (they merge into the append-only queue in background). (6) Axis lock: after 14px the gesture commits to one axis, other axis pinned to 0; onEnd uses the locked axis. (7) SwipeCard gained allowUp + overlayLabels props; triage passes allowUp with Priority/Keep/Watched/Removed labels; up commit animates out upward.",
+      "tags": [
+        "swipe",
+        "gesture",
+        "axis-lock",
+        "triage",
+        "trailers",
+        "youtube-iframe",
+        "share",
+        "android",
+        "deck",
+        "refill",
+        "for-you",
+        "undo",
+        "overlap",
+        "pointer-events"
+      ],
+      "related_bugs": [
+        "bug-109"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T00:00:00Z"
+    },
+    {
       "id": "bug-109",
       "timestamp": "2026-07-06T00:00:00Z",
       "error_message": "Startup glitches: (1) Login screen flashes 1-2s before redirecting to Home for already-signed-in users. (2) Deck posters render one movie then swap to another movie 1-2s after first paint. (3) Opening a title detail briefly shows the previously viewed movie.",
@@ -2840,6 +2869,134 @@
       "related_bugs": [],
       "occurrences": 1,
       "last_seen": "2026-07-06T08:29:04.211Z"
+    },
+    {
+      "id": "bug-158",
+      "timestamp": "2026-07-06T08:43:00.244Z",
+      "error_message": "CSS fix: SWIPE_OUT_DISTANCE_Y",
+      "file": "apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "root_cause": "SWIPE_OUT_DISTANCE_Y: 0 → direction === 'up'",
+      "fix": "Changed SWIPE_OUT_DISTANCE_Y: 0 → direction === 'up'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-06T08:43:12.007Z"
+    },
+    {
+      "id": "bug-159",
+      "timestamp": "2026-07-06T08:43:17.977Z",
+      "error_message": "Null/undefined access in ",
+      "file": "apps/mobile/src/features/swipe/SwipeCard.tsx",
+      "root_cause": "Property access on potentially null/undefined value",
+      "fix": "Added null safety (optional chaining or null check) | Also: {overlayLabels?.left ?? 'Passed'} | Also: {overlayLabels?.down ?? 'Watched'}; {allowUp ? (",
+      "tags": [
+        "auto-detected",
+        "null-safety",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 3,
+      "last_seen": "2026-07-06T08:43:30.063Z"
+    },
+    {
+      "id": "bug-160",
+      "timestamp": "2026-07-06T08:43:48.711Z",
+      "error_message": "CSS fix: top",
+      "file": "apps/mobile/app/(app)/(tabs)/deck.tsx",
+      "root_cause": "top: -24, → -56,",
+      "fix": "Changed top: -24, → -56,",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-06T08:44:00.019Z"
+    },
+    {
+      "id": "bug-161",
+      "timestamp": "2026-07-06T08:44:21.697Z",
+      "error_message": "Missing guard clause",
+      "file": "apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "No early return/throw for edge case: remaining > DECK_REFILL_THRESHOLD",
+      "fix": "Added guard clause: if (remaining > DECK_REFILL_THRESHOLD)",
+      "tags": [
+        "auto-detected",
+        "guard-clause",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:44:21.697Z"
+    },
+    {
+      "id": "bug-162",
+      "timestamp": "2026-07-06T08:44:34.361Z",
+      "error_message": "Type error",
+      "file": "apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "Missing or incorrect type annotation",
+      "fix": "Added type assertion/annotation",
+      "tags": [
+        "auto-detected",
+        "type-fix",
+        "ts"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:44:34.361Z"
+    },
+    {
+      "id": "bug-163",
+      "timestamp": "2026-07-06T08:45:16.765Z",
+      "error_message": "CSS fix: backgroundColor",
+      "file": "apps/mobile/app/(app)/trailers.tsx",
+      "root_cause": "backgroundColor: '#000', → '#000'",
+      "fix": "Changed backgroundColor: '#000', → '#000'",
+      "tags": [
+        "auto-detected",
+        "style-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 2,
+      "last_seen": "2026-07-06T08:45:31.482Z"
+    },
+    {
+      "id": "bug-164",
+      "timestamp": "2026-07-06T08:45:57.254Z",
+      "error_message": "Wrong operator: || should be ===",
+      "file": "apps/mobile/app/(app)/title/[id].tsx",
+      "root_cause": "Used \"||\" instead of \"===\"",
+      "fix": "Changed operator || → ===",
+      "tags": [
+        "auto-detected",
+        "operator-fix",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:45:57.254Z"
+    },
+    {
+      "id": "bug-165",
+      "timestamp": "2026-07-06T08:45:58.553Z",
+      "error_message": "Incorrect value in code",
+      "file": "apps/mobile/app/(app)/title/[id].tsx",
+      "root_cause": "Had 'expo-file-system/legacy'",
+      "fix": "Changed to 'expo-image'",
+      "tags": [
+        "auto-detected",
+        "wrong-value",
+        "tsx"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-06T08:45:58.553Z"
     }
   ]
 }

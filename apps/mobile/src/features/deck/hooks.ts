@@ -140,7 +140,7 @@ export function useDeckRecommendations() {
  * page and merge it into the candidate pool.
  */
 const DECK_REFILL_THRESHOLD = 5;
-const MAX_PAGES_PER_SESSION = 5;
+const MAX_PAGES_PER_SESSION = 10;
 const DECK_PAGE_SIZE = 20;
 
 /**
@@ -440,15 +440,14 @@ export function useDeck(options: UseDeckOptions = {}) {
   const [candidatePoolKey, setCandidatePoolKey] = useState(filterKey);
   const appendedPrimaryPagesRef = useRef<Set<string>>(new Set());
   const appendedRelaxedPagesRef = useRef<Set<string>>(new Set());
-  const lastRefillTriggerRef = useRef<number>(0);
 
+  // Remote recommendations (three Supabase RPCs) are deliberately NOT part of
+  // the loading gate: the first TMDB page composes and paints immediately,
+  // and recommendations merge in as a background enrichment. The screen's
+  // append-only card queue makes the late merge invisible to the user.
   const recoQuery = useDeckRecommendations();
   const recoIds = useMemo(() => recoQuery.data?.map((r) => r.titleId) ?? [], [recoQuery.data]);
   const recoTitlesQuery = useTitlesByIds(recoIds);
-  const isRecommendationsLoading =
-    isSupabaseConfigured &&
-    !!userId &&
-    (recoQuery.isLoading || (recoIds.length > 0 && recoTitlesQuery.isLoading));
 
   const recommendationScores = useMemo(() => {
     const scores: Record<string, number> = {};
@@ -650,7 +649,6 @@ export function useDeck(options: UseDeckOptions = {}) {
     setCandidatePoolKey(filterKey);
     appendedPrimaryPagesRef.current = new Set();
     appendedRelaxedPagesRef.current = new Set();
-    lastRefillTriggerRef.current = 0;
     setRefillPage(1);
   }, [filterKey]);
 
@@ -672,20 +670,19 @@ export function useDeck(options: UseDeckOptions = {}) {
     setRelaxedCandidatePool((prev) => appendUniqueTitles(prev, page.titles));
   }, [candidatePoolKey, filterKey, refillPage, relaxedCandidatesQuery.data]);
 
-  // Deck refill: when the visible deck drops below the threshold, fetch the
-  // next TMDB page. Bounded by MAX_PAGES_PER_SESSION so we never loop forever.
+  // Deck refill: when the composed deck drops to or below the threshold —
+  // INCLUDING zero — fetch the next TMDB page. An empty deck must keep
+  // refilling (this is what made "For You" declare itself exhausted after a
+  // single compose: `remaining > 0` meant a deck that hit 0 never fetched
+  // again). Bounded by MAX_PAGES_PER_SESSION and gated on the current page
+  // having settled so we advance one page at a time, never in a loop.
   useEffect(() => {
     const remaining = deck?.cards.length ?? 0;
-    if (
-      remaining > 0 &&
-      remaining <= DECK_REFILL_THRESHOLD &&
-      refillPage < MAX_PAGES_PER_SESSION &&
-      lastRefillTriggerRef.current !== deck?.cards.length
-    ) {
-      lastRefillTriggerRef.current = remaining;
-      setRefillPage((p) => p + 1);
-    }
-  }, [deck?.cards.length, refillPage]);
+    if (remaining > DECK_REFILL_THRESHOLD) return;
+    if (refillPage >= MAX_PAGES_PER_SESSION) return;
+    if (candidatesQuery.isFetching || !candidatesQuery.data) return;
+    setRefillPage((p) => p + 1);
+  }, [deck?.cards.length, refillPage, candidatesQuery.isFetching, candidatesQuery.data]);
 
   useEffect(() => {
     if (!diagnostics) return;
@@ -722,7 +719,6 @@ export function useDeck(options: UseDeckOptions = {}) {
       isProfileLoading ||
       isTasteLoading ||
       isExclusionsLoading ||
-      isRecommendationsLoading ||
       candidatesQuery.isLoading ||
       (hasStrictFilters &&
         (primaryDeck?.cards.length ?? 0) === 0 &&

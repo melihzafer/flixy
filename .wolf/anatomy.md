@@ -1,6 +1,6 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T08:30:30.354Z
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T08:45:58.538Z
 > Files: 25 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
@@ -184,17 +184,17 @@
 ## apps/mobile/app/(app)/
 
 - `settings-language.tsx` — LANGUAGES (~629 tok)
-- `trailers.tsx` — TrailersScreen for popular trailer-first vertical paging feed (~2000 tok)
-- `watchlist-triage.tsx` — WatchlistTriageScreen for swipe-triaging backlog items (~1800 tok)
+- `trailers.tsx` — TrailersScreen (~5534 tok)
+- `watchlist-triage.tsx` — WatchlistTriageScreen (~3178 tok)
 
 ## apps/mobile/app/(app)/(tabs)/
 
-- `deck.tsx` — DeckScreen (~10288 tok)
+- `deck.tsx` — DeckScreen (~10378 tok)
 - `watchlist.tsx` — FILTERS (~6472 tok)
 
 ## apps/mobile/app/(app)/title/
 
-- `[id].tsx` — TitleDetail (~5523 tok)
+- `[id].tsx` — TitleDetail (~6068 tok)
 
 ## apps/mobile/app/(auth)/
 
@@ -234,7 +234,7 @@
 ## apps/mobile/src/features/deck/
 
 - `FilterSheet.tsx` — MOODS — renders modal (~4610 tok)
-- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~7075 tok)
+- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~7159 tok)
 
 ## apps/mobile/src/features/notifications/
 
@@ -257,7 +257,7 @@
 ## apps/mobile/src/features/swipe/
 
 - `hooks.ts` — High-level swipe API consumed by the deck screen. Wraps queue + haptics + (~3161 tok)
-- `SwipeCard.tsx` — HORIZONTAL_THRESHOLD_RATIO (~3243 tok)
+- `SwipeCard.tsx` — Drag distance before the gesture hard-locks to one axis (no diagonals). (~5078 tok)
 
 ## apps/mobile/src/features/telemetry/
 

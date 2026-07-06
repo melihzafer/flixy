@@ -1,4 +1,3 @@
-import * as FileSystem from 'expo-file-system/legacy';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -194,27 +193,34 @@ export default function TitleDetail() {
     if (sharing) return;
     setSharing(true);
     try {
-      const posterUri = display.posterUrl ?? display.backdropUrl;
-      let localPosterUri: string | undefined;
+      // Text + link share. The previous flow downloaded the poster and passed
+      // a local file:// URI as `url`, which Android ignores entirely and any
+      // network hiccup surfaced as "Share failed" — the button looked broken.
+      const tmdbUrl = title.tmdbId
+        ? `https://www.themoviedb.org/${title.kind === 'tv' ? 'tv' : 'movie'}/${title.tmdbId}`
+        : undefined;
+      const trailerUrl = title.trailerKey
+        ? `https://www.youtube.com/watch?v=${title.trailerKey}`
+        : undefined;
+      const link = tmdbUrl ?? trailerUrl;
+      const message = [
+        `Flixy pick: ${display.title}${display.year ? ` (${display.year})` : ''}`,
+        link,
+      ]
+        .filter(Boolean)
+        .join('\n');
 
-      if (posterUri) {
-        const extension = posterUri.includes('.png') ? 'png' : 'jpg';
-        const safeName = display.title.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
-        const destination = `${FileSystem.cacheDirectory}flixy-${safeName || title.id}.${extension}`;
-        const result = await FileSystem.downloadAsync(posterUri, destination);
-        localPosterUri = result.uri;
-      }
-
-      events.titleShared({ titleId: title.id, hasImage: !!localPosterUri });
+      events.titleShared({ titleId: title.id, hasImage: false });
       await Share.share({
         title: `Flixy: ${display.title}`,
-        message: `Flixy pick: ${display.title}${display.year ? ` (${display.year})` : ''}`,
-        url: localPosterUri,
+        message,
+        // iOS-only; Android reads the link from the message above.
+        url: link,
       });
     } catch {
       Alert.alert(
         t('detail.shareErrorTitle', 'Share failed'),
-        t('detail.shareErrorBody', 'The share image could not be prepared. Please try again.'),
+        t('detail.shareErrorBody', 'Sharing could not be started. Please try again.'),
       );
     } finally {
       setSharing(false);

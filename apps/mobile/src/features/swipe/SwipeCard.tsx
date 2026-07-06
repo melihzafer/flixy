@@ -27,6 +27,8 @@ const VERTICAL_THRESHOLD = 120;
 const VELOCITY_THRESHOLD = 1100;
 const SWIPE_OUT_DISTANCE_X = 600;
 const SWIPE_OUT_DISTANCE_Y = 800;
+/** Drag distance before the gesture hard-locks to one axis (no diagonals). */
+const AXIS_LOCK_DISTANCE = 14;
 
 export type SwipeCardProps = {
   title: Title;
@@ -36,6 +38,13 @@ export type SwipeCardProps = {
   onTap?: () => void;
   zIndex?: number;
   disabled?: boolean;
+  /**
+   * Enable upward swipes. The deck keeps up locked (Top Pick is button-only),
+   * but watchlist triage maps swipe-up to Remove and needs the gesture.
+   */
+  allowUp?: boolean;
+  /** Override the full-card overlay label per direction (triage semantics differ from the deck's). */
+  overlayLabels?: Partial<Record<SwipeDirection, string>>;
 };
 
 export function SwipeCard({
@@ -46,11 +55,17 @@ export function SwipeCard({
   onTap,
   zIndex = 0,
   disabled = false,
+  allowUp = false,
+  overlayLabels,
 }: SwipeCardProps) {
   const { t } = useTranslation();
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
   const isCommitting = useSharedValue(false);
+  // 0 = undecided, 1 = horizontal, 2 = vertical. Once a drag exceeds
+  // AXIS_LOCK_DISTANCE it commits to a single axis for the rest of the
+  // gesture so the card can never travel diagonally.
+  const axis = useSharedValue(0);
 
   const blindDate = useDeckFilters((s) => s.blindDate);
   const [revealed, setRevealed] = useState(false);
@@ -81,16 +96,37 @@ export function SwipeCard({
 
   const pan = Gesture.Pan()
     .enabled(!disabled)
+    .onStart(() => {
+      axis.value = 0;
+    })
     .onUpdate((e) => {
-      tx.value = e.translationX;
-      // Kartın yukarı sürüklenmesini engelle — yalnızca aşağıya doğru (watch)
-      // hareket serbest. Yukarı kayma (top pick) görsel olarak kilidi.
-      ty.value = Math.max(0, e.translationY);
+      if (axis.value === 0) {
+        const absX = Math.abs(e.translationX);
+        const absY = Math.abs(e.translationY);
+        if (Math.max(absX, absY) >= AXIS_LOCK_DISTANCE) {
+          axis.value = absX >= absY ? 1 : 2;
+        }
+      }
+      // Hard axis lock: the non-dominant axis stays at 0 so the card can
+      // never drift diagonally. Upward travel is clamped unless the screen
+      // opted in (triage's swipe-up-to-remove).
+      if (axis.value === 1) {
+        tx.value = e.translationX;
+        ty.value = 0;
+      } else if (axis.value === 2) {
+        tx.value = 0;
+        ty.value = allowUp ? e.translationY : Math.max(0, e.translationY);
+      } else {
+        tx.value = e.translationX;
+        ty.value = allowUp ? e.translationY : Math.max(0, e.translationY);
+      }
     })
     .onEnd((e) => {
+      const lockedAxis = axis.value;
+      axis.value = 0;
       const absX = Math.abs(e.translationX);
       const absY = Math.abs(e.translationY);
-      const horizontalWins = absX >= absY;
+      const horizontalWins = lockedAxis === 1 || (lockedAxis === 0 && absX >= absY);
 
       let direction: SwipeDirection | null = null;
       if (horizontalWins) {
@@ -102,6 +138,11 @@ export function SwipeCard({
       } else {
         if (e.translationY > VERTICAL_THRESHOLD || e.velocityY > VELOCITY_THRESHOLD) {
           direction = 'down';
+        } else if (
+          allowUp &&
+          (e.translationY < -VERTICAL_THRESHOLD || e.velocityY < -VELOCITY_THRESHOLD)
+        ) {
+          direction = 'up';
         }
       }
 
@@ -113,7 +154,12 @@ export function SwipeCard({
             : direction === 'left'
               ? -SWIPE_OUT_DISTANCE_X
               : 0;
-        const toy = direction === 'down' ? SWIPE_OUT_DISTANCE_Y : 0;
+        const toy =
+          direction === 'down'
+            ? SWIPE_OUT_DISTANCE_Y
+            : direction === 'up'
+              ? -SWIPE_OUT_DISTANCE_Y
+              : 0;
         tx.value = withTiming(tox, { duration: 280 });
         ty.value = withTiming(toy, { duration: 280 }, (finished) => {
           if (finished) runOnJS(commit)(direction);
@@ -147,6 +193,9 @@ export function SwipeCard({
   }));
   const overlaySeen = useAnimatedStyle(() => ({
     opacity: interpolate(ty.value, [0, VERTICAL_THRESHOLD], [0, 0.85], 'clamp'),
+  }));
+  const overlayUp = useAnimatedStyle(() => ({
+    opacity: allowUp ? interpolate(ty.value, [-VERTICAL_THRESHOLD, 0], [0.85, 0], 'clamp') : 0,
   }));
 
   const meta = [display.year, seasonsLabel ?? display.runtime, display.rating]
@@ -419,7 +468,7 @@ export function SwipeCard({
               borderRadius: 12,
             }}
           >
-            Watchlist
+            {overlayLabels?.right ?? 'Watchlist'}
           </Text>
         </Animated.View>
 
@@ -454,7 +503,7 @@ export function SwipeCard({
               borderRadius: 12,
             }}
           >
-            Passed
+            {overlayLabels?.left ?? 'Passed'}
           </Text>
         </Animated.View>
 
@@ -489,9 +538,46 @@ export function SwipeCard({
               borderRadius: 12,
             }}
           >
-            Watched
+            {overlayLabels?.down ?? 'Watched'}
           </Text>
         </Animated.View>
+
+        {allowUp ? (
+          <Animated.View
+            style={[
+              {
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(224,92,75,0.85)',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 100,
+              },
+              overlayUp,
+            ]}
+          >
+            <Text
+              style={{
+                color: '#FFFFFF',
+                fontFamily: fonts.display,
+                fontSize: 38,
+                letterSpacing: 2,
+                textTransform: 'uppercase',
+                transform: [{ rotate: '5deg' }],
+                borderWidth: 4,
+                borderColor: '#FFFFFF',
+                paddingHorizontal: 20,
+                paddingVertical: 10,
+                borderRadius: 12,
+              }}
+            >
+              {overlayLabels?.up ?? 'Top Pick'}
+            </Text>
+          </Animated.View>
+        ) : null}
       </Animated.View>
     </GestureDetector>
   );

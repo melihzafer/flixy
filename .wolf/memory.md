@@ -553,3 +553,23 @@
 | 08:29 | Edited apps/mobile/src/features/catalogue/hooks.ts | added optional chaining | ~191 |
 | 08:30 | Created apps/mobile/src/features/auth/__tests__/useSession.test.ts | — | ~1381 |
 | 2026-07-06 | Startup stabilization: fixed login flash (session hydration gate in useSession), deck poster swap (append-only card queue per filterKey + NEVER_PERSIST_QUERY_ROOTS dehydration blocklist), wrong-title detail placeholder (id-guarded placeholderData in useTitle); added useSession hydration race regression tests | useSession.ts, app/_layout.tsx, deck/hooks.ts, deck.tsx, catalogue/hooks.ts, useSession.test.ts | 75/75 tests pass, typecheck+biome clean | ~90k |
+| 08:42 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | modified SwipeCard() | ~395 |
+| 08:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | kayma() → onStart() | ~643 |
+| 08:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | modified interpolate() | ~82 |
+| 08:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | added optional chaining | ~30 |
+| 08:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | added optional chaining | ~29 |
+| 08:43 | Edited apps/mobile/src/features/swipe/SwipeCard.tsx | added optional chaining | ~347 |
+| 08:43 | Edited apps/mobile/app/(app)/watchlist-triage.tsx | expanded (+7 lines) | ~199 |
+| 08:43 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | modified bar() | ~123 |
+| 08:44 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | CSS: chip | ~179 |
+| 08:44 | Edited apps/mobile/src/features/deck/hooks.ts | 3→3 lines | ~27 |
+| 08:44 | Edited apps/mobile/src/features/deck/hooks.ts | added 2 condition(s) | ~231 |
+| 08:44 | Edited apps/mobile/src/features/deck/hooks.ts | 11→10 lines | ~180 |
+| 08:44 | Edited apps/mobile/src/features/deck/hooks.ts | 8→7 lines | ~51 |
+| 08:44 | Edited apps/mobile/src/features/deck/hooks.ts | 4→3 lines | ~34 |
+| 08:45 | Edited apps/mobile/app/(app)/trailers.tsx | round() → doldurur() | ~590 |
+| 08:45 | Edited apps/mobile/app/(app)/trailers.tsx | CSS: titleId, hasImage | ~157 |
+| 08:45 | Edited apps/mobile/app/(app)/trailers.tsx | 13→15 lines | ~173 |
+| 08:45 | Edited apps/mobile/app/(app)/title/[id].tsx | CSS: file, https, https | ~373 |
+| 08:45 | Edited apps/mobile/app/(app)/title/[id].tsx | 2→1 lines | ~10 |
+| 2026-07-06 | UX bug batch: undo overlap, triage up-swipe via SwipeCard allowUp+overlayLabels, axis-locked swipes (no diagonals), fullscreen vertical trailers player + box-none touch fixes + Android share links, reliable title share (TMDB link, no poster download), deck refill on empty + page cap 10 + non-blocking recommendations | SwipeCard.tsx, deck.tsx, deck/hooks.ts, trailers.tsx, title/[id].tsx, watchlist-triage.tsx | lint+typecheck+75 tests green | ~60k |

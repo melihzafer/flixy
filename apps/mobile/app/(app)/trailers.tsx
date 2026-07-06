@@ -108,9 +108,13 @@ export default function TrailersScreen() {
 
   const shareTitle = async (title: Title) => {
     try {
+      const trailerUrl = `https://www.youtube.com/watch?v=${title.trailerKey}`;
+      events.titleShared({ titleId: title.id, hasImage: false });
+      // `url` is iOS-only in Share.share — the link must live in the message
+      // for Android, otherwise the share sheet sends text with no link.
       await Share.share({
-        message: `Check out the trailer for "${title.title}" on Flixy!`,
-        url: `https://www.youtube.com/watch?v=${title.trailerKey}`,
+        message: `Check out the trailer for "${title.title}" on Flixy!\n${trailerUrl}`,
+        url: trailerUrl,
       });
     } catch (_e) {
       // ignore
@@ -250,7 +254,9 @@ export default function TrailersScreen() {
               {/* Inline YouTube player — yalnızca bu sayfa aktif ve
                   oynatma başlatılmışsa monte edilir. Tarayıcı autoplay
                   politikası gereği muted başlatılır; kullanıcı dokunuşu
-                  zaten bir user-gesture sayıldığı için play tetiklenir. */}
+                  zaten bir user-gesture sayıldığı için play tetiklenir.
+                  Player sayfayı DİKEY doldurur (letterbox); info + aksiyon
+                  butonları JSX'te sonra geldiği için üstte kalır. */}
               {playIndex === index && item.trailerKey ? (
                 <View
                   pointerEvents="auto"
@@ -259,17 +265,15 @@ export default function TrailersScreen() {
                     top: 0,
                     left: 0,
                     right: 0,
-                    bottom: '60%',
-                    alignItems: 'center',
+                    bottom: 0,
                     justifyContent: 'center',
                     backgroundColor: '#000',
-                    zIndex: 50,
                   }}
                 >
                   <YoutubePlayer
                     videoId={item.trailerKey}
-                    height={Math.round((width - 16) * (9 / 16))}
-                    width={width - 16}
+                    height={height}
+                    width={width}
                     play
                     mute
                     forceAndroidAutoplay
@@ -277,12 +281,15 @@ export default function TrailersScreen() {
                     onChangeState={(state: PLAYER_STATES) => {
                       if (state === PLAYER_STATES.ENDED) setPlayIndex(-1);
                     }}
-                    webViewStyle={{ borderRadius: 14, overflow: 'hidden' }}
+                    webViewStyle={{ backgroundColor: '#000' }}
                   />
                 </View>
               ) : (
-                /* Big Play Button Overlay */
+                /* Big Play Button Overlay — box-none: the container spans the
+                   upper 75% of the page and was eating taps meant for the
+                   side action buttons underneath it. */
                 <View
+                  pointerEvents="box-none"
                   style={{
                     position: 'absolute',
                     top: 0,
@@ -331,8 +338,10 @@ export default function TrailersScreen() {
                 </View>
               )}
 
-              {/* Movie Details Info Overlay (Bottom) */}
+              {/* Movie Details Info Overlay (Bottom) — box-none so the
+                  text block never swallows taps aimed at the player below. */}
               <View
+                pointerEvents="box-none"
                 style={{
                   position: 'absolute',
                   bottom: 0,
