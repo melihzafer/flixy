@@ -2,10 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { ChevronDown, ChevronLeft, Heart, Play, Share2, X } from 'lucide-react-native';
-import { useRef, useState } from 'react';
+import { ChevronDown, ChevronLeft, Heart, Share2, Volume2, VolumeX, X } from 'lucide-react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, Pressable, View, useWindowDimensions } from 'react-native';
+import { FlatList, Pressable, View, type ViewToken, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 
@@ -32,8 +32,15 @@ export default function TrailersScreen() {
   const recordSwipe = useRecordSwipe();
   const recordTasteEvent = useRecordTasteEvent();
   const listRef = useRef<FlatList<Title>>(null);
+
   const [activeIndex, setActiveIndex] = useState(0);
-  const [playIndex, setPlayIndex] = useState<number>(-1);
+  const [muted, setMuted] = useState(true);
+  const [erroredIds, setErroredIds] = useState<Record<string, boolean>>({});
+  const watchedTitleIdsRef = useRef<Set<string>>(new Set());
+
+  // Portrait cover math
+  const playerWidth = height * (16 / 9);
+  const playerLeft = -(playerWidth - width) / 2;
 
   // Fetch popular movies & TV shows across 2 pages in parallel to guarantee a rich trailer pool
   const {
@@ -67,6 +74,10 @@ export default function TrailersScreen() {
     staleTime: 1000 * 60 * 30, // 30 mins cache
   });
 
+  useEffect(() => {
+    events.trailerFeedOpened();
+  }, []);
+
   const goBack = () => {
     if (router.canGoBack()) {
       router.back();
@@ -76,7 +87,8 @@ export default function TrailersScreen() {
   };
 
   const handleLike = (title: Title, index: number) => {
-    events.titleShared({ titleId: title.id, hasImage: false }); // track interaction
+    events.trailerFeedSaved({ titleId: title.id });
+    events.watchlistAdded(title.id);
     recordSwipe.mutate({
       titleId: title.id,
       direction: 'right',
@@ -87,6 +99,7 @@ export default function TrailersScreen() {
   };
 
   const handlePass = (title: Title, index: number) => {
+    events.trailerFeedSkipped({ titleId: title.id });
     recordSwipe.mutate({
       titleId: title.id,
       direction: 'left',
@@ -97,7 +110,6 @@ export default function TrailersScreen() {
   };
 
   const advanceFeed = (currentIndex: number) => {
-    setPlayIndex(-1);
     if (titles && currentIndex < titles.length - 1) {
       listRef.current?.scrollToIndex({
         index: currentIndex + 1,
@@ -106,11 +118,14 @@ export default function TrailersScreen() {
     }
   };
 
-  const openTrailer = async (title: Title, index: number) => {
-    if (!title.trailerKey) return;
-    events.trailerOpened(title.id);
-    void recordTasteEvent('watch_trailer', title);
-    setPlayIndex(index);
+  const toggleMute = () => {
+    const newMuted = !muted;
+    setMuted(newMuted);
+    if (newMuted) {
+      events.trailerFeedMuted();
+    } else {
+      events.trailerFeedUnmuted();
+    }
   };
 
   const [shareItem, setShareItem] = useState<{
@@ -129,6 +144,26 @@ export default function TrailersScreen() {
     events.titleShared({ titleId: title.id, hasImage: !!display.posterUrl });
     setShareItem({ display, url: url || null, titleId: title.id });
   };
+
+  const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    if (viewableItems.length > 0 && viewableItems[0]) {
+      const index = viewableItems[0].index ?? 0;
+      setActiveIndex(index);
+    }
+  }).current;
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 80,
+  }).current;
+
+  const getItemLayout = useCallback(
+    (_data: ArrayLike<Title> | null | undefined, index: number) => ({
+      length: height,
+      offset: height * index,
+      index,
+    }),
+    [height],
+  );
 
   if (isLoading) {
     return (
@@ -205,11 +240,13 @@ export default function TrailersScreen() {
         pagingEnabled
         showsVerticalScrollIndicator={false}
         decelerationRate="fast"
-        onMomentumScrollEnd={(e) => {
-          const index = Math.round(e.nativeEvent.contentOffset.y / height);
-          setActiveIndex(index);
-          setPlayIndex(-1);
-        }}
+        getItemLayout={getItemLayout}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
+        initialNumToRender={2}
+        maxToRenderPerBatch={2}
+        windowSize={3}
+        removeClippedSubviews
         renderItem={({ item, index }) => {
           const meta = [
             item.releaseYear,
@@ -219,12 +256,23 @@ export default function TrailersScreen() {
             .filter(Boolean)
             .join('  \u00b7  ');
 
+          const showPlayer = index === activeIndex && !erroredIds[item.id];
+          const isErrored = !!erroredIds[item.id];
+
           return (
-            <View style={{ width, height, position: 'relative', overflow: 'hidden' }}>
-              {/* Cinematic full-screen backdrop */}
-              {item.posterUrl ? (
+            <View
+              style={{
+                width,
+                height,
+                position: 'relative',
+                overflow: 'hidden',
+                backgroundColor: '#000',
+              }}
+            >
+              {/* Cinematic full-screen backdrop / poster fallback */}
+              {item.backdropUrl || item.posterUrl ? (
                 <Image
-                  source={{ uri: item.posterUrl }}
+                  source={{ uri: item.backdropUrl || item.posterUrl || undefined }}
                   contentFit="cover"
                   style={{
                     position: 'absolute',
@@ -232,8 +280,9 @@ export default function TrailersScreen() {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    opacity: playIndex === index ? 0 : 0.55,
+                    opacity: 0.35,
                   }}
+                  blurRadius={10}
                 />
               ) : (
                 <View
@@ -243,13 +292,12 @@ export default function TrailersScreen() {
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: '#101012',
+                    backgroundColor: '#0a0a0b',
                   }}
                 />
               )}
 
-              {/* Bottom Gradient overlay — iframe tıklamalarını engellememek
-                  için pointerEvents kapatıldı. */}
+              {/* Bottom Gradient overlay — pointerEvents="none" so it doesn't block scroll */}
               <LinearGradient
                 colors={[
                   'rgba(10,10,11,0.01)',
@@ -262,105 +310,158 @@ export default function TrailersScreen() {
                 style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: '60%' }}
               />
 
-              {/* Inline YouTube player — yalnızca bu sayfa aktif ve
-                  oynatma başlatılmışsa monte edilir. Tarayıcı autoplay
-                  politikası gereği muted başlatılır; kullanıcı dokunuşu
-                  zaten bir user-gesture sayıldığı için play tetiklenir.
-                  Player sayfayı DİKEY doldurur (letterbox); info + aksiyon
-                  butonları JSX'te sonra geldiği için üstte kalır. */}
-              {playIndex === index && item.trailerKey ? (
+              {/* Inline YouTube player in portrait cover mode */}
+              {showPlayer && item.trailerKey ? (
                 <View
-                  pointerEvents="auto"
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    bottom: 0,
+                    left: playerLeft,
+                    width: playerWidth,
+                    height: height,
+                    justifyContent: 'center',
+                    backgroundColor: 'transparent',
+                  }}
+                >
+                  <YoutubePlayer
+                    videoId={item.trailerKey}
+                    height={height}
+                    width={playerWidth}
+                    play={showPlayer}
+                    mute={muted}
+                    forceAndroidAutoplay
+                    initialPlayerParams={{
+                      preventFullScreen: true,
+                      controls: false,
+                      cc_load_policy: 0,
+                      rel: 0,
+                      modestbranding: 1,
+                      iv_load_policy: 3,
+                    }}
+                    onChangeState={(state: PLAYER_STATES) => {
+                      if (state === PLAYER_STATES.PLAYING) {
+                        if (!watchedTitleIdsRef.current.has(item.id)) {
+                          watchedTitleIdsRef.current.add(item.id);
+                          void recordTasteEvent('watch_trailer', item);
+                          events.trailerFeedStarted({ titleId: item.id });
+                        }
+                      } else if (state === PLAYER_STATES.ENDED) {
+                        advanceFeed(index);
+                      }
+                    }}
+                    onError={(e: unknown) => {
+                      setErroredIds((prev) => ({ ...prev, [item.id]: true }));
+                      events.trailerFeedError({ titleId: item.id, error: String(e) });
+                    }}
+                    webViewStyle={{ backgroundColor: 'transparent' }}
+                  />
+                </View>
+              ) : null}
+
+              {/* YouTube error fallback view */}
+              {isErrored && (
+                <View
                   style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    justifyContent: 'center',
-                    backgroundColor: '#000',
-                  }}
-                >
-                  <YoutubePlayer
-                    videoId={item.trailerKey}
-                    height={height}
-                    width={width}
-                    play
-                    mute
-                    forceAndroidAutoplay
-                    initialPlayerParams={{ preventFullScreen: false }}
-                    onChangeState={(state: PLAYER_STATES) => {
-                      if (state === PLAYER_STATES.ENDED) setPlayIndex(-1);
-                    }}
-                    webViewStyle={{ backgroundColor: '#000' }}
-                  />
-                </View>
-              ) : (
-                /* Big Play Button Overlay — box-none: the container spans the
-                   upper 75% of the page and was eating taps meant for the
-                   side action buttons underneath it. */
-                <View
-                  pointerEvents="box-none"
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: '25%',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    backgroundColor: 'rgba(10,10,11,0.85)',
+                    padding: 24,
+                    gap: 12,
                   }}
                 >
-                  <Pressable
-                    onPress={() => openTrailer(item, index)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Play trailer for ${item.title}`}
-                    style={({ pressed }) => ({
-                      width: 80,
-                      height: 80,
-                      borderRadius: 40,
-                      backgroundColor: colors.accent,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      opacity: pressed ? 0.8 : 1,
-                      shadowColor: colors.accent,
-                      shadowRadius: 16,
-                      shadowOpacity: 0.5,
-                      elevation: 8,
-                    })}
-                  >
-                    <Play
-                      size={36}
-                      color={colors.onAccent}
-                      fill={colors.onAccent}
-                      style={{ marginLeft: 4 }}
-                    />
-                  </Pressable>
                   <Text
                     style={{
-                      fontFamily: fonts.bodySemi,
-                      color: 'rgba(245,245,240,0.65)',
-                      marginTop: 14,
-                      fontSize: 13,
+                      fontFamily: fonts.display,
+                      fontSize: 20,
+                      color: colors.text,
+                      textAlign: 'center',
                     }}
                   >
-                    {t('trailers.playHint', 'Tap to watch official trailer')}
+                    {t('trailers.unavailableTitle', 'Trailer Unavailable')}
                   </Text>
+                  <Text
+                    style={{
+                      color: colors.textMuted,
+                      textAlign: 'center',
+                      fontSize: 13,
+                      lineHeight: 18,
+                      maxWidth: 240,
+                    }}
+                  >
+                    {t(
+                      'trailers.unavailableHint',
+                      'This trailer cannot be played. Skip to the next one.',
+                    )}
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => {
+                        setErroredIds((prev) => {
+                          const next = { ...prev };
+                          delete next[item.id];
+                          return next;
+                        });
+                      }}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        backgroundColor: 'rgba(255,255,255,0.08)',
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: 'rgba(255,255,255,0.15)',
+                      }}
+                    >
+                      <Text
+                        style={{ color: colors.text, fontFamily: fonts.bodySemi, fontSize: 12 }}
+                      >
+                        {t('common.retry', 'Retry')}
+                      </Text>
+                    </Pressable>
+
+                    <Pressable
+                      accessibilityRole="button"
+                      onPress={() => advanceFeed(index)}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        backgroundColor: colors.accent,
+                        borderRadius: 8,
+                      }}
+                    >
+                      <Text
+                        style={{ color: colors.onAccent, fontFamily: fonts.bodySemi, fontSize: 12 }}
+                      >
+                        {t('trailers.skip', 'Skip')}
+                      </Text>
+                    </Pressable>
+                  </View>
                 </View>
               )}
 
-              {/* Movie Details Info Overlay (Bottom) — box-none so the
-                  text block never swallows taps aimed at the player below. */}
-              <View
-                pointerEvents="box-none"
+              {/* Movie Details Info Overlay (Bottom) — press to open details screen */}
+              <Pressable
+                onPress={() => {
+                  router.push({
+                    pathname: '/(app)/title/[id]',
+                    params: { id: item.id },
+                  });
+                }}
                 style={{
                   position: 'absolute',
                   bottom: 0,
                   left: 0,
-                  right: 0,
+                  right: 76, // Leave space for side action buttons
                   paddingHorizontal: 20,
                   paddingBottom: Math.max(34, insets.bottom + 12),
-                  paddingRight: 76, // Leave space for side action buttons
                   gap: 8,
                 }}
               >
@@ -425,7 +526,7 @@ export default function TrailersScreen() {
                     </View>
                   ))}
                 </View>
-              </View>
+              </Pressable>
 
               {/* Side Floating Action Panel */}
               <View
@@ -441,7 +542,7 @@ export default function TrailersScreen() {
                 <Pressable
                   onPress={() => handleLike(item, index)}
                   accessibilityRole="button"
-                  accessibilityLabel="Add to Watchlist"
+                  accessibilityLabel={t('trailers.addWatchlistA11y', 'Add to Watchlist')}
                   style={({ pressed }) => ({
                     width: 50,
                     height: 50,
@@ -460,7 +561,7 @@ export default function TrailersScreen() {
                 <Pressable
                   onPress={() => handlePass(item, index)}
                   accessibilityRole="button"
-                  accessibilityLabel="Skip"
+                  accessibilityLabel={t('trailers.skipA11y', 'Skip this title')}
                   style={({ pressed }) => ({
                     width: 48,
                     height: 48,
@@ -481,7 +582,7 @@ export default function TrailersScreen() {
                 <Pressable
                   onPress={() => openShareCard(item)}
                   accessibilityRole="button"
-                  accessibilityLabel="Share"
+                  accessibilityLabel={t('trailers.shareA11y', 'Share this title')}
                   style={({ pressed }) => ({
                     width: 48,
                     height: 48,
@@ -496,6 +597,35 @@ export default function TrailersScreen() {
                   })}
                 >
                   <Share2 size={18} color="rgba(245,245,240,0.8)" />
+                </Pressable>
+
+                {/* Mute/Unmute Button */}
+                <Pressable
+                  onPress={toggleMute}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    muted
+                      ? t('trailers.unmuteA11y', 'Unmute trailer')
+                      : t('trailers.muteA11y', 'Mute trailer')
+                  }
+                  style={({ pressed }) => ({
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: 'rgba(10,10,11,0.6)',
+                    borderWidth: 1,
+                    borderColor: 'rgba(255,255,255,0.15)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed ? 0.8 : 1,
+                    elevation: 3,
+                  })}
+                >
+                  {muted ? (
+                    <VolumeX size={18} color="rgba(245,245,240,0.8)" />
+                  ) : (
+                    <Volume2 size={18} color="rgba(245,245,240,0.8)" />
+                  )}
                 </Pressable>
               </View>
             </View>
@@ -518,7 +648,7 @@ export default function TrailersScreen() {
       >
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Back to Discover"
+          accessibilityLabel={t('trailers.backA11y', 'Back to Discover')}
           hitSlop={12}
           onPress={goBack}
           style={({ pressed }) => ({
@@ -555,7 +685,7 @@ export default function TrailersScreen() {
               textTransform: 'uppercase',
             }}
           >
-            Trailers
+            {t('trailers.title', 'Trailers')}
           </Text>
         </View>
       </View>
@@ -582,7 +712,7 @@ export default function TrailersScreen() {
               letterSpacing: 1.5,
             }}
           >
-            Swipe Up for Next
+            {t('trailers.swipeUp', 'Swipe Up for Next')}
           </Text>
           <ChevronDown size={16} color="rgba(255,255,255,0.36)" style={{ marginTop: -2 }} />
         </View>

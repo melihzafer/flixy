@@ -48,6 +48,15 @@ export const events = {
   detailTrailerMissing: (props: { titleId: string; tmdbId: number; kind: string }) =>
     track('detail_trailer_missing', props),
   trailerOpened: (titleId: string) => track('trailer_opened', { titleId }),
+
+  trailerFeedOpened: () => track('trailer_feed_opened'),
+  trailerFeedStarted: (props: { titleId: string }) => track('trailer_feed_started', props),
+  trailerFeedSkipped: (props: { titleId: string }) => track('trailer_feed_skipped', props),
+  trailerFeedSaved: (props: { titleId: string }) => track('trailer_feed_saved', props),
+  trailerFeedMuted: () => track('trailer_feed_muted'),
+  trailerFeedUnmuted: () => track('trailer_feed_unmuted'),
+  trailerFeedError: (props: { titleId: string; error: string }) =>
+    track('trailer_feed_error', props),
   availabilityOpened: (props: { titleId: string; serviceId: string; offerType: string }) =>
     track('availability_opened', props),
 
