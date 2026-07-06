@@ -705,3 +705,9 @@
 | 22:08 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | added optional chaining | ~284 |
 | 22:08 | Edited apps/mobile/src/lib/__tests__/localDb.test.ts | expanded (+37 lines) | ~516 |
 | 22:09 | Edited apps/mobile/app/(app)/(tabs)/deck.tsx | CSS: screen | ~174 |
+| 22:14 | Session summary: For You algorithm overhaul (scale-free dislike affinity, disliked-genre hard suppression, taste-aware feed pools), watchlist/swiped exclusion integrity (compose gating, live queue filter, cross-device swipes, invalidation), fresh-deck-per-open cache fixes (no persisted discover pages, launch-salted jitter, impressions cooldown). PR #27 merged to main (17141df), CI green, 192 tests. | composer.ts, taste pipeline, deck hooks/screen, localDb, _layout.tsx | merged | ~0 |
+
+## Session: 2026-07-06 22:20
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
