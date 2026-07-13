@@ -730,3 +730,8 @@
 | 23:13 | Edited apps/mobile/src/features/deck/hooks.ts | 1→3 lines | ~68 |
 | 23:15 | Created ../../../tmp/claude-0/-home-user-flixy/40542152-19c1-52f7-b909-8f20535b6e41/scratchpad/probe3.mjs | — | ~163 |
 | 23:45 | Fixed prod web black screen: zustand/middleware ESM import.meta parse error in classic-script Expo export; metro resolveRequest routes zustand to CJS on web + guarded prefs?.excluded_genres?.map in useDeck; verified via local web export + headless Chromium | apps/mobile/metro.config.js, apps/mobile/src/features/deck/hooks.ts | fixed+verified | ~52k |
+
+## Session: 2026-07-13 23:37
+
+| Time | Action | File(s) | Outcome | ~Tokens |
+|------|--------|---------|---------|--------|
