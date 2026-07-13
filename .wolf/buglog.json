@@ -2,6 +2,30 @@
   "version": 1,
   "bugs": [
     {
+      "id": "bug-112",
+      "timestamp": "2026-07-13T23:30:00Z",
+      "error_message": "Prod web (Vercel) is a black screen after commit 418d4a7 (fix(deck): enforce filters and rebalance For You). Console: SyntaxError: Cannot use import.meta outside a module — the whole JS bundle fails to parse, React never mounts, only the dark static shell renders.",
+      "file": "apps/mobile/metro.config.js; apps/mobile/src/features/deck/filterStore.ts; apps/mobile/src/features/deck/hooks.ts",
+      "root_cause": "filterStore.ts newly imported zustand/middleware (persist). On web, Metro resolves zustand via the import exports condition to esm/middleware.mjs, which contains import.meta.env checks in devtools code. Expo static export loads bundles as classic scripts where import.meta is a parse-time SyntaxError, killing the entire bundle. Native was fine (react-native condition -> CJS). Secondary latent crash: persisted user_preferences query cache from before the schema change lacks excluded_genres, and useDeck called prefs?.excluded_genres.map() unguarded.",
+      "fix": "metro.config.js resolveRequest override routes zustand/* to its CJS build (require.resolve) on web only, matching what native already uses. useDeck now optional-chains prefs?.excluded_genres?.map(). Verified by building the web export locally and loading it headlessly: pageerror gone, app renders.",
+      "tags": [
+        "web",
+        "metro",
+        "zustand",
+        "import-meta",
+        "expo-export",
+        "black-screen",
+        "prod",
+        "query-persistence"
+      ],
+      "related_bugs": [
+        "bug-004",
+        "bug-010"
+      ],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T23:30:00Z"
+    },
+    {
       "id": "bug-111",
       "timestamp": "2026-07-06T00:00:00Z",
       "error_message": "Taste signal counted 'down' (Seen) swipes as dislikes, poisoning the genre profile of users who honestly mark watched titles; all directions weighed equally; no time decay; onboarding genre selection unused in For You (pure popularity on cold start); strong repeated passes on a genre barely affected ranking during cold start.",
@@ -3663,6 +3687,22 @@
       ],
       "occurrences": 1,
       "last_seen": "2026-07-06T22:35:24.848Z"
+    },
+    {
+      "id": "bug-207",
+      "timestamp": "2026-07-13T23:13:40.873Z",
+      "error_message": "Missing error handling in unknown",
+      "file": "apps/mobile/metro.config.js",
+      "root_cause": "Code path had no error handling — exceptions would propagate uncaught",
+      "fix": "Added try/catch block",
+      "tags": [
+        "auto-detected",
+        "error-handling",
+        "js"
+      ],
+      "related_bugs": [],
+      "occurrences": 1,
+      "last_seen": "2026-07-13T23:13:40.873Z"
     }
   ]
 }
