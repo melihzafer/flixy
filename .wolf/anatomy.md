@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-06T22:34:30.877Z
-> Files: 28 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T23:15:29.820Z
+> Files: 32 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -167,6 +167,7 @@
 
 ## apps/mobile/
 
+- `metro.config.js` — Declares path (~511 tok)
 
 ## apps/mobile/.expo/
 
@@ -226,7 +227,7 @@
 
 ## apps/mobile/src/features/deck/
 
-- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~8343 tok)
+- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~9425 tok)
 - `queueFilter.ts` — Live filter for the deck screen's append-only card queue. (~352 tok)
 
 ## apps/mobile/src/features/deck/__tests__/
