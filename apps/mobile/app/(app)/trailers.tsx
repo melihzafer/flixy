@@ -100,7 +100,7 @@ export default function TrailersScreen() {
       titleId: title.id,
       direction: 'right',
       deckPosition: index,
-      genres: title.genres,
+      titleSnapshot: { genres: title.genres, language: title.language, kind: title.kind },
     });
     advanceFeed(index);
   };
@@ -111,7 +111,7 @@ export default function TrailersScreen() {
       titleId: title.id,
       direction: 'left',
       deckPosition: index,
-      genres: title.genres,
+      titleSnapshot: { genres: title.genres, language: title.language, kind: title.kind },
     });
     advanceFeed(index);
   };

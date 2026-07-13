@@ -112,11 +112,6 @@ function applyFallbackFilter(filter: TitleQueryFilter): Title[] {
       if (effectiveGenres.size > 0) {
         const hasMatch = title.genres.some((genre) => effectiveGenres.has(normalizeGenreId(genre)));
         if (!hasMatch) return false;
-
-        const hasExcluded = title.genres.some(
-          (genre) => !effectiveGenres.has(normalizeGenreId(genre)),
-        );
-        if (hasExcluded) return false;
       }
       if (
         filter.minYear != null &&

@@ -71,13 +71,13 @@ export function useWatchlist(filter: WatchlistFilter = 'all') {
 
 function useInvalidate() {
   const qc = useQueryClient();
-  return () => {
-    qc.invalidateQueries({ queryKey: ['watchlist'] });
-    // The deck's hard-exclusion set is derived from the watchlist; without
-    // this, add/remove from search or title detail leaves the deck serving
-    // stale exclusions until the next full refetch.
-    qc.invalidateQueries({ queryKey: ['deck_exclusions'] });
-  };
+  return () =>
+    Promise.all([
+      qc.invalidateQueries({ queryKey: ['watchlist'] }),
+      qc.invalidateQueries({ queryKey: ['taste_signal'] }),
+      qc.invalidateQueries({ queryKey: ['deck_exclusions'] }),
+      qc.invalidateQueries({ queryKey: ['deck_recommendations'] }),
+    ]);
 }
 
 export function useMarkWatched() {

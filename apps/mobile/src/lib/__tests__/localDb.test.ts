@@ -256,6 +256,35 @@ describe('localDb', () => {
       expect(Array.isArray(parsed.data)).toBe(true);
       expect(parsed.data[0].title_id).toBe('t-write');
     });
+
+    it('adds new filter preference fields when updating a legacy preference row', async () => {
+      const userId = 'user-legacy-preferences';
+      await AsyncStorage.setItem(
+        'flixy.local_db.prefs.v3',
+        JSON.stringify({
+          schema_version: 1,
+          data: {
+            [userId]: {
+              user_id: userId,
+              selected_services: ['netflix'],
+              selected_genres: ['drama'],
+              notifications_enabled: false,
+              onboarding_completed_at: null,
+              cold_start_completed_at: null,
+              updated_at: '2026-07-01T00:00:00.000Z',
+            },
+          },
+        }),
+      );
+
+      await localDb.clearUserMemory();
+      const updated = await localDb.upsertPreferences(userId, { notifications_enabled: true });
+
+      expect(updated.excluded_genres).toEqual([]);
+      expect(updated.preferred_languages).toEqual([]);
+      expect(updated.excluded_languages).toEqual([]);
+      expect(updated.notifications_enabled).toBe(true);
+    });
   });
 
   describe('taste event persistence', () => {

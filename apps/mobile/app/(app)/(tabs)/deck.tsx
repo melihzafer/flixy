@@ -73,13 +73,23 @@ export default function DeckScreen() {
   const extraFilter = useMemo(
     () => ({
       kinds,
-      minYear: forYou ? undefined : (minYear ?? undefined),
-      maxYear: forYou ? undefined : (maxYear ?? undefined),
+      minYear: minYear ?? undefined,
+      maxYear: maxYear ?? undefined,
     }),
-    [kinds, minYear, maxYear, forYou],
+    [kinds, minYear, maxYear],
   );
 
-  const { deck, diagnostics, filterKey, excludeIds, isLoading, isError, error, refetch } = useDeck({
+  const {
+    deck,
+    diagnostics,
+    filterKey,
+    excludeIds,
+    hardExcludedIds,
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useDeck({
     mood: activeMood,
     vibes,
     country,
@@ -156,8 +166,9 @@ export default function DeckScreen() {
         return { key: filterKey, ids: [], byId: new Map() };
       }
 
-      const base = sameKey ? prev.ids : [];
+      const base = sameKey ? prev.ids.filter((id) => !hardExcludedIds.has(id)) : [];
       const byId = sameKey ? new Map(prev.byId) : new Map<string, DeckCard>();
+      for (const id of hardExcludedIds) byId.delete(id);
       for (const card of cards) {
         byId.set(card.title.id, card);
       }
@@ -176,7 +187,7 @@ export default function DeckScreen() {
         cards.every((card) => prev.byId.get(card.title.id) === card);
       return unchanged ? prev : { key: filterKey, ids: next, byId };
     });
-  }, [cards, filterKey]);
+  }, [cards, filterKey, hardExcludedIds]);
 
   const cardQueueIds = cardQueue.ids;
   const queuedCards = useMemo(
@@ -234,7 +245,11 @@ export default function DeckScreen() {
           titleId: card.title.id,
           direction: dir,
           deckPosition: swipeIndex,
-          genres: card.title.genres,
+          titleSnapshot: {
+            genres: card.title.genres,
+            language: card.title.language,
+            kind: card.title.kind,
+          },
           discoverySessionId: discoverySession.session_id,
         });
         lastEventRef.current = ev;

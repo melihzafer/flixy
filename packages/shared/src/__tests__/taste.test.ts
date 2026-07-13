@@ -2,6 +2,7 @@ import {
   COLD_START_GENRE_PRIOR,
   TASTE_DECAY_DAYS,
   buildTasteSignal,
+  buildWatchlistTasteSignal,
   withColdStartPrior,
 } from '../taste';
 
@@ -10,7 +11,7 @@ const daysAgo = (days: number) =>
   new Date(NOW.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
 
 describe('buildTasteSignal', () => {
-  it('weights directions: Top Pick > Save > Seen positive, Pass negative', () => {
+  it('weights directions: Top Pick 5x, Save 2x, Seen 3x, Pass negative', () => {
     const taste = buildTasteSignal(
       [
         { direction: 'up', genres: ['action'], occurredAt: daysAgo(0) },
@@ -21,21 +22,21 @@ describe('buildTasteSignal', () => {
       { now: NOW },
     );
 
-    expect(taste.positiveGenres.action).toBeCloseTo(4);
-    expect(taste.positiveGenres.comedy).toBeCloseTo(3);
-    expect(taste.positiveGenres.drama).toBeCloseTo(0.5);
+    expect(taste.positiveGenres.action).toBeCloseTo(5);
+    expect(taste.positiveGenres.comedy).toBeCloseTo(2);
+    expect(taste.positiveGenres.drama).toBeCloseTo(3);
     expect(taste.negativeGenres.horror).toBeCloseTo(1);
     expect(taste.totalSwipes).toBe(4);
   });
 
-  it('treats Seen (down) as a weak positive, never a dislike', () => {
+  it('treats Seen (down) as a strong positive, never a dislike', () => {
     const taste = buildTasteSignal(
       [{ direction: 'down', genres: ['drama'], occurredAt: daysAgo(0) }],
       { now: NOW },
     );
     expect(taste.negativeGenres.drama).toBeUndefined();
     expect(taste.positiveGenres.drama).toBeGreaterThan(0);
-    expect(taste.positiveGenres.drama).toBeLessThan(3); // weaker than a Save
+    expect(taste.positiveGenres.drama).toBeCloseTo(3);
   });
 
   it('decays old swipes: a TASTE_DECAY_DAYS-old swipe weighs 1/e of a fresh one', () => {
@@ -85,11 +86,11 @@ describe('buildTasteSignal', () => {
       ],
       { now: NOW },
     );
-    expect(taste.positiveGenres.drama).toBeCloseTo(3);
-    expect(taste.positiveGenres.comedy).toBeCloseTo(3);
+    expect(taste.positiveGenres.drama).toBeCloseTo(2);
+    expect(taste.positiveGenres.comedy).toBeCloseTo(2);
   });
 
-  it('weights trailer watches above detail opens but below save and top pick', () => {
+  it('weights trailer watches above detail opens but below watched and top pick', () => {
     const taste = buildTasteSignal(
       [
         { direction: 'right', itemId: 'saved', genres: ['comedy'], occurredAt: daysAgo(0) },
@@ -120,8 +121,8 @@ describe('buildTasteSignal', () => {
 
     expect(taste.positiveGenres.drama).toBeCloseTo(1);
     expect(taste.positiveGenres.sci_fi).toBeCloseTo(2);
-    expect(taste.positiveGenres.comedy).toBeCloseTo(3);
-    expect(taste.positiveGenres.action).toBeCloseTo(4);
+    expect(taste.positiveGenres.comedy).toBeCloseTo(2);
+    expect(taste.positiveGenres.action).toBeCloseTo(5);
   });
 
   it('applies the same 30-day decay to local taste events', () => {
@@ -170,9 +171,84 @@ describe('buildTasteSignal', () => {
   });
 });
 
+describe('buildWatchlistTasteSignal', () => {
+  it('uses the strongest watchlist state without double-counting: top 5x, watched 3x, saved 2x', () => {
+    const taste = buildWatchlistTasteSignal(
+      [
+        { genres: ['action'], language: 'en', kind: 'movie', priority: 'top', watchedAt: null },
+        {
+          genres: ['drama'],
+          language: 'tr',
+          kind: 'tv',
+          priority: 'normal',
+          watchedAt: daysAgo(0),
+        },
+        { genres: ['comedy'], language: 'en', kind: 'movie', priority: 'normal', watchedAt: null },
+        {
+          genres: ['thriller'],
+          language: 'en',
+          kind: 'movie',
+          priority: 'top',
+          watchedAt: daysAgo(0),
+        },
+      ],
+      [],
+      { now: NOW },
+    );
+
+    expect(taste.positiveGenres.action).toBeCloseTo(5);
+    expect(taste.positiveGenres.drama).toBeCloseTo(3);
+    expect(taste.positiveGenres.comedy).toBeCloseTo(2);
+    expect(taste.positiveGenres.thriller).toBeCloseTo(5);
+    expect(taste.positiveLanguages.en).toBeCloseTo(12);
+    expect(taste.positiveKinds.movie).toBeCloseTo(12);
+  });
+
+  it('turns three passes for a language into a durable negative signal', () => {
+    const taste = buildWatchlistTasteSignal(
+      [],
+      [
+        {
+          direction: 'left',
+          genres: ['animation'],
+          language: 'hi',
+          kind: 'movie',
+          occurredAt: daysAgo(0),
+        },
+        {
+          direction: 'left',
+          genres: ['animation'],
+          language: 'hi',
+          kind: 'movie',
+          occurredAt: daysAgo(0),
+        },
+        {
+          direction: 'left',
+          genres: ['animation'],
+          language: 'hi',
+          kind: 'movie',
+          occurredAt: daysAgo(0),
+        },
+      ],
+      { now: NOW },
+    );
+
+    expect(taste.negativeGenres.animation).toBeCloseTo(3);
+    expect(taste.negativeLanguages.hi).toBeCloseTo(3);
+  });
+});
+
 describe('withColdStartPrior', () => {
   it('adds the prior to selected genres without mutating the input', () => {
-    const base = { positiveGenres: { drama: 2 }, negativeGenres: {}, totalSwipes: 1 };
+    const base = {
+      positiveGenres: { drama: 2 },
+      negativeGenres: {},
+      positiveLanguages: {},
+      negativeLanguages: {},
+      positiveKinds: {},
+      negativeKinds: {},
+      totalSwipes: 1,
+    };
     const seeded = withColdStartPrior(base, ['drama', 'comedy']);
 
     expect(seeded.positiveGenres.drama).toBeCloseTo(2 + COLD_START_GENRE_PRIOR);
@@ -183,7 +259,15 @@ describe('withColdStartPrior', () => {
   });
 
   it('returns the input unchanged for an empty selection', () => {
-    const base = { positiveGenres: {}, negativeGenres: {}, totalSwipes: 0 };
+    const base = {
+      positiveGenres: {},
+      negativeGenres: {},
+      positiveLanguages: {},
+      negativeLanguages: {},
+      positiveKinds: {},
+      negativeKinds: {},
+      totalSwipes: 0,
+    };
     expect(withColdStartPrior(base, [])).toBe(base);
     expect(withColdStartPrior(base, null)).toBe(base);
   });

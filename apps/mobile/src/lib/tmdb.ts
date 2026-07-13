@@ -549,7 +549,10 @@ export async function discoverTmdbTitles(filter: TmdbDiscoverFilter): Promise<Ti
     results.push(...list);
   }
 
-  return results.sort((a, b) => b.popularity - a.popularity).slice(0, filter.limit || 60);
+  // Keep each requested kind's page. Sorting then globally slicing this merged
+  // array made high-popularity TV results evict every movie before the deck
+  // composer could apply its movie/series balance policy.
+  return results.sort((a, b) => b.popularity - a.popularity);
 }
 
 /**

@@ -47,39 +47,21 @@ export type ComposeResult = {
   };
 };
 
-const COLD_START_THRESHOLD = 50;
+const COLD_START_THRESHOLD = 6;
 const MAX_CONSECUTIVE_SAME_GENRE = 3;
 const DEFAULT_TARGET_SIZE = 50;
 
 /**
- * Disliked-genre detection. A genre counts as disliked when its decayed
- * negative weight reaches ~3 recent passes AND clearly dominates whatever
- * positive signal the genre has. Because taste weights are time-decayed
- * (30-day e-folding), a dislike ages out on its own if the user stops
- * passing the genre — this is a rolling verdict, not a permanent ban.
- */
-export const DISLIKED_GENRE_MIN_NEGATIVE = 2.5;
-export const DISLIKED_GENRE_DOMINANCE = 2;
-/**
- * Evidence mass (decayed positive+negative weight across a title's genres) at
- * which the personalization score reaches full confidence. Keeps one stray
- * pass from nuking a genre while letting 3+ consistent signals act at full
- * strength.
- */
-const AFFINITY_EVIDENCE_SATURATION = 5;
-
-/**
- * Feed mix slot pattern, repeated every 10 positions: 6 personalized,
- * 2 trending, 1 fresh (new release), 1 exploration — i.e. 60/20/10/10.
+ * Feed mix slot pattern, repeated every 10 positions: 7 personalized,
+ * 1 trending, 1 fresh, 1 exploration — i.e. 70/10/10/10.
  * Unlisted positions are personalized. When a slice has nothing left the slot
  * falls back to personalized, so small pools degrade gracefully to pure
  * score order (which keeps decks of <4 cards byte-identical to the old
  * behavior).
  */
 const MIX_SLOT_PATTERN: Record<number, DeckCardSource> = {
-  3: 'trending',
-  6: 'fresh',
-  8: 'trending',
+  7: 'trending',
+  8: 'fresh',
   9: 'exploration',
 };
 /** A title is "fresh" when released this year or the previous one. */
@@ -116,11 +98,23 @@ function numberRecord(value: unknown): Record<string, number> {
 
 function safeTasteSignal(value: unknown): TasteSignal {
   if (!isRecord(value)) {
-    return { positiveGenres: {}, negativeGenres: {}, totalSwipes: 0 };
+    return {
+      positiveGenres: {},
+      negativeGenres: {},
+      positiveLanguages: {},
+      negativeLanguages: {},
+      positiveKinds: {},
+      negativeKinds: {},
+      totalSwipes: 0,
+    };
   }
   return {
     positiveGenres: numberRecord(value.positiveGenres),
     negativeGenres: numberRecord(value.negativeGenres),
+    positiveLanguages: numberRecord(value.positiveLanguages),
+    negativeLanguages: numberRecord(value.negativeLanguages),
+    positiveKinds: numberRecord(value.positiveKinds),
+    negativeKinds: numberRecord(value.negativeKinds),
     totalSwipes:
       typeof value.totalSwipes === 'number' && Number.isFinite(value.totalSwipes)
         ? value.totalSwipes
@@ -159,73 +153,59 @@ function popularityScore(t: Title): number {
   return Math.min(1, t.popularity / 1000);
 }
 
-/**
- * Per-title genre affinity in [-1, 1] plus the evidence mass behind it.
- * Each genre contributes (pos - neg) / (pos + neg + 1) — a scale-free ratio —
- * so the verdict on a genre does NOT dilute as unrelated swipes accumulate.
- * (The previous formula divided by totalSwipes, which meant 10 passes on
- * horror became invisible once the user had swiped 100 other titles, and
- * popular horror kept resurfacing. That was the "categories I pass keep
- * showing up" bug.)
- */
-function genreAffinity(t: Title, taste: TasteSignal): { affinity: number; evidence: number } {
-  if (t.genres.length === 0) return { affinity: 0, evidence: 0 };
+function affinity(
+  values: readonly string[],
+  positive: Record<string, number>,
+  negative: Record<string, number>,
+): number {
+  if (values.length === 0) return 0;
   let sum = 0;
-  let evidence = 0;
-  for (const g of t.genres) {
-    const pos = taste.positiveGenres[g] ?? 0;
-    const neg = taste.negativeGenres[g] ?? 0;
+  for (const value of values) {
+    const pos = positive[value] ?? 0;
+    const neg = negative[value] ?? 0;
+    // Scale-free affinity keeps three focused passes meaningful even after a
+    // long, unrelated swipe history.
     sum += (pos - neg) / (pos + neg + 1);
-    evidence += pos + neg;
   }
-  return { affinity: sum / t.genres.length, evidence };
-}
-
-/** Genres whose decayed negative weight dominates their positive weight. */
-export function dislikedGenres(taste: TasteSignal): Set<string> {
-  const out = new Set<string>();
-  for (const [genre, neg] of Object.entries(taste.negativeGenres)) {
-    const pos = taste.positiveGenres[genre] ?? 0;
-    if (neg >= DISLIKED_GENRE_MIN_NEGATIVE && neg > DISLIKED_GENRE_DOMINANCE * pos) {
-      out.add(genre);
-    }
-  }
-  return out;
-}
-
-/**
- * A title is "disliked" only when EVERY genre it carries is disliked — a
- * horror-comedy survives for a user who hates horror but loves comedy; the
- * affinity score handles its ranking instead.
- */
-function isDislikedTitle(t: Title, disliked: Set<string>): boolean {
-  return t.genres.length > 0 && t.genres.every((g) => disliked.has(g));
+  return sum / values.length;
 }
 
 function personalizationScore(t: Title, taste: TasteSignal, recommendationScore?: number): number {
-  let baseScore = 0;
-  // Score whenever ANY genre signal exists — a cold-start prior (onboarding
-  // genre selection) populates positiveGenres with zero swipes and must still
-  // personalize the deck.
-  const hasSignal =
-    taste.totalSwipes > 0 ||
-    Object.keys(taste.positiveGenres).length > 0 ||
-    Object.keys(taste.negativeGenres).length > 0;
-  if (hasSignal) {
-    // Scale-free affinity (repeated passes on a genre stay strong no matter
-    // how much unrelated history exists), gated by evidence so a single
-    // accidental swipe moves the score only slightly. Bounded to [-2, 2] so
-    // an extreme profile can never fully drown popularity/availability.
-    const { affinity, evidence } = genreAffinity(t, taste);
-    const confidence = Math.min(1, evidence / AFFINITY_EVIDENCE_SATURATION);
-    baseScore = 2 * affinity * confidence;
-  }
+  const genre = affinity(t.genres, taste.positiveGenres, taste.negativeGenres);
+  const language = affinity(
+    t.language ? [t.language] : [],
+    taste.positiveLanguages,
+    taste.negativeLanguages,
+  );
+  const kind = affinity([t.kind], taste.positiveKinds, taste.negativeKinds);
+  // Genre is the strongest content signal, while language and type stop Hindi
+  // and all-series feeds from recurring after the user repeatedly rejects them.
+  const baseScore = Math.max(-2, Math.min(2, 1.25 * genre + 0.5 * language + 0.25 * kind));
+  return recommendationScore != null ? 0.55 * baseScore + 0.45 * recommendationScore : baseScore;
+}
 
-  if (recommendationScore != null) {
-    // Combine base genre preference (0.4) and specific item recommendation (0.6)
-    return 0.4 * baseScore + 0.6 * recommendationScore;
-  }
-  return baseScore;
+const DISLIKED_SIGNAL_THRESHOLD = 2.5;
+export const DISLIKED_GENRE_MIN_NEGATIVE = DISLIKED_SIGNAL_THRESHOLD;
+export const DISLIKED_GENRE_DOMINANCE = 2;
+
+function isDominantlyDisliked(
+  value: string | null | undefined,
+  positive: Record<string, number>,
+  negative: Record<string, number>,
+): boolean {
+  if (!value) return false;
+  const neg = negative[value] ?? 0;
+  const pos = positive[value] ?? 0;
+  return neg >= DISLIKED_SIGNAL_THRESHOLD && neg > pos * 2;
+}
+
+/** Genres whose decayed negative signal clearly dominates positives. */
+export function dislikedGenres(taste: TasteSignal): Set<string> {
+  return new Set(
+    Object.keys(taste.negativeGenres).filter((genre) =>
+      isDominantlyDisliked(genre, taste.positiveGenres, taste.negativeGenres),
+    ),
+  );
 }
 
 /**
@@ -434,6 +414,46 @@ function mixFeed(scored: ScoredCandidate[], targetSize: number, now: Date): Scor
   return result;
 }
 
+/**
+ * Prevent an API popularity skew from producing an all-movie or all-series
+ * deck. The user's positive kind signal picks the target ratio, but both kinds
+ * retain a 30% floor whenever both are available.
+ */
+function balanceKinds(
+  mixed: ScoredCandidate[],
+  scored: ScoredCandidate[],
+  targetSize: number,
+): ScoredCandidate[] {
+  const availableMovies = scored.filter((candidate) => candidate.title.kind === 'movie');
+  const availableTv = scored.filter((candidate) => candidate.title.kind === 'tv');
+  if (availableMovies.length === 0 || availableTv.length === 0 || targetSize < 4) return mixed;
+
+  const targetCount = Math.min(targetSize, scored.length);
+  const floor = Math.ceil(targetCount * 0.3);
+  const result = [...mixed];
+  const chosen = new Set(result.map((candidate) => candidate.title.id));
+  const count = (kind: 'movie' | 'tv') =>
+    result.filter((candidate) => candidate.title.kind === kind).length;
+
+  const fill = (neededKind: 'movie' | 'tv') => {
+    while (count(neededKind) < floor) {
+      const replacementIndex = result.findIndex((candidate) => candidate.title.kind !== neededKind);
+      const replacement = (neededKind === 'movie' ? availableMovies : availableTv).find(
+        (candidate) => !chosen.has(candidate.title.id),
+      );
+      if (replacementIndex === -1 || !replacement) break;
+      const removed = result[replacementIndex];
+      if (removed) chosen.delete(removed.title.id);
+      chosen.add(replacement.title.id);
+      result[replacementIndex] = tagged(replacement, 'personalized');
+    }
+  };
+
+  fill('movie');
+  fill('tv');
+  return result;
+}
+
 export function composeDeck(opts: ComposeOptions): ComposeResult {
   const candidates = candidateArray(opts.candidates);
   const taste = safeTasteSignal(opts.taste);
@@ -455,8 +475,8 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   // "For You" mode we tilt even harder toward personalization + remote recos so
   // the deck visibly reflects the user's taste the moment they swipe in.
   const isColdStart = taste.totalSwipes < COLD_START_THRESHOLD;
-  const wPersonal = isColdStart ? (forYou ? 0.35 : 0.2) : forYou ? 0.7 : 0.6;
-  const wPopularity = isColdStart ? 0.6 : forYou ? 0.1 : 0.2;
+  const wPersonal = isColdStart ? (forYou ? 0.6 : 0.2) : forYou ? 0.75 : 0.6;
+  const wPopularity = isColdStart ? (forYou ? 0.3 : 0.6) : forYou ? 0.1 : 0.2;
   const wAvailability = 0.3;
   const wFreshness = forYou ? 0.1 : 0.2;
   const wCooldown = 1.0;
@@ -465,28 +485,33 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
 
   // Hard exclude (Layer 1 residue): seen, watchlist, recent passes' hard list.
   const exclusions: Record<string, string[]> = {};
-  let eligible = candidates.filter((t) => {
-    if (!excludeIds.has(t.id)) return true;
-    const reasons = ['exclude_ids'];
-    if (passedRecently.has(t.id)) reasons.push('passed_recently');
-    if (shownLast7d.has(t.id)) reasons.push('shown_last_7d');
-    exclusions[t.id] = reasons;
-    return false;
-  });
-
-  // For You hard suppression: a title made ONLY of genres the user keeps
-  // passing must not resurface at all — demotion is not enough when the
-  // catalogue keeps serving popular titles from that genre. Only applied in
-  // For You mode; with explicit manual filters the user asked for those
-  // genres, so demotion (personalization score) is the right tool there.
-  const disliked = forYou ? dislikedGenres(taste) : null;
-  if (disliked && disliked.size > 0) {
-    eligible = eligible.filter((t) => {
-      if (!isDislikedTitle(t, disliked)) return true;
-      exclusions[t.id] = ['disliked_genres'];
+  const eligible = candidates.filter((t) => {
+    if (excludeIds.has(t.id)) {
+      const reasons = ['exclude_ids'];
+      if (passedRecently.has(t.id)) reasons.push('passed_recently');
+      if (shownLast7d.has(t.id)) reasons.push('shown_last_7d');
+      exclusions[t.id] = reasons;
       return false;
-    });
-  }
+    }
+
+    if (forYou) {
+      const everyGenreDisliked =
+        t.genres.length > 0 &&
+        t.genres.every((genre) =>
+          isDominantlyDisliked(genre, taste.positiveGenres, taste.negativeGenres),
+        );
+      const languageDisliked = isDominantlyDisliked(
+        t.language,
+        taste.positiveLanguages,
+        taste.negativeLanguages,
+      );
+      if (everyGenreDisliked || languageDisliked) {
+        exclusions[t.id] = [everyGenreDisliked ? 'disliked_genres' : 'disliked_language'];
+        return false;
+      }
+    }
+    return true;
+  });
 
   const scored: Array<{ title: Title; trace: RuleTrace }> = eligible.map((t) => {
     const personalization = personalizationScore(t, taste, recommendationScores[t.id]);
@@ -541,7 +566,7 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   scored.sort(
     (a, b) => b.trace.finalScore - a.trace.finalScore || (a.title.id < b.title.id ? -1 : 1),
   );
-  const merged = mixFeed(scored, targetSize, now);
+  const merged = balanceKinds(mixFeed(scored, targetSize, now), scored, targetSize);
 
   // Diversity guard: no more than 3 consecutive cards in the same primary genre.
   const ordered: DeckCard[] = [];

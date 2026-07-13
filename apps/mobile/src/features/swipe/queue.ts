@@ -64,7 +64,7 @@ export function isPermanentSwipeSyncError(error: unknown): boolean {
   return typeof code === 'string' && PERMANENT_SYNC_ERROR_CODES.has(code);
 }
 
-export async function syncSwipeEvent(ev: SwipeEvent & { genres?: string[] }): Promise<void> {
+export async function syncSwipeEvent(ev: SwipeEvent): Promise<void> {
   // Local-first, unconditionally: the device's own swipe history (taste
   // signal, deck exclusions, quotas) must never depend on the network call
   // succeeding. insertSwipe upserts by event_id, so retries are idempotent.
@@ -78,11 +78,17 @@ export async function syncSwipeEvent(ev: SwipeEvent & { genres?: string[] }): Pr
     deck_position: ev.deckPosition,
     region: ev.region,
     filters_snapshot: ev.filtersSnapshot,
-    genres: ev.genres,
+    genres: ev.titleSnapshot?.genres ?? ev.genres,
+    title_snapshot: ev.titleSnapshot
+      ? {
+          genres: ev.titleSnapshot.genres,
+          language: ev.titleSnapshot.language,
+          kind: ev.titleSnapshot.kind,
+        }
+      : undefined,
   });
 
   if (!isSupabaseConfigured) return;
-
   const { error } = await supabase.from('swipes').insert({
     event_id: ev.eventId,
     user_id: ev.userId,
@@ -96,6 +102,7 @@ export async function syncSwipeEvent(ev: SwipeEvent & { genres?: string[] }): Pr
     deck_position: ev.deckPosition,
     region: ev.region,
     filters_snapshot: ev.filtersSnapshot,
+    title_snapshot: ev.titleSnapshot ?? null,
   });
   if (!error) return;
   // event_id is the idempotency key. A duplicate means a previous ambiguous

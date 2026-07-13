@@ -22,26 +22,54 @@ export default function EditGenresScreen() {
   const { data: prefs } = useUserPreferences();
   const update = useUpdatePreferences();
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [blocked, setBlocked] = useState<Set<string>>(new Set());
+  const [mode, setMode] = useState<'allow' | 'block'>('allow');
   const hydratedRef = useRef(false);
 
   useEffect(() => {
     if (!prefs || hydratedRef.current) return;
     setSelected(new Set(prefs?.selected_genres ?? []));
+    setBlocked(new Set(prefs?.excluded_genres ?? []));
     hydratedRef.current = true;
   }, [prefs]);
 
   const toggle = (id: string) => {
-    setSelected((current) => {
+    if (mode === 'allow') {
+      setSelected((current) => {
+        const next = new Set(current);
+        if (next.has(id)) next.delete(id);
+        else if (next.size < ONBOARDING.MAX_GENRES) next.add(id);
+        return next;
+      });
+      setBlocked((current) => {
+        if (!current.has(id)) return current;
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      return;
+    }
+
+    setBlocked((current) => {
       const next = new Set(current);
       if (next.has(id)) next.delete(id);
-      else if (next.size < ONBOARDING.MAX_GENRES) next.add(id);
+      else next.add(id);
+      return next;
+    });
+    setSelected((current) => {
+      if (!current.has(id)) return current;
+      const next = new Set(current);
+      next.delete(id);
       return next;
     });
   };
 
   const save = () => {
     update.mutate(
-      { selected_genres: Array.from(selected).slice(0, ONBOARDING.MAX_GENRES) },
+      {
+        selected_genres: Array.from(selected).slice(0, ONBOARDING.MAX_GENRES),
+        excluded_genres: Array.from(blocked),
+      },
       { onSuccess: () => router.back() },
     );
   };
@@ -54,16 +82,65 @@ export default function EditGenresScreen() {
       title={t('settingsPages.genres.title', 'Favourite genres')}
       subtitle={t(
         'settingsPages.genres.subtitle',
-        'Pick {{min}}-{{max}}. Discover will still leave room for surprises.',
+        'Choose the main genres you want. Use Never show for genres that must stay out of Discover.',
         {
           min: ONBOARDING.MIN_GENRES,
           max: ONBOARDING.MAX_GENRES,
         },
       )}
     >
+      <View style={{ flexDirection: 'row', gap: 8 }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: mode === 'allow' }}
+          onPress={() => setMode('allow')}
+          style={{
+            minHeight: 38,
+            paddingHorizontal: 13,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: mode === 'allow' ? colors.accentBorder : colors.border,
+            backgroundColor: mode === 'allow' ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: fonts.bodySemi,
+              color: mode === 'allow' ? colors.text : colors.textMuted,
+            }}
+          >
+            Show me ({selected.size})
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityState={{ selected: mode === 'block' }}
+          onPress={() => setMode('block')}
+          style={{
+            minHeight: 38,
+            paddingHorizontal: 13,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: mode === 'block' ? colors.accentBorder : colors.border,
+            backgroundColor: mode === 'block' ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+            justifyContent: 'center',
+          }}
+        >
+          <Text
+            style={{
+              fontFamily: fonts.bodySemi,
+              color: mode === 'block' ? colors.text : colors.textMuted,
+            }}
+          >
+            Never show ({blocked.size})
+          </Text>
+        </Pressable>
+      </View>
+
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
         {genreOptions.map((genre) => {
-          const active = selected.has(genre.id);
+          const active = mode === 'allow' ? selected.has(genre.id) : blocked.has(genre.id);
           const label = t(`genres.${genre.id}`, genre.id.replace(/_/g, ' '));
           return (
             <Pressable

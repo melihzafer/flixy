@@ -3,7 +3,7 @@ import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 
-import type { SwipeDirection, SwipeEvent } from '@flixy/shared';
+import type { SwipeDirection, SwipeEvent, SwipeTitleSnapshot } from '@flixy/shared';
 
 import { localDb } from '../../lib/localDb';
 import { logger } from '../../lib/logger';
@@ -25,7 +25,9 @@ export type RecordSwipeArgs = {
   titleId: string;
   direction: SwipeDirection;
   deckPosition: number;
+  /** Legacy caller support; prefer titleSnapshot. */
   genres?: string[];
+  titleSnapshot?: SwipeTitleSnapshot;
   discoverySessionId?: string | null;
 };
 
@@ -87,7 +89,8 @@ export function useRecordSwipe() {
           services: prefs?.selected_services ?? [],
           genres: prefs?.selected_genres ?? [],
         },
-        genres: args.genres,
+        genres: args.titleSnapshot?.genres ?? args.genres,
+        titleSnapshot: args.titleSnapshot,
       };
       void hapticFor(args.direction);
       await enqueue(event);

@@ -6,6 +6,18 @@ export const SwipeDirectionSchema = z.enum(['left', 'right', 'up', 'down']);
 export type SwipeDirection = z.infer<typeof SwipeDirectionSchema>;
 
 /**
+ * The minimum title metadata needed to learn a user's taste without having to
+ * re-fetch every historical swipe. It is deliberately optional on the event
+ * so already-persisted queues and server rows remain readable.
+ */
+export const SwipeTitleSnapshotSchema = z.object({
+  genres: z.array(z.string()).default([]),
+  language: z.string().nullable().default(null),
+  kind: z.enum(['movie', 'tv']).nullable().default(null),
+});
+export type SwipeTitleSnapshot = z.infer<typeof SwipeTitleSnapshotSchema>;
+
+/**
  * Client-emitted swipe event. The `eventId` is a client UUID used for
  * idempotency (FSD section 3.6.3): re-delivery of the same id is a no-op.
  */
@@ -26,8 +38,10 @@ export const SwipeEventSchema = z.object({
   deckPosition: z.number().int().nonnegative(),
   region: z.string().length(2),
   filtersSnapshot: z.record(z.unknown()).default({}),
-  /** Title genres at swipe time; feeds the local taste signal. Must survive queue hydration. */
+  /** Legacy title genres at swipe time; retained for old persisted queue entries. */
   genres: z.array(z.string()).optional(),
+  /** Full title metadata for language/type pass learning. */
+  titleSnapshot: SwipeTitleSnapshotSchema.optional(),
 });
 export type SwipeEvent = z.infer<typeof SwipeEventSchema>;
 
@@ -40,6 +54,10 @@ export type SwipeEvent = z.infer<typeof SwipeEventSchema>;
 export const TasteSignalSchema = z.object({
   positiveGenres: z.record(z.number()),
   negativeGenres: z.record(z.number()),
+  positiveLanguages: z.record(z.number()),
+  negativeLanguages: z.record(z.number()),
+  positiveKinds: z.record(z.number()),
+  negativeKinds: z.record(z.number()),
   totalSwipes: z.number().int().nonnegative(),
 });
 export type TasteSignal = z.infer<typeof TasteSignalSchema>;

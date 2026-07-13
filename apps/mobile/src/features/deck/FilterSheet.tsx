@@ -60,6 +60,25 @@ const TYPE_I18N: Record<(typeof TYPES)[number], string> = {
   Series: 'filters.kinds.tv',
 };
 
+const LANGUAGES = [
+  { id: 'en', label: 'English' },
+  { id: 'tr', label: 'Turkish' },
+  { id: 'es', label: 'Spanish' },
+  { id: 'fr', label: 'French' },
+  { id: 'de', label: 'German' },
+  { id: 'it', label: 'Italian' },
+  { id: 'ja', label: 'Japanese' },
+  { id: 'ko', label: 'Korean' },
+  { id: 'hi', label: 'Hindi' },
+] as const;
+
+const RUNTIME_RANGES = [
+  { key: 'any', label: 'Any length', min: null, max: null },
+  { key: 'short', label: 'Under 90 min', min: null, max: 89 },
+  { key: 'feature', label: '90–150 min', min: 90, max: 150 },
+  { key: 'long', label: 'Over 150 min', min: 151, max: null },
+] as const;
+
 const YEAR_RANGES = [
   { key: 'any', label: 'Any year', min: null, max: null },
   { key: 'thisYear', label: 'This year', min: new Date().getFullYear(), max: null },
@@ -109,14 +128,13 @@ export function FilterSheet({
     maxYear,
     serviceIds,
     genres,
-    setForYou,
-    setMood,
-    setVibes,
-    setCountry,
-    toggleKind,
-    setYears,
-    setServices,
-    setGenres,
+    excludedGenres,
+    languages,
+    excludedLanguages,
+    minRuntime,
+    maxRuntime,
+    blindDate,
+    apply: applyFilters,
     reset,
   } = useDeckFilters();
 
@@ -140,6 +158,12 @@ export function FilterSheet({
   const [yearRange, setYearRange] = useState<string>(() => `${minYear ?? ''}:${maxYear ?? ''}`);
   const [selServices, setSelServices] = useState<Set<string>>(new Set());
   const [selGenres, setSelGenres] = useState<Set<string>>(new Set());
+  const [selExcludedGenres, setSelExcludedGenres] = useState<Set<string>>(new Set());
+  const [selLanguages, setSelLanguages] = useState<Set<string>>(new Set());
+  const [selExcludedLanguages, setSelExcludedLanguages] = useState<Set<string>>(new Set());
+  const [runtimeRange, setRuntimeRange] = useState<string>(
+    () => `${minRuntime ?? ''}:${maxRuntime ?? ''}`,
+  );
   const openHydratedRef = useRef(false);
 
   useEffect(() => {
@@ -166,8 +190,29 @@ export function FilterSheet({
     setYearRange(`${minYear ?? ''}:${maxYear ?? ''}`);
     setSelServices(new Set(serviceIds ?? prefs?.selected_services ?? []));
     setSelGenres(new Set(genres ?? prefs?.selected_genres ?? []));
+    setSelExcludedGenres(new Set(excludedGenres ?? prefs?.excluded_genres ?? []));
+    setSelLanguages(new Set(languages ?? prefs?.preferred_languages ?? []));
+    setSelExcludedLanguages(new Set(excludedLanguages ?? prefs?.excluded_languages ?? []));
+    setRuntimeRange(`${minRuntime ?? ''}:${maxRuntime ?? ''}`);
     openHydratedRef.current = true;
-  }, [kinds, maxYear, minYear, mood, vibes, country, forYou, serviceIds, genres, prefs, visible]);
+  }, [
+    kinds,
+    maxYear,
+    minYear,
+    mood,
+    vibes,
+    country,
+    forYou,
+    serviceIds,
+    genres,
+    excludedGenres,
+    languages,
+    excludedLanguages,
+    minRuntime,
+    maxRuntime,
+    prefs,
+    visible,
+  ]);
 
   const toggleType = (t: string) => {
     const next = new Set(types);
@@ -190,7 +235,38 @@ export function FilterSheet({
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelGenres(next);
+    setSelExcludedGenres((current) => {
+      const blocked = new Set(current);
+      blocked.delete(id);
+      return blocked;
+    });
     setSelForYou(false);
+  };
+
+  const toggleExcludedGenre = (id: string) => {
+    const next = new Set(selExcludedGenres);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelExcludedGenres(next);
+    setSelGenres((current) => {
+      const allowed = new Set(current);
+      allowed.delete(id);
+      return allowed;
+    });
+  };
+
+  const toggleLanguage = (id: string, blocked: boolean) => {
+    const setter = blocked ? setSelExcludedLanguages : setSelLanguages;
+    const next = new Set(blocked ? selExcludedLanguages : selLanguages);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setter(next);
+    const oppositeSetter = blocked ? setSelLanguages : setSelExcludedLanguages;
+    oppositeSetter((current) => {
+      const opposite = new Set(current);
+      opposite.delete(id);
+      return opposite;
+    });
   };
 
   const toggleVibe = (id: string) => {
@@ -217,25 +293,37 @@ export function FilterSheet({
   const apply = () => {
     const moodMatch = MOODS.find((m) => m.id === selMood);
     const nextMood: MoodPreset | null = moodMatch ? moodMatch.id : null;
-    setMood(nextMood);
     const knownVibes = VIBES.filter((v) => selVibes.has(v.id)).map((v) => v.id);
-    setVibes(knownVibes.length > 0 ? knownVibes : null);
-    setCountry(selCountry);
-    setForYou(selForYou);
 
     const wantsMovies = types.has('Movies');
     const wantsSeries = types.has('Series');
-    if (wantsMovies && !kinds.includes('movie')) toggleKind('movie');
-    if (!wantsMovies && kinds.includes('movie')) toggleKind('movie');
-    if (wantsSeries && !kinds.includes('tv')) toggleKind('tv');
-    if (!wantsSeries && kinds.includes('tv')) toggleKind('tv');
 
     const selectedYear = YEAR_RANGES.find(
       (range) => `${range.min ?? ''}:${range.max ?? ''}` === yearRange,
     );
-    setYears(selectedYear?.min ?? null, selectedYear?.max ?? null);
-    setServices(Array.from(selServices));
-    setGenres(Array.from(selGenres));
+    const selectedRuntime = RUNTIME_RANGES.find(
+      (range) => `${range.min ?? ''}:${range.max ?? ''}` === runtimeRange,
+    );
+    applyFilters({
+      forYou: selForYou,
+      mood: nextMood,
+      vibes: knownVibes.length > 0 ? knownVibes : null,
+      country: selCountry,
+      kinds: [
+        ...(wantsMovies ? (['movie'] as const) : []),
+        ...(wantsSeries ? (['tv'] as const) : []),
+      ],
+      minYear: selectedYear?.min ?? null,
+      maxYear: selectedYear?.max ?? null,
+      serviceIds: Array.from(selServices),
+      genres: Array.from(selGenres),
+      excludedGenres: Array.from(selExcludedGenres),
+      languages: Array.from(selLanguages),
+      excludedLanguages: Array.from(selExcludedLanguages),
+      minRuntime: selectedRuntime?.min ?? null,
+      maxRuntime: selectedRuntime?.max ?? null,
+      blindDate,
+    });
 
     events.filterApplied({
       forYou: selForYou,
@@ -260,6 +348,10 @@ export function FilterSheet({
     setYearRange(':');
     setSelServices(new Set(prefs?.selected_services ?? []));
     setSelGenres(new Set(prefs?.selected_genres ?? []));
+    setSelExcludedGenres(new Set(prefs?.excluded_genres ?? []));
+    setSelLanguages(new Set(prefs?.preferred_languages ?? []));
+    setSelExcludedLanguages(new Set(prefs?.excluded_languages ?? []));
+    setRuntimeRange(':');
     events.filterApplied({
       forYou: true,
       mood: null,
@@ -646,6 +738,134 @@ export function FilterSheet({
             })}
           </View>
 
+          <SectionLabel>{t('filters.sectionHiddenGenres', 'Never show genres')}</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {FALLBACK_GENRES_PARSED.map((g) => {
+              const isOn = selExcludedGenres.has(g.id);
+              const label = t(`genres.${g.id}`, g.id.replace(/_/g, ' '));
+              return (
+                <Pressable
+                  key={g.id}
+                  testID={`filter-excluded-genre-${g.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => toggleExcludedGenre(g.id)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 12,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? 'rgba(244,91,91,0.65)' : colors.border,
+                    backgroundColor: isOn ? 'rgba(244,91,91,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                      textTransform: 'capitalize',
+                    }}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <SectionLabel>{t('filters.sectionLanguages', 'Original language')}</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {LANGUAGES.map((language) => {
+              const isOn = selLanguages.has(language.id);
+              return (
+                <Pressable
+                  key={language.id}
+                  testID={`filter-language-${language.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => toggleLanguage(language.id, false)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 12,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {language.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <SectionLabel>{t('filters.sectionHiddenLanguages', 'Never show languages')}</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {LANGUAGES.map((language) => {
+              const isOn = selExcludedLanguages.has(language.id);
+              return (
+                <Pressable
+                  key={language.id}
+                  testID={`filter-excluded-language-${language.id}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => toggleLanguage(language.id, true)}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 12,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? 'rgba(244,91,91,0.65)' : colors.border,
+                    backgroundColor: isOn ? 'rgba(244,91,91,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {language.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
           <SectionLabel>{t('filters.sectionYears', 'Release window')}</SectionLabel>
           <View
             style={{
@@ -690,6 +910,52 @@ export function FilterSheet({
                     }}
                   >
                     {t(`filters.yearRanges.${range.key}`, range.label)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <SectionLabel>{t('filters.sectionRuntime', 'Runtime')}</SectionLabel>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: 7,
+              marginBottom: 18,
+            }}
+          >
+            {RUNTIME_RANGES.map((range) => {
+              const id = `${range.min ?? ''}:${range.max ?? ''}`;
+              const isOn = runtimeRange === id;
+              return (
+                <Pressable
+                  key={range.key}
+                  testID={`filter-runtime-${range.key}`}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isOn }}
+                  onPress={() => {
+                    setRuntimeRange(id);
+                    setSelForYou(false);
+                  }}
+                  style={{
+                    height: 32,
+                    paddingHorizontal: 13,
+                    borderRadius: 11,
+                    borderWidth: 1,
+                    borderColor: isOn ? colors.accentBorder : colors.border,
+                    backgroundColor: isOn ? 'rgba(255,77,28,0.14)' : 'rgba(245,245,240,0.035)',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 12,
+                      fontFamily: fonts.bodyMedium,
+                      color: isOn ? colors.text : colors.textMuted,
+                    }}
+                  >
+                    {range.label}
                   </Text>
                 </Pressable>
               );

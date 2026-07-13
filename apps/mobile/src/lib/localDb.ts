@@ -24,7 +24,13 @@ export type LocalSwipe = {
   region: string;
   filters_snapshot: Record<string, unknown>;
   is_undone?: boolean;
+  /** Legacy queue field retained so pre-snapshot passes still influence taste. */
   genres?: string[];
+  title_snapshot?: {
+    genres: string[];
+    language: string | null;
+    kind: 'movie' | 'tv' | null;
+  };
 };
 
 export type LocalTasteEvent = TasteEvent & {
@@ -45,6 +51,9 @@ export type LocalPreferences = {
   user_id: string;
   selected_services: string[];
   selected_genres: string[];
+  excluded_genres: string[];
+  preferred_languages: string[];
+  excluded_languages: string[];
   notifications_enabled: boolean;
   onboarding_completed_at: string | null;
   cold_start_completed_at: string | null;
@@ -454,15 +463,22 @@ export const localDb = {
     updates: Partial<LocalPreferences>,
   ): Promise<LocalPreferences> {
     await hydrateDb();
-    const existing = prefsCache[userId] || {
+    const defaults: LocalPreferences = {
       user_id: userId,
       selected_services: [],
       selected_genres: [],
+      excluded_genres: [],
+      preferred_languages: [],
+      excluded_languages: [],
       notifications_enabled: false,
       onboarding_completed_at: null,
       cold_start_completed_at: null,
       updated_at: new Date().toISOString(),
     };
+    // Add new preference fields to existing AsyncStorage rows before merging a
+    // narrow settings patch. Without this, a legacy row could fail validation
+    // the first time a user changes an unrelated setting.
+    const existing = { ...defaults, ...(prefsCache[userId] ?? {}) };
 
     const updated = {
       ...existing,

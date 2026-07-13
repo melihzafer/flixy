@@ -5,7 +5,7 @@ import type { MoodPreset, TasteSignal, Title, VibePreset } from '@flixy/shared';
 import {
   type ComposeOptions,
   type ComposeResult,
-  buildTasteSignal,
+  buildWatchlistTasteSignal,
   composeDeck,
   moodToFilter,
   vibesToGenres,
@@ -16,6 +16,7 @@ import { normalizeGenreId, normalizeServiceId } from '../../lib/fallbackCatalogu
 import { localDb } from '../../lib/localDb';
 import { logger } from '../../lib/logger';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { fetchTmdbTitlesByIds } from '../../lib/tmdb';
 import { useSession } from '../auth/useSession';
 import {
   type CatalogueDiagnostics,
@@ -28,6 +29,7 @@ import { useUserPreferences } from '../onboarding/hooks';
 import { useProfile } from '../profile/hooks';
 import { events } from '../telemetry/events';
 import { watchlistStore } from '../watchlist/store';
+import { resolveDeckFilterPolicy, titleMatchesDeckPolicy } from './filterPolicy';
 import { useDeckFilters } from './filterStore';
 
 export type RecommendationItem = {
@@ -164,8 +166,60 @@ const LAUNCH_SEED = `${Date.now().toString(36)}-${Math.floor(Math.random() * 0xf
 const EMPTY_TASTE: TasteSignal = {
   positiveGenres: {},
   negativeGenres: {},
+  positiveLanguages: {},
+  negativeLanguages: {},
+  positiveKinds: {},
+  negativeKinds: {},
   totalSwipes: 0,
 };
+
+type RemoteSwipeRow = {
+  event_id: string;
+  title_id: string;
+  direction: string;
+  occurred_at: string;
+  is_undone: boolean;
+  title_snapshot: {
+    genres?: string[];
+    language?: string | null;
+    kind?: 'movie' | 'tv' | null;
+  } | null;
+};
+
+async function fetchRemoteSwipeRows(userId: string): Promise<RemoteSwipeRow[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const { data, error } = await supabase
+      .from('swipes')
+      .select('event_id,title_id,direction,occurred_at,is_undone,title_snapshot')
+      .eq('user_id', userId)
+      .order('occurred_at', { ascending: false })
+      .limit(500);
+    if (error) {
+      // Existing installations can be one deploy behind the title_snapshot
+      // migration. Keep cross-device exclusions working there; only the new
+      // language/type learning is unavailable until the migration lands.
+      const legacy = await supabase
+        .from('swipes')
+        .select('event_id,title_id,direction,occurred_at,is_undone')
+        .eq('user_id', userId)
+        .order('occurred_at', { ascending: false })
+        .limit(500);
+      if (legacy.error) {
+        logger.warn('Could not load remote swipe history', { error: legacy.error });
+        return [];
+      }
+      return (legacy.data ?? []).map((row) => ({
+        ...(row as Omit<RemoteSwipeRow, 'title_snapshot'>),
+        title_snapshot: null,
+      }));
+    }
+    return (data ?? []) as RemoteSwipeRow[];
+  } catch (error) {
+    logger.warn('Could not load remote swipe history', { error: String(error) });
+    return [];
+  }
+}
 
 function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
   const { data: session } = useSession();
@@ -176,21 +230,52 @@ function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
     enabled: !!userId,
     queryFn: async (): Promise<TasteSignal> => {
       if (!userId) return EMPTY_TASTE;
-      const [swipes, tasteEvents] = await Promise.all([
+      const [localSwipes, remoteSwipes, watchlist] = await Promise.all([
         localDb.getSwipes(userId),
-        localDb.getTasteEvents(userId),
+        fetchRemoteSwipeRows(userId),
+        watchlistStore.getWatchlist(userId),
       ]);
-      // Weighted + time-decayed: Top Pick > Save > Seen (weak positive, NOT a
-      // dislike) > Pass (negative); a 30-day-old swipe weighs ~1/e of today's.
-      return buildTasteSignal(
-        swipes.map((row) => ({
+      const swipes = new Map<
+        string,
+        {
+          direction: string;
+          title_id: string;
+          occurred_at: string;
+          is_undone?: boolean;
+          title_snapshot?: RemoteSwipeRow['title_snapshot'];
+        }
+      >();
+      for (const row of localSwipes) {
+        swipes.set(row.event_id, row);
+      }
+      for (const row of remoteSwipes) {
+        if (!swipes.has(row.event_id)) swipes.set(row.event_id, row);
+      }
+      const titles = await fetchTmdbTitlesByIds(watchlist.map((item) => item.title_id));
+      const titleById = new Map(titles.map((title) => [title.id, title]));
+      return buildWatchlistTasteSignal(
+        watchlist.flatMap((item) => {
+          const title = titleById.get(item.title_id);
+          if (!title) return [];
+          return [
+            {
+              priority: item.priority,
+              watchedAt: item.watched_at,
+              genres: title.genres,
+              language: title.language,
+              kind: title.kind,
+            },
+          ];
+        }),
+        Array.from(swipes.values()).map((row) => ({
           direction: row.direction,
           itemId: row.title_id,
-          genres: row.genres,
+          genres: row.title_snapshot?.genres ?? [],
+          language: row.title_snapshot?.language,
+          kind: row.title_snapshot?.kind,
           occurredAt: row.occurred_at,
           isUndone: row.is_undone,
         })),
-        { tasteEvents },
       );
     },
   });
@@ -207,39 +292,6 @@ function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
     [data, coldStartGenres],
   );
   return { taste, isLoading: !!userId && isLoading };
-}
-
-/**
- * Cross-device swipe history. The local DB only knows about swipes made on
- * THIS device/browser — the same account on the APK and on the web otherwise
- * re-serves everything the user already passed on the other platform.
- * Best-effort: returns [] on any failure (local swipes still cover the
- * current device).
- */
-async function fetchRemoteSwipeRows(
-  userId: string,
-): Promise<Array<{ title_id: string; direction: string; occurred_at: string }>> {
-  if (!isSupabaseConfigured) return [];
-  try {
-    const { data, error } = await supabase
-      .from('swipes')
-      .select('title_id,direction,occurred_at')
-      .eq('user_id', userId)
-      .eq('is_undone', false)
-      .order('occurred_at', { ascending: false })
-      .limit(2000);
-    if (error) throw error;
-    return (data ?? []).map((row) => ({
-      title_id: String(row.title_id),
-      direction: String(row.direction),
-      occurred_at: String(row.occurred_at),
-    }));
-  } catch (error) {
-    logger.warn('remote swipe exclusions fetch failed; using local swipes only', {
-      message: (error as Error).message,
-    });
-    return [];
-  }
 }
 
 function useDeckExclusions() {
@@ -261,12 +313,25 @@ function useDeckExclusions() {
       // The watchlist read is NOT best-effort: composing a deck without it is
       // exactly the "my watchlist keeps showing up" bug. Let the query throw
       // and retry instead of silently proceeding with an empty exclusion set.
-      const [swipes, watchlist, remoteSwipes, impressions] = await Promise.all([
+      const [localSwipes, remoteSwipes, watchlist, impressions] = await Promise.all([
         localDb.getSwipes(userId),
-        watchlistStore.getWatchlist(userId),
         fetchRemoteSwipeRows(userId),
+        watchlistStore.getWatchlist(userId),
         localDb.getRecentImpressions(userId),
       ]);
+      const swipes = new Map<
+        string,
+        {
+          title_id: string;
+          direction: string;
+          occurred_at: string;
+          is_undone?: boolean;
+        }
+      >();
+      for (const row of localSwipes) swipes.set(row.event_id, row);
+      for (const row of remoteSwipes) {
+        if (!swipes.has(row.event_id)) swipes.set(row.event_id, row);
+      }
 
       const excludeIds = new Set<string>();
       const passedRecently = new Set<string>();
@@ -282,12 +347,9 @@ function useDeckExclusions() {
         }
       };
 
-      for (const row of swipes) {
+      for (const row of swipes.values()) {
         if (row.is_undone) continue;
         addSwipe(String(row.title_id), row.direction, row.occurred_at);
-      }
-      for (const row of remoteSwipes) {
-        addSwipe(row.title_id, row.direction, row.occurred_at);
       }
       for (const row of watchlist) {
         excludeIds.add(String(row.title_id));
@@ -321,7 +383,7 @@ export type UseDeckOptions = {
   mood?: MoodPreset | null;
   vibes?: VibePreset[] | null;
   country?: string | null;
-  /** For You mode bypasses manual filters and leans on taste + remote recos. */
+  /** For You mode leans on taste + remote recos while preserving manual filters. */
   forYou?: boolean;
   extraFilter?: Partial<TitleQueryFilter>;
 };
@@ -441,14 +503,61 @@ export function useDeck(options: UseDeckOptions = {}) {
   const [refillPage, setRefillPage] = useState(1);
   const filterServices = useDeckFilters((s) => s.serviceIds);
   const filterGenres = useDeckFilters((s) => s.genres);
+  const filterExcludedGenres = useDeckFilters((s) => s.excludedGenres);
+  const filterLanguages = useDeckFilters((s) => s.languages);
+  const filterExcludedLanguages = useDeckFilters((s) => s.excludedLanguages);
+  const filterMinRuntime = useDeckFilters((s) => s.minRuntime);
+  const filterMaxRuntime = useDeckFilters((s) => s.maxRuntime);
 
-  const selectedServices = useMemo(
-    () => filterServices ?? prefs?.selected_services.map(normalizeServiceId) ?? undefined,
-    [filterServices, prefs?.selected_services],
-  );
   const selectedGenres = useMemo(
     () => filterGenres ?? prefs?.selected_genres.map(normalizeGenreId) ?? undefined,
     [filterGenres, prefs?.selected_genres],
+  );
+
+  const policy = useMemo(
+    () =>
+      resolveDeckFilterPolicy(
+        {
+          selectedGenres: prefs?.selected_genres.map(normalizeGenreId) ?? [],
+          excludedGenres: prefs?.excluded_genres.map(normalizeGenreId) ?? [],
+          preferredLanguages: prefs?.preferred_languages ?? [],
+          excludedLanguages: prefs?.excluded_languages ?? [],
+          selectedServices: prefs?.selected_services.map(normalizeServiceId) ?? [],
+        },
+        {
+          kinds: options.extraFilter?.kinds ?? ['movie', 'tv'],
+          serviceIds: filterServices,
+          genres: filterGenres?.map(normalizeGenreId) ?? null,
+          excludedGenres: filterExcludedGenres?.map(normalizeGenreId) ?? null,
+          languages: filterLanguages,
+          excludedLanguages: filterExcludedLanguages,
+          minYear: options.extraFilter?.minYear ?? null,
+          maxYear: options.extraFilter?.maxYear ?? null,
+          minRuntime: filterMinRuntime,
+          maxRuntime: filterMaxRuntime,
+          originCountryLanguage: options.country
+            ? (COUNTRY_LANGUAGE_MAP[options.country.toUpperCase()] ?? null)
+            : null,
+        },
+      ),
+    [
+      filterExcludedGenres,
+      filterExcludedLanguages,
+      filterLanguages,
+      filterMaxRuntime,
+      filterMinRuntime,
+      filterServices,
+      filterGenres,
+      options.country,
+      options.extraFilter?.kinds,
+      options.extraFilter?.maxYear,
+      options.extraFilter?.minYear,
+      prefs?.excluded_genres,
+      prefs?.excluded_languages,
+      prefs?.preferred_languages,
+      prefs?.selected_genres,
+      prefs?.selected_services,
+    ],
   );
 
   const vibeGenres = useMemo(
@@ -459,33 +568,37 @@ export function useDeck(options: UseDeckOptions = {}) {
   const baseFilter: TitleQueryFilter = useMemo(
     () => ({
       region: profile?.region,
-      // In For You mode the user is not filtering — keep services/genres as
-      // soft preferences only (so the catalogue query stays wide and the
-      // composer can lean on taste + remote recos).
-      serviceIds: forYou ? undefined : selectedServices,
-      genres: forYou ? undefined : (moodFilter.genres ?? selectedGenres),
-      vibeGenres: forYou ? undefined : vibeGenres,
-      originCountry: forYou ? undefined : (options.country ?? undefined),
-      minYear: forYou ? undefined : moodFilter.minYear,
-      maxYear: forYou ? undefined : moodFilter.maxYear,
+      // For You is a ranking mode, never a bypass for settings. Queries stay
+      // broad enough for the composer, then the same strict policy runs after
+      // remote/fallback candidates are merged.
+      serviceIds: policy.serviceIds.length > 0 ? policy.serviceIds : undefined,
+      genres: policy.includeGenres.length > 0 ? policy.includeGenres : undefined,
+      vibeGenres,
+      originCountry: options.country ?? undefined,
+      minYear: policy.minYear ?? moodFilter.minYear,
+      maxYear: policy.maxYear ?? moodFilter.maxYear,
       limit: DECK_PAGE_SIZE,
       ...options.extraFilter,
     }),
     [
-      forYou,
       profile?.region,
-      selectedServices,
-      selectedGenres,
+      policy,
       vibeGenres,
       options.country,
-      moodFilter.genres,
       moodFilter.minYear,
       moodFilter.maxYear,
       options.extraFilter,
     ],
   );
 
-  const filterKey = useMemo(() => JSON.stringify(baseFilter), [baseFilter]);
+  // The query only carries constraints TMDB can express. The UI queue also
+  // needs the client-only policy (blocked genres/languages and runtime) in its
+  // identity; otherwise an already queued Animation card could survive after
+  // the user explicitly blocks Animation.
+  const filterKey = useMemo(
+    () => JSON.stringify({ query: baseFilter, policy }),
+    [baseFilter, policy],
+  );
   const pagedFilter = useMemo(
     () => ({
       ...baseFilter,
@@ -533,7 +646,7 @@ export function useDeck(options: UseDeckOptions = {}) {
   const composeOpts: Omit<ComposeOptions, 'candidates'> = useMemo(
     () => ({
       taste,
-      ownedServiceIds: selectedServices ?? [],
+      ownedServiceIds: policy.serviceIds,
       passedRecently: exclusions.passedRecently,
       shownLast7d: exclusions.shownLast7d,
       excludeIds: exclusions.excludeIds,
@@ -546,7 +659,7 @@ export function useDeck(options: UseDeckOptions = {}) {
     }),
     [
       taste,
-      selectedServices,
+      policy.serviceIds,
       exclusions,
       recommendationScores,
       userId,
@@ -584,40 +697,24 @@ export function useDeck(options: UseDeckOptions = {}) {
       candidates = merged;
     }
 
-    // Inclusive genre filter: keep candidates that match AT LEAST ONE selected
-    // genre. In For You mode we do NOT apply genre filtering — the composer
-    // boosts preferred genres via the taste signal instead.
-    if (!forYou && selectedGenres && selectedGenres.length > 0) {
-      const selectedSet = new Set(selectedGenres);
-      candidates = candidates.filter((t) =>
-        t.genres.some((g) => selectedSet.has(normalizeGenreId(g))),
+    // This is the final hard gate: recommendations are merged above and TMDB
+    // cannot express primary-genre and language-block semantics precisely.
+    candidates = candidates.filter((title) => titleMatchesDeckPolicy(title, policy));
+
+    if (moodFilter.genres && moodFilter.genres.length > 0) {
+      const moodSet = new Set(moodFilter.genres.map(normalizeGenreId));
+      candidates = candidates.filter((title) =>
+        title.genres.some((genre) => moodSet.has(normalizeGenreId(genre))),
       );
     }
 
     // Vibe genre filter (mirror of the genre inclusive match for vibe presets).
-    if (!forYou && vibeGenres && vibeGenres.length > 0) {
+    if (vibeGenres && vibeGenres.length > 0) {
       const vibeSet = new Set(vibeGenres);
       candidates = candidates.filter((t) => t.genres.some((g) => vibeSet.has(normalizeGenreId(g))));
     }
 
-    // Country filter using the title `language` field as a coarse proxy.
-    if (!forYou && options.country) {
-      const countryLang = COUNTRY_LANGUAGE_MAP[options.country.toUpperCase()];
-      if (countryLang) {
-        candidates = candidates.filter((t) =>
-          (t.language ?? '').toLowerCase().startsWith(countryLang),
-        );
-      }
-    }
-
-    // Content-type filter (movie/tv). Recommendations are merged in unfiltered,
-    // so enforce the kind here too when the user narrowed to a single type.
-    const kinds = baseFilter.kinds;
-    if (kinds && kinds.length > 0 && kinds.length < 2) {
-      candidates = candidates.filter((t) => kinds.includes(t.kind));
-    }
-
-    if (!forYou && moodFilter.maxRuntime != null) {
+    if (moodFilter.maxRuntime != null) {
       const cap = moodFilter.maxRuntime;
       const filtered = candidates.filter(
         (t) => t.runtimeMinutes == null || t.runtimeMinutes <= cap,
@@ -633,12 +730,10 @@ export function useDeck(options: UseDeckOptions = {}) {
     filterKey,
     recoTitlesQuery.data,
     composeOpts,
+    moodFilter.genres,
     moodFilter.maxRuntime,
-    selectedGenres,
+    policy,
     vibeGenres,
-    options.country,
-    forYou,
-    baseFilter.kinds,
   ]);
 
   const relaxedDeck = useMemo(() => {
@@ -693,10 +788,10 @@ export function useDeck(options: UseDeckOptions = {}) {
     baseFilter.kinds,
   ]);
 
-  const useRelaxedDeck =
-    Boolean(hasStrictFilters) &&
-    (primaryDeck?.cards.length ?? 0) === 0 &&
-    (relaxedDeck?.cards.length ?? 0) > 0;
+  // A strict filter must never silently fall back to a broader deck. Showing
+  // an honest empty state is the only safe result when no eligible title
+  // exists; users can deliberately broaden/reset from that state.
+  const useRelaxedDeck = false;
 
   const deck = useRelaxedDeck ? relaxedDeck : primaryDeck;
   const activeCatalogueDiagnostics = useRelaxedDeck
@@ -718,7 +813,6 @@ export function useDeck(options: UseDeckOptions = {}) {
       deck,
       hasStrictFilters,
       relaxedCandidatesQuery.data?.diagnostics.candidateCount,
-      useRelaxedDeck,
     ],
   );
 
@@ -796,8 +890,15 @@ export function useDeck(options: UseDeckOptions = {}) {
     ]);
   }, [candidatesQuery, relaxedCandidatesQuery, refetchExclusions]);
 
+  const hardExcludedIds = useMemo(
+    () => new Set(Object.keys(deck?.diagnostics.exclusions ?? {})),
+    [deck],
+  );
+
   return {
     deck,
+    /** Queued UI cards with these ids must be removed instead of merely re-ranked. */
+    hardExcludedIds,
     diagnostics,
     /**
      * Identity of the active filter context. Changes only when the user

@@ -21,6 +21,9 @@ const PrefsRowSchema = z.object({
   user_id: LocalUserIdSchema,
   selected_services: z.array(z.string()),
   selected_genres: z.array(z.string()),
+  excluded_genres: z.array(z.string()).default([]),
+  preferred_languages: z.array(z.string()).default([]),
+  excluded_languages: z.array(z.string()).default([]),
   notifications_enabled: z.boolean(),
   onboarding_completed_at: z.string().nullable(),
   cold_start_completed_at: z.string().nullable(),
@@ -73,6 +76,9 @@ export function useGenres() {
 type PrefsPatch = {
   selected_services?: string[];
   selected_genres?: string[];
+  excluded_genres?: string[];
+  preferred_languages?: string[];
+  excluded_languages?: string[];
   notifications_enabled?: boolean;
   onboarding_completed_at?: string | null;
   cold_start_completed_at?: string | null;

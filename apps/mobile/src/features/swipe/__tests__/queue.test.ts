@@ -38,6 +38,7 @@ const swipe = {
   region: 'US',
   filtersSnapshot: { genres: ['drama'] },
   genres: ['drama'],
+  titleSnapshot: { genres: ['drama'], language: 'en', kind: 'movie' as const },
 };
 
 describe('remote swipe synchronization', () => {
@@ -49,9 +50,10 @@ describe('remote swipe synchronization', () => {
     updateSwipe.mockResolvedValue(undefined);
   });
 
-  it('records the swipe locally BEFORE attempting the remote write', async () => {
+  it('records the local projection before it synchronizes remotely', async () => {
     await syncSwipeEvent(swipe);
 
+    expect(from).toHaveBeenCalledWith('swipes');
     expect(insertSwipe).toHaveBeenCalledWith(
       expect.objectContaining({
         event_id: swipe.eventId,
@@ -59,6 +61,13 @@ describe('remote swipe synchronization', () => {
         title_id: swipe.titleId,
         direction: swipe.direction,
         genres: ['drama'],
+        title_snapshot: swipe.titleSnapshot,
+      }),
+    );
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        session_id: swipe.discoverySessionId,
+        title_snapshot: swipe.titleSnapshot,
       }),
     );
     const localOrder = insertSwipe.mock.invocationCallOrder[0];
@@ -108,7 +117,7 @@ describe('remote swipe synchronization', () => {
     expect(insertSwipe).toHaveBeenCalledTimes(1);
   });
 
-  it('still throws on transient errors so the queue retries, but keeps the local record', async () => {
+  it('keeps a transiently failed remote swipe in the local history for retry', async () => {
     insert.mockResolvedValue({ error: { code: '503', message: 'unavailable' } });
 
     await expect(syncSwipeEvent(swipe)).rejects.toMatchObject({ code: '503' });
@@ -129,6 +138,7 @@ describe('remote swipe synchronization', () => {
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.genres).toEqual(['drama']);
+      expect(parsed.data.titleSnapshot).toEqual(swipe.titleSnapshot);
       expect(parsed.data.discoverySessionId).toBe(swipe.discoverySessionId);
     }
   });

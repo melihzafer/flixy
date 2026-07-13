@@ -24,7 +24,15 @@ function mkTitle(over: Partial<Title>): Title {
   };
 }
 
-const noTaste: TasteSignal = { positiveGenres: {}, negativeGenres: {}, totalSwipes: 0 };
+const noTaste: TasteSignal = {
+  positiveGenres: {},
+  negativeGenres: {},
+  positiveLanguages: {},
+  negativeLanguages: {},
+  positiveKinds: {},
+  negativeKinds: {},
+  totalSwipes: 0,
+};
 
 describe('composeDeck', () => {
   it('returns popularity-ordered deck on cold start', () => {
@@ -471,8 +479,8 @@ describe('composeDeck', () => {
       expect(card.trace.positiveFactors.length).toBeGreaterThan(0);
       expect(card.trace.negativeFactors).toEqual([]);
     }
-    expect(diagnostics.sources.personalized).toBe(12);
-    expect(diagnostics.sources.trending).toBe(4);
+    expect(diagnostics.sources.personalized).toBe(14);
+    expect(diagnostics.sources.trending).toBe(2);
     expect(diagnostics.sources.fresh).toBe(2);
     expect(diagnostics.sources.exploration).toBe(2);
     const total = Object.values(diagnostics.sources).reduce((a, b) => a + b, 0);
@@ -504,190 +512,62 @@ describe('composeDeck', () => {
     }
   });
 
-  it('hard-excludes titles whose every genre is repeatedly passed in For You mode', () => {
-    const now = new Date('2026-07-06T00:00:00Z');
-    const taste = buildTasteSignal(
-      Array.from({ length: 4 }, () => ({
-        direction: 'left',
-        genres: ['horror'],
-        occurredAt: now.toISOString(),
-      })),
-      { now },
-    );
-    const horror = mkTitle({
-      id: '00000000-0000-0000-0000-000000000001',
-      popularity: 1000,
-      genres: ['horror'],
-    });
-    const horrorComedy = mkTitle({
-      id: '00000000-0000-0000-0000-000000000002',
-      popularity: 400,
-      genres: ['horror', 'comedy'],
-    });
-    const drama = mkTitle({
-      id: '00000000-0000-0000-0000-000000000003',
-      popularity: 300,
+  it('removes a language after three pass signals in For You', () => {
+    const dislikedHindi = mkTitle({
+      id: '00000000-0000-0000-0000-000000000071',
+      language: 'hi',
       genres: ['drama'],
+      popularity: 900,
     });
-    const { cards, diagnostics } = composeDeck({
-      candidates: [horror, horrorComedy, drama],
-      taste,
-      ownedServiceIds: [],
-      passedRecently: new Set(),
-      shownLast7d: new Set(),
-      excludeIds: new Set(),
-      targetSize: 3,
-      forYou: true,
-      now,
+    const english = mkTitle({
+      id: '00000000-0000-0000-0000-000000000072',
+      language: 'en',
+      genres: ['drama'],
+      popularity: 100,
     });
-    const ids = cards.map((c) => c.title.id);
-    // Pure horror is gone entirely; the multi-genre title survives (comedy is
-    // not disliked) and is only demoted by its horror half.
-    expect(ids).not.toContain('00000000-0000-0000-0000-000000000001');
-    expect(ids).toContain('00000000-0000-0000-0000-000000000002');
-    expect(ids).toContain('00000000-0000-0000-0000-000000000003');
-    expect(diagnostics.exclusions['00000000-0000-0000-0000-000000000001']).toEqual([
-      'disliked_genres',
-    ]);
-  });
 
-  it('does not exclude a genre after a single accidental pass', () => {
-    const now = new Date('2026-07-06T00:00:00Z');
-    const taste = buildTasteSignal(
-      [{ direction: 'left', genres: ['horror'], occurredAt: now.toISOString() }],
-      { now },
-    );
-    const horror = mkTitle({
-      id: '00000000-0000-0000-0000-000000000001',
-      genres: ['horror'],
-    });
     const { cards } = composeDeck({
-      candidates: [horror],
-      taste,
+      candidates: [dislikedHindi, english],
+      taste: {
+        ...noTaste,
+        negativeLanguages: { hi: 3 },
+        totalSwipes: 3,
+      },
       ownedServiceIds: [],
       passedRecently: new Set(),
       shownLast7d: new Set(),
       excludeIds: new Set(),
-      targetSize: 1,
+      targetSize: 10,
       forYou: true,
-      now,
     });
-    expect(cards.map((c) => c.title.id)).toContain('00000000-0000-0000-0000-000000000001');
+
+    expect(cards.map((card) => card.title.id)).toEqual([english.id]);
   });
 
-  it('keeps a disliked genre available when its positive signal dominates', () => {
-    const now = new Date('2026-07-06T00:00:00Z');
-    const taste = buildTasteSignal(
-      [
-        // 4 passes (-4) but also 3 saves (+9): the user is picky about horror,
-        // not opposed to it. No hard suppression.
-        ...Array.from({ length: 4 }, () => ({
-          direction: 'left',
-          genres: ['horror'],
-          occurredAt: now.toISOString(),
-        })),
-        ...Array.from({ length: 3 }, () => ({
-          direction: 'right',
-          genres: ['horror'],
-          occurredAt: now.toISOString(),
-        })),
-      ],
-      { now },
-    );
-    const horror = mkTitle({
-      id: '00000000-0000-0000-0000-000000000001',
-      genres: ['horror'],
-    });
-    const { cards } = composeDeck({
-      candidates: [horror],
-      taste,
-      ownedServiceIds: [],
-      passedRecently: new Set(),
-      shownLast7d: new Set(),
-      excludeIds: new Set(),
-      targetSize: 1,
-      forYou: true,
-      now,
-    });
-    expect(cards.map((c) => c.title.id)).toContain('00000000-0000-0000-0000-000000000001');
-  });
-
-  it('keeps disliked-genre titles out of trending/fresh/exploration slots', () => {
-    const now = new Date('2026-07-06T00:00:00Z');
-    const taste = buildTasteSignal(
-      Array.from({ length: 6 }, () => ({
-        direction: 'left',
-        genres: ['horror'],
-        occurredAt: now.toISOString(),
-      })),
-      { now },
-    );
-    // 30 candidates: horror titles are the most popular AND the freshest, so
-    // under the old pool logic they would own the trending + fresh slots.
-    const candidates = Array.from({ length: 30 }, (_, i) =>
+  it('keeps at least 30% movies and 30% series when both are available', () => {
+    const candidates = Array.from({ length: 20 }, (_, index) =>
       mkTitle({
-        id: `00000000-0000-0000-0000-${String(i + 1).padStart(12, '0')}`,
-        popularity: i < 10 ? 900 + i : 500 - i,
-        genres: i < 10 ? ['horror'] : ['drama', 'comedy', 'action'],
-        releaseYear: i < 10 ? 2026 : 2015,
+        id: `00000000-0000-0000-0000-${String(index + 80).padStart(12, '0')}`,
+        kind: index < 14 ? 'movie' : 'tv',
+        popularity: 1000 - index * 10,
+        genres: [index % 2 === 0 ? 'drama' : 'comedy'],
       }),
     );
     const { cards } = composeDeck({
       candidates,
-      taste,
+      taste: noTaste,
       ownedServiceIds: [],
       passedRecently: new Set(),
       shownLast7d: new Set(),
       excludeIds: new Set(),
-      targetSize: 20,
-      now,
+      targetSize: 10,
+      forYou: true,
     });
-    for (const card of cards) {
-      if (card.trace.source === 'personalized') continue;
-      expect(card.title.genres).not.toEqual(['horror']);
-    }
-  });
+    const movieCount = cards.filter((card) => card.title.kind === 'movie').length;
+    const tvCount = cards.filter((card) => card.title.kind === 'tv').length;
 
-  it('keeps a repeatedly-passed genre suppressed even with a long unrelated history', () => {
-    const now = new Date('2026-07-06T00:00:00Z');
-    // 10 horror passes buried under 90 unrelated positive swipes — the old
-    // totalSwipes normalization diluted the dislike to invisibility.
-    const taste = buildTasteSignal(
-      [
-        ...Array.from({ length: 10 }, () => ({
-          direction: 'left',
-          genres: ['horror'],
-          occurredAt: now.toISOString(),
-        })),
-        ...Array.from({ length: 90 }, () => ({
-          direction: 'right',
-          genres: ['drama'],
-          occurredAt: now.toISOString(),
-        })),
-      ],
-      { now },
-    );
-    const horror = mkTitle({
-      id: '00000000-0000-0000-0000-000000000001',
-      popularity: 1000,
-      genres: ['horror'],
-    });
-    const comedy = mkTitle({
-      id: '00000000-0000-0000-0000-000000000002',
-      popularity: 300,
-      genres: ['comedy'],
-    });
-    const { cards } = composeDeck({
-      candidates: [horror, comedy],
-      taste,
-      ownedServiceIds: [],
-      passedRecently: new Set(),
-      shownLast7d: new Set(),
-      excludeIds: new Set(),
-      targetSize: 2,
-      now,
-    });
-    expect(cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000002');
+    expect(movieCount).toBeGreaterThanOrEqual(3);
+    expect(tvCount).toBeGreaterThanOrEqual(3);
   });
 
   it('tilts scoring toward taste signal in For You mode', () => {
@@ -704,6 +584,10 @@ describe('composeDeck', () => {
     const taste: TasteSignal = {
       positiveGenres: { drama: 30 },
       negativeGenres: {},
+      positiveLanguages: {},
+      negativeLanguages: {},
+      positiveKinds: {},
+      negativeKinds: {},
       totalSwipes: 60,
     };
     const { cards } = composeDeck({
