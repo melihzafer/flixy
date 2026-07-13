@@ -1,95 +1,65 @@
 {
-  "session_id": "session-2026-07-06-2220",
-  "started": "2026-07-06T22:20:37.970Z",
+  "session_id": "session-2026-07-13-2254",
+  "started": "2026-07-13T22:54:50.779Z",
   "files_read": {
-    "/home/user/flixy/apps/web/scripts/build.js": {
+    "/home/user/flixy/apps/mobile/src/components/ErrorBoundary.tsx": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-07-06T22:26:44.283Z"
+      "first_read": "2026-07-13T22:59:28.627Z"
     },
-    "/home/user/flixy/packages/shared/src/schemas/swipe.ts": {
+    "/home/user/flixy/apps/mobile/metro.config.js": {
       "count": 1,
       "tokens": 0,
-      "first_read": "2026-07-06T22:32:04.679Z"
+      "first_read": "2026-07-13T23:13:29.437Z"
     },
-    "/home/user/flixy/apps/mobile/src/features/swipe/__tests__/queue.test.ts": {
+    "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts": {
       "count": 1,
-      "tokens": 0,
-      "first_read": "2026-07-06T22:32:04.963Z"
-    },
-    "/home/user/flixy/apps/mobile/app/(app)/title/[id].tsx": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-07-06T22:33:17.601Z"
-    },
-    "/home/user/flixy/apps/mobile/src/lib/query.ts": {
-      "count": 1,
-      "tokens": 0,
-      "first_read": "2026-07-06T22:33:58.212Z"
+      "tokens": 8343,
+      "first_read": "2026-07-13T23:13:51.795Z"
     }
   },
   "files_written": [
     {
-      "file": "/home/user/flixy/packages/shared/src/schemas/swipe.ts",
-      "action": "edit",
-      "tokens": 246,
-      "at": "2026-07-06T22:32:39.545Z"
-    },
-    {
-      "file": "/home/user/flixy/apps/mobile/src/features/swipe/queue.ts",
-      "action": "edit",
-      "tokens": 857,
-      "at": "2026-07-06T22:32:59.395Z"
-    },
-    {
-      "file": "/home/user/flixy/apps/mobile/src/features/swipe/hooks.ts",
-      "action": "edit",
-      "tokens": 246,
-      "at": "2026-07-06T22:33:10.282Z"
-    },
-    {
-      "file": "/home/user/flixy/apps/mobile/app/(app)/title/[id].tsx",
-      "action": "edit",
-      "tokens": 85,
-      "at": "2026-07-06T22:33:24.880Z"
-    },
-    {
-      "file": "/home/user/flixy/apps/mobile/src/features/swipe/__tests__/queue.test.ts",
+      "file": "/tmp/claude-0/-home-user-flixy/40542152-19c1-52f7-b909-8f20535b6e41/scratchpad/probe.mjs",
       "action": "create",
-      "tokens": 1474,
-      "at": "2026-07-06T22:33:48.270Z"
+      "tokens": 348,
+      "at": "2026-07-13T22:56:25.579Z"
     },
     {
-      "file": "/home/user/flixy/apps/mobile/src/lib/query.ts",
-      "action": "edit",
-      "tokens": 120,
-      "at": "2026-07-06T22:34:05.466Z"
+      "file": "/tmp/claude-0/-home-user-flixy/40542152-19c1-52f7-b909-8f20535b6e41/scratchpad/probe2.mjs",
+      "action": "create",
+      "tokens": 275,
+      "at": "2026-07-13T23:11:16.879Z"
     },
     {
-      "file": "/home/user/flixy/apps/web/scripts/build.js",
+      "file": "/home/user/flixy/apps/mobile/metro.config.js",
       "action": "edit",
-      "tokens": 156,
-      "at": "2026-07-06T22:34:12.756Z"
+      "tokens": 341,
+      "at": "2026-07-13T23:13:40.870Z"
     },
     {
-      "file": "/home/user/flixy/apps/web/scripts/build.js",
+      "file": "/home/user/flixy/apps/mobile/src/features/deck/hooks.ts",
       "action": "edit",
-      "tokens": 374,
-      "at": "2026-07-06T22:34:30.889Z"
+      "tokens": 68,
+      "at": "2026-07-13T23:13:59.469Z"
+    },
+    {
+      "file": "/tmp/claude-0/-home-user-flixy/40542152-19c1-52f7-b909-8f20535b6e41/scratchpad/probe3.mjs",
+      "action": "create",
+      "tokens": 174,
+      "at": "2026-07-13T23:15:29.829Z"
     }
   ],
   "edit_counts": {
-    "packages/shared/src/schemas/swipe.ts": 1,
-    "apps/mobile/src/features/swipe/queue.ts": 1,
-    "apps/mobile/src/features/swipe/hooks.ts": 1,
-    "apps/mobile/app/(app)/title/[id].tsx": 1,
-    "apps/mobile/src/features/swipe/__tests__/queue.test.ts": 1,
-    "apps/mobile/src/lib/query.ts": 1,
-    "apps/web/scripts/build.js": 2
+    "../../../tmp/claude-0/-home-user-flixy/40542152-19c1-52f7-b909-8f20535b6e41/scratchpad/probe.mjs": 1,
+    "../../../tmp/claude-0/-home-user-flixy/40542152-19c1-52f7-b909-8f20535b6e41/scratchpad/probe2.mjs": 1,
+    "apps/mobile/metro.config.js": 1,
+    "apps/mobile/src/features/deck/hooks.ts": 1,
+    "../../../tmp/claude-0/-home-user-flixy/40542152-19c1-52f7-b909-8f20535b6e41/scratchpad/probe3.mjs": 1
   },
-  "anatomy_hits": 0,
-  "anatomy_misses": 5,
+  "anatomy_hits": 1,
+  "anatomy_misses": 2,
   "repeated_reads_warned": 0,
   "cerebrum_warnings": 0,
-  "stop_count": 9
+  "stop_count": 0
 }

@@ -519,7 +519,9 @@ export function useDeck(options: UseDeckOptions = {}) {
       resolveDeckFilterPolicy(
         {
           selectedGenres: prefs?.selected_genres.map(normalizeGenreId) ?? [],
-          excludedGenres: prefs?.excluded_genres.map(normalizeGenreId) ?? [],
+          // Optional-chained past prefs: a persisted query-cache entry written
+          // before the excluded_genres migration restores without this field.
+          excludedGenres: prefs?.excluded_genres?.map(normalizeGenreId) ?? [],
           preferredLanguages: prefs?.preferred_languages ?? [],
           excludedLanguages: prefs?.excluded_languages ?? [],
           selectedServices: prefs?.selected_services.map(normalizeServiceId) ?? [],
