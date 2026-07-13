@@ -1,9 +1,9 @@
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { ChevronDown, ChevronLeft, Heart, Share2, Volume2, VolumeX, X } from 'lucide-react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   FlatList,
@@ -19,15 +19,23 @@ import YoutubePlayer, { PLAYER_STATES } from 'react-native-youtube-iframe';
 import { Screen } from '../../src/components/Screen';
 import { ShareCardModal } from '../../src/components/ShareCardModal';
 
-import type { Title } from '@flixy/shared';
+import { type Title, personalizationScore } from '@flixy/shared';
 import { Text } from '../../src/components/Text';
+import { useSession } from '../../src/features/auth/useSession';
 import { type TitleDisplay, toTitleDisplay } from '../../src/features/catalogue/display';
+import { useDeckExclusions, useTasteSignal } from '../../src/features/deck/hooks';
+import { useUserPreferences } from '../../src/features/onboarding/hooks';
 import { useProfile } from '../../src/features/profile/hooks';
 import { useRecordSwipe } from '../../src/features/swipe/hooks';
 import { useRecordTasteEvent } from '../../src/features/taste/hooks';
 import { events } from '../../src/features/telemetry/events';
+import { normalizeGenreId } from '../../src/lib/fallbackCatalogue';
+import { titleShareLinks } from '../../src/lib/share';
 import { discoverTmdbTitles, fetchTmdbTitlesByIds } from '../../src/lib/tmdb';
 import { colors, fonts } from '../../src/theme/tokens';
+
+/** Upper bound on TMDB discover pages the feed will walk (20 titles/page). */
+const MAX_FEED_PAGES = 15;
 
 export default function TrailersScreen() {
   const { t } = useTranslation();
@@ -49,37 +57,123 @@ export default function TrailersScreen() {
   const playerWidth = height * (16 / 9);
   const playerLeft = -(playerWidth - width) / 2;
 
-  // Fetch popular movies & TV shows across 2 pages in parallel to guarantee a rich trailer pool
+  // ---- For You feed composition -------------------------------------------
+  // TikTok-style FYP: an infinite, personalized trailer stream.
+  //  - Candidates come from TMDB discover, one page at a time (infinite).
+  //  - Already swiped / watchlisted titles never appear (deck exclusions).
+  //  - "Never show" genre & language preferences apply here too.
+  //  - Each new batch is ranked by the shared taste signal, so the feed
+  //    leans toward what the user likes and adapts as they react.
+  const { data: session } = useSession();
+  const userId = session?.user?.id ?? 'anon';
+  const { taste, isLoading: tasteLoading } = useTasteSignal();
+  const { exclusions, isReady: exclusionsReady } = useDeckExclusions();
+  const { data: prefs } = useUserPreferences();
+
+  const blockedGenres = useMemo(
+    () => new Set((prefs?.excluded_genres ?? []).map(normalizeGenreId)),
+    [prefs?.excluded_genres],
+  );
+  const blockedLanguages = useMemo(
+    () => new Set((prefs?.excluded_languages ?? []).map((l) => l.toLowerCase())),
+    [prefs?.excluded_languages],
+  );
+
   const {
-    data: titles,
+    data: pagedData,
     isLoading,
     isError,
     refetch,
-  } = useQuery({
-    queryKey: ['trailers_feed', region],
-    queryFn: async () => {
-      const [page1, page2] = await Promise.all([
-        discoverTmdbTitles({
-          region,
-          kinds: ['movie', 'tv'],
-          limit: 20,
-          page: 1,
-        }),
-        discoverTmdbTitles({
-          region,
-          kinds: ['movie', 'tv'],
-          limit: 20,
-          page: 2,
-        }),
-      ]);
-
-      const discoverResults = [...page1, ...page2];
-      const uuids = discoverResults.map((t) => t.id);
-      const fullTitles = await fetchTmdbTitlesByIds(uuids);
+    hasNextPage,
+    isFetchingNextPage,
+    fetchNextPage,
+  } = useInfiniteQuery({
+    queryKey: ['trailers_feed', region, userId],
+    enabled: exclusionsReady && !tasteLoading,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      const discovered = await discoverTmdbTitles({
+        region,
+        kinds: ['movie', 'tv'],
+        limit: 20,
+        page: pageParam,
+      });
+      const fullTitles = await fetchTmdbTitlesByIds(discovered.map((t) => t.id));
       return fullTitles.filter((t) => !!t.trailerKey);
     },
+    getNextPageParam: (_lastPage, pages) =>
+      pages.length >= MAX_FEED_PAGES ? undefined : pages.length + 1,
     staleTime: 1000 * 60 * 30, // 30 mins cache
   });
+
+  // Append-only feed: new candidates are filtered + taste-ranked, then
+  // appended. Items already in the feed never move or disappear — a Like
+  // invalidates exclusions, and live-filtering would yank the card the user
+  // is looking at.
+  const feedRef = useRef<{ key: string; ids: string[]; byId: Map<string, Title> }>({
+    key: '',
+    ids: [],
+    byId: new Map(),
+  });
+  const titles = useMemo(() => {
+    const feedKey = `${region}:${userId}`;
+    if (feedRef.current.key !== feedKey) {
+      feedRef.current = { key: feedKey, ids: [], byId: new Map() };
+    }
+    const feed = feedRef.current;
+    const known = new Set(feed.ids);
+    const fresh: Title[] = [];
+    for (const candidate of pagedData?.pages.flat() ?? []) {
+      if (known.has(candidate.id)) {
+        feed.byId.set(candidate.id, candidate);
+        continue;
+      }
+      known.add(candidate.id);
+      if (exclusions.excludeIds.has(candidate.id)) continue;
+      if (candidate.genres.some((g) => blockedGenres.has(normalizeGenreId(g)))) continue;
+      if (candidate.language && blockedLanguages.has(candidate.language.toLowerCase())) continue;
+      fresh.push(candidate);
+    }
+    if (fresh.length > 0) {
+      // Taste first, popularity as the tie-breaker — the FYP ordering.
+      fresh.sort(
+        (a, b) =>
+          personalizationScore(b, taste) +
+          0.3 * Math.min(1, b.popularity / 1000) -
+          (personalizationScore(a, taste) + 0.3 * Math.min(1, a.popularity / 1000)),
+      );
+      feed.ids = [...feed.ids, ...fresh.map((t) => t.id)];
+      for (const t of fresh) feed.byId.set(t.id, t);
+    }
+    const list: Title[] = [];
+    for (const id of feed.ids) {
+      const t = feed.byId.get(id);
+      if (t) list.push(t);
+    }
+    return list;
+  }, [pagedData, exclusions.excludeIds, blockedGenres, blockedLanguages, taste, region, userId]);
+
+  // Keep the stream going well before the user reaches the end.
+  const maybeFetchMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    // Covers both "user is near the end" and "the whole first batch was
+    // filtered out by exclusions/blocks" — keep pulling until content lands.
+    if (pagedData && titles.length - activeIndex <= 5) {
+      maybeFetchMore();
+    }
+  }, [activeIndex, titles.length, pagedData, maybeFetchMore]);
+
+  const feedPending =
+    isLoading ||
+    !exclusionsReady ||
+    tasteLoading ||
+    (!pagedData && !isError) ||
+    // Everything fetched so far was filtered out but more pages exist —
+    // keep the spinner up instead of flashing the error state.
+    (titles.length === 0 && !isError && (hasNextPage || isFetchingNextPage));
 
   useEffect(() => {
     events.trailerFeedOpened();
@@ -138,18 +232,20 @@ export default function TrailersScreen() {
   const [shareItem, setShareItem] = useState<{
     display: TitleDisplay;
     url: string | null;
+    trailerUrl: string | null;
     titleId: string;
   } | null>(null);
 
   const openShareCard = (title: Title) => {
     const display = toTitleDisplay(title);
-    const url = title.trailerKey
-      ? `https://www.youtube.com/watch?v=${title.trailerKey}`
-      : title.tmdbId
-        ? `https://www.themoviedb.org/${title.kind === 'tv' ? 'tv' : 'movie'}/${title.tmdbId}`
-        : '';
+    const links = titleShareLinks(title);
     events.titleShared({ titleId: title.id, hasImage: !!display.posterUrl });
-    setShareItem({ display, url: url || null, titleId: title.id });
+    setShareItem({
+      display,
+      url: links.webUrl,
+      trailerUrl: links.trailerUrl,
+      titleId: title.id,
+    });
   };
 
   const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
@@ -183,7 +279,7 @@ export default function TrailersScreen() {
     }
   }, [activeIndex, titles, recordTasteEvent]);
 
-  if (isLoading) {
+  if (feedPending) {
     return (
       <Screen scroll={false}>
         <View
@@ -261,6 +357,8 @@ export default function TrailersScreen() {
         getItemLayout={getItemLayout}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        onEndReached={maybeFetchMore}
+        onEndReachedThreshold={3}
         initialNumToRender={2}
         maxToRenderPerBatch={2}
         windowSize={3}
@@ -759,6 +857,7 @@ export default function TrailersScreen() {
         onClose={() => setShareItem(null)}
         display={shareItem?.display ?? null}
         shareUrl={shareItem?.url ?? null}
+        trailerUrl={shareItem?.trailerUrl ?? null}
       />
     </View>
   );

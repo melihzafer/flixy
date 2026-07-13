@@ -221,7 +221,7 @@ async function fetchRemoteSwipeRows(userId: string): Promise<RemoteSwipeRow[]> {
   }
 }
 
-function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
+export function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
   const { data: prefs } = useUserPreferences();
@@ -294,7 +294,7 @@ function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
   return { taste, isLoading: !!userId && isLoading };
 }
 
-function useDeckExclusions() {
+export function useDeckExclusions() {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
   const { data, isLoading, isError, refetch } = useQuery({

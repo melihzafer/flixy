@@ -22,6 +22,7 @@ import { Text } from '../../components/Text';
 import { useDeckFilters } from '../../features/deck/filterStore';
 import { events } from '../../features/telemetry/events';
 import { FALLBACK_GENRES_PARSED, FALLBACK_STREAMING_SERVICES } from '../../lib/fallbackCatalogue';
+import { LANGUAGE_OPTIONS } from '../../lib/languageOptions';
 import { colors, fonts } from '../../theme/tokens';
 import { useUserPreferences } from '../onboarding/hooks';
 import { useProfile } from '../profile/hooks';
@@ -60,17 +61,7 @@ const TYPE_I18N: Record<(typeof TYPES)[number], string> = {
   Series: 'filters.kinds.tv',
 };
 
-const LANGUAGES = [
-  { id: 'en', label: 'English' },
-  { id: 'tr', label: 'Turkish' },
-  { id: 'es', label: 'Spanish' },
-  { id: 'fr', label: 'French' },
-  { id: 'de', label: 'German' },
-  { id: 'it', label: 'Italian' },
-  { id: 'ja', label: 'Japanese' },
-  { id: 'ko', label: 'Korean' },
-  { id: 'hi', label: 'Hindi' },
-] as const;
+const LANGUAGES = LANGUAGE_OPTIONS;
 
 const RUNTIME_RANGES = [
   { key: 'any', label: 'Any length', min: null, max: null },

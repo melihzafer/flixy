@@ -1,7 +1,7 @@
 # anatomy.md
 
-> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T23:15:29.820Z
-> Files: 32 tracked | Anatomy hits: 0 | Misses: 0
+> Auto-maintained by OpenWolf. Last scanned: 2026-07-13T23:53:07.073Z
+> Files: 35 tracked | Anatomy hits: 0 | Misses: 0
 
 ## ./
 
@@ -182,16 +182,18 @@
 ## apps/mobile/app/(app)/
 
 - `settings-account.tsx` — WELCOME_ROUTE (~739 tok)
-- `settings.tsx` — Unified settings hub. Reachable from the Profile tab via the "Settings" row. (~3322 tok)
-- `trailers.tsx` — TrailersScreen (~6007 tok)
+- `settings-languages.tsx` — Default original-language preferences for movies & shows. These feed (~1830 tok)
+- `settings.tsx` — Unified settings hub. Reachable from the Profile tab via the "Settings" row. (~3587 tok)
+- `trailers.tsx` — Upper bound on TMDB discover pages the feed will walk (20 titles/page). (~8676 tok)
 
 ## apps/mobile/app/(app)/(tabs)/
 
 - `deck.tsx` — DeckScreen (~12381 tok)
+- `watchlist.tsx` — FILTERS (~13086 tok)
 
 ## apps/mobile/app/(app)/title/
 
-- `[id].tsx` — TitleDetail (~5998 tok)
+- `[id].tsx` — TitleDetail (~5987 tok)
 
 ## apps/mobile/app/(auth)/
 
@@ -209,6 +211,7 @@
 
 - `CustomTabBar.tsx` — TABS (~1214 tok)
 - `PwaInstallModal.tsx` — Web-only "Add to Home Screen" prompt. Renders nothing on the native APK (~1800 tok)
+- `ShareCardModal.tsx` — Primary link — the Flixy web page for this title. (~2958 tok)
 
 ## apps/mobile/src/components/__tests__/
 
@@ -227,7 +230,8 @@
 
 ## apps/mobile/src/features/deck/
 
-- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~9425 tok)
+- `FilterSheet.tsx` — MOODS — renders modal (~9792 tok)
+- `hooks.ts` — When the remaining deck drops below this threshold, fetch the next TMDB (~9429 tok)
 - `queueFilter.ts` — Live filter for the deck screen's append-only card queue. (~352 tok)
 
 ## apps/mobile/src/features/deck/__tests__/
@@ -291,10 +295,12 @@
 
 ## apps/mobile/src/lib/
 
+- `languageOptions.ts` — Original-language options shared by the deck FilterSheet and the (~238 tok)
 - `localDb.ts` — A card the user actually SAW at the top of the deck but did not swipe. (~4948 tok)
 - `pwaInstall.ts` — PWA "Add to Home Screen" install-prompt persistence. (~624 tok)
 - `pwaInstallPlatform.ts` — Flixy ships as a native APK (Platform.OS === 'ios' | 'android') and as a (~506 tok)
 - `query.ts` — Exports queryClient, queryPersister (~311 tok)
+- `share.ts` — Central share plumbing. Every share surface (title detail, trailers feed, (~859 tok)
 
 ## apps/mobile/src/lib/__tests__/
 
@@ -337,7 +343,7 @@
 
 ## packages/shared/src/
 
-- `composer.ts` — 7-layer deck composer (FSD section 3.5.3). Pure function: takes a candidate (~6482 tok)
+- `composer.ts` — 7-layer deck composer (FSD section 3.5.3). Pure function: takes a candidate (~6624 tok)
 
 ## packages/shared/src/__tests__/
 

@@ -1,6 +1,7 @@
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import {
+  AudioLines,
   Bell,
   Clapperboard,
   FileText,
@@ -25,6 +26,7 @@ import { toProfilePreferenceDisplay } from '../../src/features/profile/display';
 import { useProfile } from '../../src/features/profile/hooks';
 import { events } from '../../src/features/telemetry/events';
 import { FALLBACK_STREAMING_SERVICES } from '../../src/lib/fallbackCatalogue';
+import { languageLabel } from '../../src/lib/languageOptions';
 import { colors, fonts, radii, spacing } from '../../src/theme/tokens';
 
 /**
@@ -47,6 +49,21 @@ export default function Settings() {
     selectedServiceCount,
     selectedGenreCount,
   ].filter(Boolean).length;
+  const preferredLanguages = prefs?.preferred_languages ?? [];
+  const blockedLanguages = prefs?.excluded_languages ?? [];
+  const contentLanguagesSummary =
+    preferredLanguages.length === 0 && blockedLanguages.length === 0
+      ? t('settings.contentLanguagesAny', 'Any language')
+      : [
+          preferredLanguages.map(languageLabel).join(', '),
+          blockedLanguages.length > 0
+            ? t('settings.contentLanguagesBlocked', '{{count}} blocked', {
+                count: blockedLanguages.length,
+              })
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ');
   const display = toProfilePreferenceDisplay({
     profile,
     prefs,
@@ -170,6 +187,16 @@ export default function Settings() {
           leading={<SettingsIcon Icon={Clapperboard} />}
           accessibilityLabel={`${t('settings.genres')}, ${display.genresSummary}`}
           onPress={() => open('genres', '/(app)/settings-genres')}
+          valueNumberOfLines={2}
+        />
+        <SettingsRow
+          testID="settings-content-languages-row"
+          label={t('settings.contentLanguages', 'Content languages')}
+          value={contentLanguagesSummary}
+          subtitle={t('settings.contentLanguagesSub', 'Original language for movies & shows')}
+          leading={<SettingsIcon Icon={AudioLines} />}
+          accessibilityLabel={`${t('settings.contentLanguages', 'Content languages')}, ${contentLanguagesSummary}`}
+          onPress={() => open('content_languages', '/(app)/settings-languages')}
           valueNumberOfLines={2}
         />
       </SettingsGroup>

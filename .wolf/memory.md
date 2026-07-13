@@ -735,3 +735,44 @@
 
 | Time | Action | File(s) | Outcome | ~Tokens |
 |------|--------|---------|---------|--------|
+| 23:43 | Created apps/mobile/src/lib/languageOptions.ts | — | ~238 |
+| 23:43 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | removed 11 lines | ~10 |
+| 23:43 | Edited apps/mobile/src/features/deck/FilterSheet.tsx | added 1 import(s) | ~46 |
+| 23:43 | Created apps/mobile/app/(app)/settings-languages.tsx | — | ~1830 |
+| 23:44 | Edited apps/mobile/app/(app)/settings.tsx | 12→13 lines | ~48 |
+| 23:44 | Edited apps/mobile/app/(app)/settings.tsx | expanded (+10 lines) | ~304 |
+| 23:44 | Edited apps/mobile/app/(app)/settings.tsx | added optional chaining | ~189 |
+| 23:44 | Edited apps/mobile/app/(app)/settings.tsx | added 1 import(s) | ~41 |
+| 23:46 | Created apps/mobile/src/lib/share.ts | — | ~859 |
+| 23:46 | Edited apps/mobile/src/components/ShareCardModal.tsx | added 2 import(s) | ~607 |
+| 23:46 | Edited apps/mobile/src/components/ShareCardModal.tsx | modified t() | ~616 |
+| 23:47 | Edited apps/mobile/app/(app)/title/[id].tsx | removed 5 lines | ~13 |
+| 23:47 | Edited apps/mobile/app/(app)/title/[id].tsx | 6→7 lines | ~62 |
+| 23:47 | Edited apps/mobile/app/(app)/title/[id].tsx | added 1 import(s) | ~38 |
+| 23:47 | Edited apps/mobile/app/(app)/trailers.tsx | CSS: trailerUrl, trailerUrl | ~146 |
+| 23:47 | Edited apps/mobile/app/(app)/trailers.tsx | 6→7 lines | ~69 |
+| 23:47 | Edited apps/mobile/app/(app)/trailers.tsx | added 1 import(s) | ~38 |
+| 23:48 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | added nullish coalescing | ~821 |
+| 23:48 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | 5→5 lines | ~48 |
+| 23:48 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | modified WatchlistScreen() | ~404 |
+| 23:48 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | modified filter() | ~288 |
+| 23:48 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | inline fix | ~10 |
+| 23:48 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | expanded (+25 lines) | ~384 |
+| 23:49 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | 4→5 lines | ~60 |
+| 23:49 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | expanded (+37 lines) | ~389 |
+| 23:49 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | added optional chaining | ~1839 |
+| 23:49 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | modified FilterSectionLabel() | ~461 |
+| 23:50 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | added 1 condition(s) | ~112 |
+| 23:50 | Edited apps/mobile/app/(app)/(tabs)/watchlist.tsx | 5→9 lines | ~92 |
+| 23:50 | Edited apps/mobile/src/features/deck/hooks.ts | inline fix | ~23 |
+| 23:50 | Edited apps/mobile/src/features/deck/hooks.ts | inline fix | ~11 |
+| 23:51 | Edited packages/shared/src/composer.ts | modified personalizationScore() | ~112 |
+| 23:51 | Edited apps/mobile/app/(app)/trailers.tsx | inline fix | ~17 |
+| 23:51 | Edited apps/mobile/app/(app)/trailers.tsx | expanded (+7 lines) | ~301 |
+| 23:52 | Edited apps/mobile/app/(app)/trailers.tsx | added optional chaining | ~1181 |
+| 23:52 | Edited apps/mobile/app/(app)/trailers.tsx | inline fix | ~22 |
+| 23:52 | Edited apps/mobile/app/(app)/trailers.tsx | modified if() | ~120 |
+| 23:52 | Edited apps/mobile/app/(app)/trailers.tsx | modified if() | ~18 |
+| 23:52 | Edited apps/mobile/app/(app)/trailers.tsx | 14→16 lines | ~151 |
+| 23:53 | Edited apps/mobile/app/(app)/trailers.tsx | expanded (+7 lines) | ~94 |
+| 00:55 | Trailers FYP (infinite personalized feed), watchlist filter/sort sheet + row share, settings content-languages page, share system rework (flixy web deep link + clipboard) | trailers.tsx, watchlist.tsx, settings-languages.tsx, share.ts, ShareCardModal.tsx, deck/hooks.ts, composer.ts | tests+tsc pass | ~60k |

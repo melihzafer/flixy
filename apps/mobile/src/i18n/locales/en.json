@@ -70,13 +70,13 @@
   },
   "deck": {
     "title": "Discover",
-    "loadingTitle": "Finding tonight\u2019s picks",
-    "loadingHint": "Composing your deck\u2026",
+    "loadingTitle": "Finding tonight’s picks",
+    "loadingHint": "Composing your deck…",
     "errorTitle": "Something went wrong",
-    "emptyTitle": "You\u2019ve seen them all",
+    "emptyTitle": "You’ve seen them all",
     "emptyHint": "Broaden your filters to see more picks.",
-    "syncing": "Syncing {{count}} swipe(s)\u2026",
-    "syncIssue": "Saved offline. Retrying sync\u2026",
+    "syncing": "Syncing {{count}} swipe(s)…",
+    "syncIssue": "Saved offline. Retrying sync…",
     "readyStatus": "{{count}} picks ready",
     "relaxedStatus": "Broadened filters for more picks",
     "degradedStatus": "Limited offline picks",
@@ -114,9 +114,9 @@
       "fallbackTitle": "Showing offline picks",
       "fallbackHint": "We couldn't connect to the server. You can keep swiping on downloaded picks, or try again.",
       "fallbackPrimary": "Retry catalogue",
-      "exhaustedTitle": "You\u2019ve seen this deck.",
+      "exhaustedTitle": "You’ve seen this deck.",
       "exhaustedHint": "Your swipes and watchlist exclude every current card. Check back after the catalogue refreshes.",
-      "defaultTitle": "You\u2019ve out-swiped us.",
+      "defaultTitle": "You’ve out-swiped us.",
       "defaultHint": "Broaden your filters or check your watchlist.",
       "clearFilters": "Clear filters",
       "filters": "Filters",
@@ -165,7 +165,8 @@
       "markTop": "Mark as top pick",
       "removeTop": "Remove top pick",
       "remove": "Remove from watchlist",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "share": "Share"
     },
     "filter": {
       "all": "All",
@@ -173,7 +174,18 @@
       "watched": "Watched",
       "movies": "Movies",
       "series": "Series"
-    }
+    },
+    "filterSort": "Filter & sort",
+    "sortLabel": "Sort",
+    "sortRecent": "Recently added",
+    "sortAz": "A to Z",
+    "sortYear": "Newest release",
+    "sortRating": "Top rated",
+    "genresLabel": "Genres",
+    "servicesLabel": "Services",
+    "clearFilters": "Clear",
+    "applyFilters": "Apply",
+    "noMatches": "No titles match your filters. Clear them to see your full watchlist."
   },
   "detail": {
     "notFound": "Not found",
@@ -383,7 +395,11 @@
     "terms": "Terms of service",
     "signOut": "Sign out",
     "open": "Open",
-    "read": "Read"
+    "read": "Read",
+    "contentLanguages": "Content languages",
+    "contentLanguagesSub": "Original language for movies & shows",
+    "contentLanguagesAny": "Any language",
+    "contentLanguagesBlocked": "{{count}} blocked"
   },
   "settingsPages": {
     "editProfile": {
@@ -489,6 +505,16 @@
         "promo_unavailable": "Promo redemption is unavailable right now. Try again later.",
         "promo_unknown_error": "Something went wrong. Try again or contact support."
       }
+    },
+    "languages": {
+      "title": "Content languages",
+      "subtitle": "Pick the original languages you want for movies and shows. Leave \"Show me\" empty for every language. Never show hides a language everywhere.",
+      "showMe": "Show me ({{count}})",
+      "neverShow": "Never show ({{count}})",
+      "allowHint": "With no selection, Discover stays open to every language and simply learns from your swipes.",
+      "blockHint": "Blocked languages never appear in Discover, For You, or Trailers — even inside recommendations.",
+      "save": "Save languages",
+      "cancel": "Cancel"
     }
   },
   "display": {
@@ -557,5 +583,14 @@
     "iosStep4": "Confirm",
     "iosCta": "Got it",
     "close": "Close"
+  },
+  "share": {
+    "title": "Share",
+    "viaApps": "Share via apps",
+    "shared": "Shared!",
+    "copyLink": "Copy link",
+    "copied": "Copied!",
+    "watchTrailer": "Watch trailer",
+    "message": "Flixy pick: {{title}}"
   }
 }

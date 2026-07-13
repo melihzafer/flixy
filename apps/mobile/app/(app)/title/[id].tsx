@@ -19,6 +19,7 @@ import { useRecordSwipe } from '../../../src/features/swipe/hooks';
 import { useRecordTasteEvent } from '../../../src/features/taste/hooks';
 import { events } from '../../../src/features/telemetry/events';
 import { FALLBACK_STREAMING_SERVICES } from '../../../src/lib/fallbackCatalogue';
+import { titleShareLinks } from '../../../src/lib/share';
 import { colors, fonts } from '../../../src/theme/tokens';
 
 export default function TitleDetail() {
@@ -198,11 +199,7 @@ export default function TitleDetail() {
     await Linking.openURL(offer.deepLink);
   };
 
-  const shareUrl = title.tmdbId
-    ? `https://www.themoviedb.org/${title.kind === 'tv' ? 'tv' : 'movie'}/${title.tmdbId}`
-    : title.trailerKey
-      ? `https://www.youtube.com/watch?v=${title.trailerKey}`
-      : null;
+  const shareLinks = titleShareLinks(title);
 
   const openShareCard = () => {
     events.titleShared({ titleId: title.id, hasImage: !!display.posterUrl });
@@ -581,7 +578,8 @@ export default function TitleDetail() {
         visible={showShareCard}
         onClose={() => setShowShareCard(false)}
         display={display}
-        shareUrl={shareUrl}
+        shareUrl={shareLinks.webUrl}
+        trailerUrl={shareLinks.trailerUrl}
       />
     </View>
   );
