@@ -1,10 +1,12 @@
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, Link2, Share2, X } from 'lucide-react-native';
+import { Check, Clapperboard, Link2, Share2, X } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Modal, Pressable, Share, StyleSheet, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import type { TitleDisplay } from '../features/catalogue/display';
+import { buildShareMessage, copyText, shareTitleMessage } from '../lib/share';
 import { colors, fonts, radii, spacing } from '../theme/tokens';
 import { Text } from './Text';
 
@@ -12,8 +14,10 @@ type ShareCardModalProps = {
   visible: boolean;
   onClose: () => void;
   display: TitleDisplay | null;
-  /** TMDB or YouTube link to share */
+  /** Primary link — the Flixy web page for this title. */
   shareUrl: string | null;
+  /** Optional secondary YouTube trailer link, appended to the message. */
+  trailerUrl?: string | null;
   onShared?: () => void;
 };
 
@@ -22,8 +26,10 @@ export function ShareCardModal({
   onClose,
   display,
   shareUrl,
+  trailerUrl = null,
   onShared,
 }: ShareCardModalProps) {
+  const { t } = useTranslation();
   const [shared, setShared] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -36,38 +42,35 @@ export function ShareCardModal({
 
   if (!display) return null;
 
-  const message = [
-    `Flixy pick: ${display.title}${display.year ? ` (${display.year})` : ''}`,
-    shareUrl,
-  ]
-    .filter(Boolean)
-    .join('\n');
+  const message = buildShareMessage(display.title, display.year, {
+    webUrl: shareUrl ?? '',
+    trailerUrl,
+  });
 
   const handleShare = async () => {
-    try {
-      await Share.share({
-        title: `Flixy: ${display.title}`,
-        message,
-        url: shareUrl ?? undefined,
-      });
+    const outcome = await shareTitleMessage({
+      title: `Flixy: ${display.title}`,
+      message,
+      url: shareUrl ?? '',
+    });
+    if (outcome === 'shared') {
       setShared(true);
       onShared?.();
-    } catch {
-      // user dismissed the share sheet — not an error
+    } else if (outcome === 'copied') {
+      // Desktop web without navigator.share: the message went to the
+      // clipboard instead — surface that on the copy row.
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
   };
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (!shareUrl) return;
-    // Use Share.share as a fallback — on most platforms the share sheet
-    // includes a "copy" option. This avoids needing a clipboard dependency.
-    setCopied(true);
-    void Share.share({
-      message: shareUrl,
-    }).catch(() => {
-      // dismissal is not an error
-    });
-    setTimeout(() => setCopied(false), 2000);
+    const ok = await copyText(shareUrl);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   return (
@@ -154,23 +157,34 @@ export function ShareCardModal({
               </Text>
             </View>
           ) : null}
+          {trailerUrl ? (
+            <View style={styles.linkBox}>
+              <Clapperboard size={14} color={colors.textMuted} strokeWidth={2} />
+              <Text style={styles.linkText} numberOfLines={1}>
+                {t('share.watchTrailer', 'Watch trailer')} ·{' '}
+                {trailerUrl.replace(/^https?:\/\//, '')}
+              </Text>
+            </View>
+          ) : null}
 
           {/* Actions */}
           <View style={styles.actions}>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel="Share via apps"
+              accessibilityLabel={t('share.viaApps', 'Share via apps')}
               onPress={handleShare}
               style={({ pressed }) => [styles.primaryAction, pressed && styles.actionPressed]}
             >
               <Share2 size={18} color={colors.onAccent} strokeWidth={2.3} />
-              <Text style={styles.primaryActionText}>{shared ? 'Shared!' : 'Share via apps'}</Text>
+              <Text style={styles.primaryActionText}>
+                {shared ? t('share.shared', 'Shared!') : t('share.viaApps', 'Share via apps')}
+              </Text>
             </Pressable>
 
             {shareUrl ? (
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel="Copy link"
+                accessibilityLabel={t('share.copyLink', 'Copy link')}
                 onPress={handleCopyLink}
                 style={({ pressed }) => [styles.secondaryAction, pressed && styles.actionPressed]}
               >
@@ -179,7 +193,9 @@ export function ShareCardModal({
                 ) : (
                   <Link2 size={16} color={colors.text} strokeWidth={2.2} />
                 )}
-                <Text style={styles.secondaryActionText}>{copied ? 'Copied!' : 'Copy link'}</Text>
+                <Text style={styles.secondaryActionText}>
+                  {copied ? t('share.copied', 'Copied!') : t('share.copyLink', 'Copy link')}
+                </Text>
               </Pressable>
             ) : null}
           </View>

@@ -1,16 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Dices, MoreVertical, Star, X } from 'lucide-react-native';
+import { Dices, MoreVertical, SlidersHorizontal, Star, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Modal, Pressable, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
 
 import type { Title } from '@flixy/shared';
 import { AppHeader } from '../../../src/components/AppHeader';
 import { Screen } from '../../../src/components/Screen';
+import { ShareCardModal } from '../../../src/components/ShareCardModal';
 import { Text } from '../../../src/components/Text';
-import { toTitleDisplay } from '../../../src/features/catalogue/display';
+import { type TitleDisplay, toTitleDisplay } from '../../../src/features/catalogue/display';
 import {
   type WatchlistEntry,
   type WatchlistFilter,
@@ -21,6 +22,8 @@ import {
   useWatchlist,
 } from '../../../src/features/watchlist/hooks';
 import { track } from '../../../src/lib/analytics';
+import { FALLBACK_STREAMING_SERVICES } from '../../../src/lib/fallbackCatalogue';
+import { titleShareLinks } from '../../../src/lib/share';
 import { colors, fonts } from '../../../src/theme/tokens';
 
 const FILTERS: { id: WatchlistFilter; label: string }[] = [
@@ -36,15 +39,74 @@ const TYPE_FILTERS: { id: TypeFilter; label: string }[] = [
   { id: 'tv', label: 'watchlist.filter.series' },
 ];
 
+type WatchlistSort = 'recent' | 'az' | 'year' | 'rating';
+const SORTS: { id: WatchlistSort; label: string; fallback: string }[] = [
+  { id: 'recent', label: 'watchlist.sortRecent', fallback: 'Recently added' },
+  { id: 'az', label: 'watchlist.sortAz', fallback: 'A to Z' },
+  { id: 'year', label: 'watchlist.sortYear', fallback: 'Newest release' },
+  { id: 'rating', label: 'watchlist.sortRating', fallback: 'Top rated' },
+];
+
+type ValidEntry = WatchlistEntry & { title: Title };
+
+function sortEntries(entries: ValidEntry[], sort: WatchlistSort): ValidEntry[] {
+  const sorted = [...entries];
+  switch (sort) {
+    case 'az':
+      sorted.sort((a, b) => a.title.title.localeCompare(b.title.title));
+      break;
+    case 'year':
+      sorted.sort((a, b) => (b.title.releaseYear ?? 0) - (a.title.releaseYear ?? 0));
+      break;
+    case 'rating':
+      sorted.sort(
+        (a, b) =>
+          (b.title.imdbRating ?? b.title.popularity / 1000) -
+          (a.title.imdbRating ?? a.title.popularity / 1000),
+      );
+      break;
+    default:
+      sorted.sort(
+        (a, b) => new Date(b.item.addedAt).getTime() - new Date(a.item.addedAt).getTime(),
+      );
+  }
+  return sorted;
+}
+
 export default function WatchlistScreen() {
   const { t } = useTranslation();
   const [filter, setFilter] = useState<WatchlistFilter>('all');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
+  const [sort, setSort] = useState<WatchlistSort>('recent');
+  const [genreFilter, setGenreFilter] = useState<Set<string>>(new Set());
+  const [serviceFilter, setServiceFilter] = useState<Set<string>>(new Set());
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [shareItem, setShareItem] = useState<{
+    display: TitleDisplay;
+    url: string;
+    trailerUrl: string | null;
+  } | null>(null);
   const { entries, isLoading, isError, refetch } = useWatchlist(filter);
   const markWatched = useMarkWatched();
   const unmarkWatched = useUnmarkWatched();
   const removeFromWatchlist = useRemoveFromWatchlist();
   const setPriority = useSetPriority();
+
+  const openShare = (title: Title) => {
+    const display = toTitleDisplay(title);
+    const links = titleShareLinks(title);
+    track('watchlist_row_action', { action: 'share' });
+    setShareItem({ display, url: links.webUrl, trailerUrl: links.trailerUrl });
+  };
+
+  const advancedFilterCount =
+    (genreFilter.size > 0 ? 1 : 0) + (serviceFilter.size > 0 ? 1 : 0) + (sort !== 'recent' ? 1 : 0);
+
+  const clearAdvancedFilters = () => {
+    setGenreFilter(new Set());
+    setServiceFilter(new Set());
+    setSort('recent');
+  };
 
   // Streaming Roulette State (ZERO_COST feature)
   const [showRoulette, setShowRoulette] = useState(false);
@@ -149,12 +211,34 @@ export default function WatchlistScreen() {
     );
   }
 
-  const validEntries = entries
-    .filter((e): e is typeof e & { title: NonNullable<typeof e.title> } => !!e.title)
+  const typedEntries = entries
+    .filter((e): e is ValidEntry => !!e.title)
     .filter((e) => typeFilter === 'all' || e.title.kind === typeFilter);
-  const top = validEntries.filter((e) => e.item.priority === 'top' && !e.item.watchedAt);
-  const norm = validEntries.filter((e) => e.item.priority !== 'top' && !e.item.watchedAt);
-  const watched = validEntries.filter((e) => !!e.item.watchedAt);
+
+  const availableGenres = Array.from(new Set(typedEntries.flatMap((e) => e.title.genres))).sort();
+  const availableServices = Array.from(
+    new Set(typedEntries.flatMap((e) => e.title.availability.map((a) => a.serviceId))),
+  ).sort();
+
+  const validEntries = typedEntries
+    .filter((e) => genreFilter.size === 0 || e.title.genres.some((g) => genreFilter.has(g)))
+    .filter(
+      (e) =>
+        serviceFilter.size === 0 ||
+        e.title.availability.some((a) => serviceFilter.has(a.serviceId)),
+    );
+  const top = sortEntries(
+    validEntries.filter((e) => e.item.priority === 'top' && !e.item.watchedAt),
+    sort,
+  );
+  const norm = sortEntries(
+    validEntries.filter((e) => e.item.priority !== 'top' && !e.item.watchedAt),
+    sort,
+  );
+  const watched = sortEntries(
+    validEntries.filter((e) => !!e.item.watchedAt),
+    sort,
+  );
 
   return (
     <Screen scroll={true}>
@@ -164,6 +248,31 @@ export default function WatchlistScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             {entries.length > 0 && (
               <>
+                <Pressable
+                  onPress={() => setFilterSheetOpen(true)}
+                  testID="watchlist-filter-sheet-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={t('watchlist.filterSort', 'Filter & sort')}
+                  style={({ pressed }) => ({
+                    width: 30,
+                    height: 26,
+                    borderRadius: 8,
+                    backgroundColor:
+                      advancedFilterCount > 0 ? 'rgba(255,77,28,0.16)' : 'rgba(255,255,255,0.06)',
+                    borderWidth: 1,
+                    borderColor:
+                      advancedFilterCount > 0 ? colors.accentBorder : 'rgba(255,255,255,0.09)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <SlidersHorizontal
+                    size={14}
+                    color={advancedFilterCount > 0 ? colors.accent : 'rgba(245,245,240,0.7)'}
+                    strokeWidth={2.2}
+                  />
+                </Pressable>
                 <Pressable
                   onPress={startRoulette}
                   testID="watchlist-roulette-button"
@@ -346,6 +455,7 @@ export default function WatchlistScreen() {
               onRemove={() =>
                 removeFromWatchlist.mutate({ id: entry.item.id, titleId: entry.item.titleId })
               }
+              onShare={() => openShare(entry.title)}
             />
           ))}
         </>
@@ -389,6 +499,7 @@ export default function WatchlistScreen() {
               onRemove={() =>
                 removeFromWatchlist.mutate({ id: entry.item.id, titleId: entry.item.titleId })
               }
+              onShare={() => openShare(entry.title)}
             />
           ))}
         </>
@@ -430,12 +541,215 @@ export default function WatchlistScreen() {
               onRemove={() =>
                 removeFromWatchlist.mutate({ id: entry.item.id, titleId: entry.item.titleId })
               }
+              onShare={() => openShare(entry.title)}
             />
           ))}
         </>
       )}
 
-      {validEntries.length === 0 && <WatchlistEmptyState filter={filter} />}
+      {validEntries.length === 0 && typedEntries.length > 0 && advancedFilterCount > 0 ? (
+        <View style={{ alignItems: 'center', gap: 12, padding: 40 }}>
+          <Text
+            style={{
+              fontSize: 13,
+              color: 'rgba(245,245,240,0.38)',
+              textAlign: 'center',
+              lineHeight: 20,
+            }}
+          >
+            {t(
+              'watchlist.noMatches',
+              'No titles match your filters. Clear them to see your full watchlist.',
+            )}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            onPress={clearAdvancedFilters}
+            style={({ pressed }) => ({
+              minHeight: 38,
+              paddingHorizontal: 16,
+              borderRadius: 999,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: 'rgba(255,77,28,0.14)',
+              borderWidth: 1,
+              borderColor: colors.accentBorder,
+              opacity: pressed ? 0.85 : 1,
+            })}
+          >
+            <Text style={{ fontFamily: fonts.bodySemi, fontSize: 13, color: colors.text }}>
+              {t('watchlist.clearFilters', 'Clear')}
+            </Text>
+          </Pressable>
+        </View>
+      ) : (
+        validEntries.length === 0 && <WatchlistEmptyState filter={filter} />
+      )}
+
+      {/* Filter & sort sheet */}
+      <Modal
+        visible={filterSheetOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setFilterSheetOpen(false)}
+      >
+        <Pressable
+          accessibilityLabel={t('common.back', 'Dismiss')}
+          onPress={() => setFilterSheetOpen(false)}
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              maxHeight: '80%',
+              backgroundColor: colors.surface,
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              borderWidth: 1,
+              borderColor: 'rgba(255,77,28,0.12)',
+              paddingTop: 10,
+              paddingBottom: 26,
+            }}
+          >
+            <View
+              style={{
+                alignSelf: 'center',
+                width: 36,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: 'rgba(255,255,255,0.18)',
+                marginBottom: 6,
+              }}
+            />
+            <ScrollView style={{ paddingHorizontal: 18 }} contentContainerStyle={{ gap: 14 }}>
+              <Text
+                style={{
+                  fontFamily: fonts.display,
+                  fontSize: 20,
+                  color: colors.text,
+                  textAlign: 'center',
+                }}
+              >
+                {t('watchlist.filterSort', 'Filter & sort')}
+              </Text>
+
+              <FilterSectionLabel label={t('watchlist.sortLabel', 'Sort')} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {SORTS.map((option) => (
+                  <FilterChip
+                    key={option.id}
+                    testID={`watchlist-sort-${option.id}`}
+                    label={t(option.label, option.fallback)}
+                    active={sort === option.id}
+                    onPress={() => setSort(option.id)}
+                  />
+                ))}
+              </View>
+
+              {availableGenres.length > 0 ? (
+                <>
+                  <FilterSectionLabel label={t('watchlist.genresLabel', 'Genres')} />
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {availableGenres.map((genre) => (
+                      <FilterChip
+                        key={genre}
+                        testID={`watchlist-genre-${genre}`}
+                        label={t(`genres.${genre}`, genre.replace(/_/g, ' '))}
+                        active={genreFilter.has(genre)}
+                        onPress={() =>
+                          setGenreFilter((current) => {
+                            const next = new Set(current);
+                            if (next.has(genre)) next.delete(genre);
+                            else next.add(genre);
+                            return next;
+                          })
+                        }
+                      />
+                    ))}
+                  </View>
+                </>
+              ) : null}
+
+              {availableServices.length > 0 ? (
+                <>
+                  <FilterSectionLabel label={t('watchlist.servicesLabel', 'Services')} />
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {availableServices.map((serviceId) => (
+                      <FilterChip
+                        key={serviceId}
+                        testID={`watchlist-service-${serviceId}`}
+                        label={
+                          FALLBACK_STREAMING_SERVICES.find((s) => s.id === serviceId)?.name ??
+                          serviceId
+                        }
+                        active={serviceFilter.has(serviceId)}
+                        onPress={() =>
+                          setServiceFilter((current) => {
+                            const next = new Set(current);
+                            if (next.has(serviceId)) next.delete(serviceId);
+                            else next.add(serviceId);
+                            return next;
+                          })
+                        }
+                      />
+                    ))}
+                  </View>
+                </>
+              ) : null}
+
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 6 }}>
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={clearAdvancedFilters}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    minHeight: 46,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.05)',
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <Text style={{ fontFamily: fonts.bodySemi, color: colors.text, fontSize: 14 }}>
+                    {t('watchlist.clearFilters', 'Clear')}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="button"
+                  testID="watchlist-filters-apply"
+                  onPress={() => setFilterSheetOpen(false)}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    minHeight: 46,
+                    borderRadius: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.accent,
+                    opacity: pressed ? 0.85 : 1,
+                  })}
+                >
+                  <Text
+                    style={{ fontFamily: fonts.bodyBold, color: colors.onAccent, fontSize: 14 }}
+                  >
+                    {t('watchlist.applyFilters', 'Apply')}
+                  </Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <ShareCardModal
+        visible={!!shareItem}
+        onClose={() => setShareItem(null)}
+        display={shareItem?.display ?? null}
+        shareUrl={shareItem?.url ?? null}
+        trailerUrl={shareItem?.trailerUrl ?? null}
+      />
 
       {/* Roulette Picker Modal */}
       <Modal
@@ -702,18 +1016,79 @@ function WatchlistEmptyState({ filter }: { filter: WatchlistFilter }) {
   );
 }
 
+function FilterSectionLabel({ label }: { label: string }) {
+  return (
+    <Text
+      style={{
+        fontSize: 10,
+        fontFamily: fonts.bodySemi,
+        letterSpacing: 1.2,
+        textTransform: 'uppercase',
+        color: 'rgba(245,245,240,0.4)',
+      }}
+    >
+      {label}
+    </Text>
+  );
+}
+
+function FilterChip({
+  label,
+  active,
+  onPress,
+  testID,
+}: {
+  label: string;
+  active: boolean;
+  onPress: () => void;
+  testID?: string;
+}) {
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      accessibilityLabel={`${label}${active ? ', selected' : ''}`}
+      onPress={onPress}
+      style={{
+        minHeight: 34,
+        paddingHorizontal: 12,
+        borderRadius: 999,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: active ? 'rgba(255,77,28,0.16)' : 'rgba(245,245,240,0.04)',
+        borderWidth: 1,
+        borderColor: active ? colors.accentBorder : colors.border,
+      }}
+    >
+      <Text
+        style={{
+          fontFamily: fonts.bodySemi,
+          fontSize: 12,
+          color: active ? colors.text : colors.textMuted,
+          textTransform: 'capitalize',
+        }}
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 function WatchlistRow({
   entry,
   onPress,
   onToggleWatched,
   onTogglePriority,
   onRemove,
+  onShare,
 }: {
   entry: WatchlistEntry & { title: NonNullable<WatchlistEntry['title']> };
   onPress: () => void;
   onToggleWatched: () => void;
   onTogglePriority: () => void;
   onRemove: () => void;
+  onShare: () => void;
 }) {
   const { t } = useTranslation();
   const display = toTitleDisplay(entry.title);
@@ -728,12 +1103,13 @@ function WatchlistRow({
       : null;
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const fire = (action: 'mark_watched' | 'mark_top' | 'remove' | 'pass') => {
+  const fire = (action: 'mark_watched' | 'mark_top' | 'remove' | 'share' | 'pass') => {
     track('watchlist_row_action', { action, watched: watched ? 1 : 0 });
     setSheetOpen(false);
     if (action === 'mark_watched') onToggleWatched();
     else if (action === 'mark_top') onTogglePriority();
     else if (action === 'remove') onRemove();
+    else if (action === 'share') onShare();
   };
 
   return (
@@ -903,6 +1279,10 @@ function WatchlistRow({
                   : t('watchlist.sheet.markTop', 'Mark as top pick')
               }
               onPress={() => fire('mark_top')}
+            />
+            <SheetAction
+              label={t('watchlist.sheet.share', 'Share')}
+              onPress={() => fire('share')}
             />
             <SheetAction
               label={t('watchlist.sheet.remove', 'Remove from watchlist')}

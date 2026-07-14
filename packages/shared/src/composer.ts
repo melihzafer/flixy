@@ -170,7 +170,16 @@ function affinity(
   return sum / values.length;
 }
 
-function personalizationScore(t: Title, taste: TasteSignal, recommendationScore?: number): number {
+/**
+ * Taste-based score in [-2, 2] for a single title. Exported so lighter
+ * personalized surfaces (the trailers For You feed) can rank candidates
+ * without running the full deck composer.
+ */
+export function personalizationScore(
+  t: Title,
+  taste: TasteSignal,
+  recommendationScore?: number,
+): number {
   const genre = affinity(t.genres, taste.positiveGenres, taste.negativeGenres);
   const language = affinity(
     t.language ? [t.language] : [],
