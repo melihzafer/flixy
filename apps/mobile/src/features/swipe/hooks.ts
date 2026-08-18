@@ -1,7 +1,8 @@
+import NetInfo from '@react-native-community/netinfo';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Crypto from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { SwipeDirection, SwipeEvent, SwipeTitleSnapshot } from '@flixy/shared';
 
@@ -12,6 +13,7 @@ import { useSession } from '../auth/useSession';
 import { useUserPreferences } from '../onboarding/hooks';
 import { useProfile } from '../profile/hooks';
 import { events } from '../telemetry/events';
+import { watchlistQueue } from '../watchlist/queue';
 import { watchlistStore } from '../watchlist/store';
 import { useSwipeQueue } from './queue';
 
@@ -184,11 +186,33 @@ export function useSwipeQueueBoot() {
   const flush = useSwipeQueue((s) => s.flush);
   useEffect(() => {
     void hydrate();
+    void watchlistQueue.hydrate().then(() => watchlistQueue.flush());
     const id = setInterval(() => {
       void flush();
+      void watchlistQueue.flush();
     }, 30_000);
     return () => clearInterval(id);
   }, [hydrate, flush]);
+}
+
+export function useNetworkOnline(): boolean {
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    void NetInfo.fetch().then((state) => {
+      if (active) setIsOnline(state.isConnected !== false);
+    });
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOnline(state.isConnected !== false);
+    });
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, []);
+
+  return isOnline;
 }
 
 export function useSwipeStats() {
@@ -334,7 +358,10 @@ export function useFlushOnReconnect(isOnline: boolean) {
   const flush = useSwipeQueue((s) => s.flush);
   const last = useRef(isOnline);
   useEffect(() => {
-    if (!last.current && isOnline) void flush();
+    if (!last.current && isOnline) {
+      void flush();
+      void watchlistQueue.flush();
+    }
     last.current = isOnline;
   }, [isOnline, flush]);
 }

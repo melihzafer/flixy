@@ -16,6 +16,18 @@ import type {
   PromoRedemptionResult,
 } from './types';
 
+function isOfflineLikeError(error: unknown): boolean {
+  const candidate = error as { code?: unknown; status?: unknown; message?: unknown } | null;
+  const code = typeof candidate?.code === 'string' ? candidate.code.toUpperCase() : '';
+  const status = candidate?.status;
+  const message = typeof candidate?.message === 'string' ? candidate.message : String(error ?? '');
+  return (
+    (typeof status === 'number' && [408, 425, 429, 500, 502, 503, 504].includes(status)) ||
+    ['ECONNRESET', 'ECONNREFUSED', 'ENETUNREACH', 'ETIMEDOUT', 'NETWORK_ERROR'].includes(code) ||
+    /offline|network|fetch|connection|timeout|timed out|enotfound/i.test(message)
+  );
+}
+
 function parseSnapshot(value: unknown): EntitlementSnapshot {
   if (!value || typeof value !== 'object') return SAFE_FREE_SNAPSHOT;
   const raw = value as { plan_id?: unknown; entitlements?: unknown };
@@ -29,8 +41,10 @@ function parseSnapshot(value: unknown): EntitlementSnapshot {
 
 export function useEntitlements() {
   const { data: auth } = useSession();
+  const qc = useQueryClient();
+  const queryKey = ['entitlements', auth?.user?.id ?? 'preview'] as const;
   return useQuery({
-    queryKey: ['entitlements', auth?.user?.id ?? 'preview'],
+    queryKey: queryKey,
     queryFn: async () => {
       if (!isSupabaseConfigured || !auth?.user) return SAFE_FREE_SNAPSHOT;
       try {
@@ -43,6 +57,12 @@ export function useEntitlements() {
         logger.warn('entitlements load failed; using free access', {
           message: (error as Error).message,
         });
+        // Never replace a known plan with the free fallback: react-query keeps
+        // the last successful value when the queryFn throws, so rethrowing
+        // preserves the paid snapshot (and the 7-day persisted copy) across an
+        // offline refetch. Returning SAFE_FREE_SNAPSHOT here would poison both
+        // caches and demote paying users client-side until the next success.
+        if (qc.getQueryData<EntitlementSnapshot>(queryKey)) throw error;
         return SAFE_FREE_SNAPSHOT;
       }
     },
@@ -52,6 +72,7 @@ export function useEntitlements() {
 
 export function useStartDiscoverySession() {
   const { data: auth } = useSession();
+  const entitlements = useEntitlements();
   return useMutation({
     mutationFn: async ({
       mode,
@@ -77,16 +98,37 @@ export function useStartDiscoverySession() {
           period_end: periodEnd,
         };
       }
-      const { data, error } = await supabase.rpc('start_discovery_session', {
-        mode,
-        requested_cards: requestedCards ?? null,
-        anonymous_device_id: anonymousDeviceId ?? null,
-      });
-      if (error) throw error;
-      const result = data as DiscoverySessionResult;
-      if (result.allowed) events.discoverySessionStarted(mode, result.plan_id);
-      else events.discoverySessionQuotaExceeded(mode, result.plan_id);
-      return result;
+      try {
+        const { data, error } = await supabase.rpc('start_discovery_session', {
+          mode,
+          requested_cards: requestedCards ?? null,
+          anonymous_device_id: anonymousDeviceId ?? null,
+        });
+        if (error) throw error;
+        const result = data as DiscoverySessionResult;
+        if (result.allowed) events.discoverySessionStarted(mode, result.plan_id);
+        else events.discoverySessionQuotaExceeded(mode, result.plan_id);
+        return result;
+      } catch (error) {
+        if (!isOfflineLikeError(error)) throw error;
+        const snapshot = entitlements.data ?? SAFE_FREE_SNAPSHOT;
+        const now = new Date();
+        const periodEnd = new Date(
+          Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1),
+        ).toISOString();
+        logger.warn('discovery session unavailable; using offline session', {
+          message: (error as Error).message,
+        });
+        return {
+          ...snapshot,
+          allowed: true,
+          offline: true,
+          session_id: Crypto.randomUUID(),
+          cards_limit: requestedCards ?? snapshot.entitlements.cards_per_session ?? 12,
+          remaining_sessions: null,
+          period_end: periodEnd,
+        };
+      }
     },
   });
 }

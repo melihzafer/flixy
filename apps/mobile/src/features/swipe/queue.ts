@@ -64,17 +64,32 @@ export function isPermanentSwipeSyncError(error: unknown): boolean {
   return typeof code === 'string' && PERMANENT_SYNC_ERROR_CODES.has(code);
 }
 
-export async function syncSwipeEvent(ev: SwipeEvent): Promise<void> {
-  // Local-first, unconditionally: the device's own swipe history (taste
-  // signal, deck exclusions, quotas) must never depend on the network call
-  // succeeding. insertSwipe upserts by event_id, so retries are idempotent.
-  await localDb.insertSwipe({
+async function isLocalSwipeUndone(userId: string, eventId: string): Promise<boolean> {
+  const swipes = await localDb.getSwipes(userId);
+  return swipes.some((swipe) => swipe.event_id === eventId && swipe.is_undone === true);
+}
+
+async function syncRemoteSwipeUndo(eventId: string): Promise<void> {
+  const { error } = await supabase
+    .from('swipes')
+    .update({ is_undone: true })
+    .eq('event_id', eventId);
+  if (error) throw error;
+}
+
+function toLocalSwipe(
+  ev: SwipeEvent,
+  isUndone: boolean,
+  syncPending = true,
+): Parameters<typeof localDb.insertSwipe>[0] {
+  return {
     event_id: ev.eventId,
     user_id: ev.userId,
     title_id: ev.titleId,
     direction: ev.direction,
     occurred_at: ev.occurredAt,
     session_id: ev.sessionId,
+    discovery_session_id: ev.discoverySessionId ?? null,
     deck_position: ev.deckPosition,
     region: ev.region,
     filters_snapshot: ev.filtersSnapshot,
@@ -86,9 +101,43 @@ export async function syncSwipeEvent(ev: SwipeEvent): Promise<void> {
           kind: ev.titleSnapshot.kind,
         }
       : undefined,
-  });
+    is_undone: isUndone,
+    sync_pending: syncPending,
+  };
+}
 
-  if (!isSupabaseConfigured) return;
+function localSwipeToEvent(
+  swipe: Awaited<ReturnType<typeof localDb.getPendingSwipes>>[number],
+): SwipeEvent | null {
+  const parsed = SwipeEventSchema.safeParse({
+    eventId: swipe.event_id,
+    userId: swipe.user_id,
+    titleId: swipe.title_id,
+    direction: swipe.direction,
+    occurredAt: swipe.occurred_at,
+    sessionId: swipe.session_id,
+    discoverySessionId: swipe.discovery_session_id ?? null,
+    deckPosition: swipe.deck_position,
+    region: swipe.region,
+    filtersSnapshot: swipe.filters_snapshot,
+    genres: swipe.genres,
+    titleSnapshot: swipe.title_snapshot,
+  });
+  return parsed.success ? parsed.data : null;
+}
+
+export async function syncSwipeEvent(ev: SwipeEvent): Promise<void> {
+  const localIsUndone = await isLocalSwipeUndone(ev.userId, ev.eventId);
+
+  // Local-first, unconditionally: the device's own swipe history (taste
+  // signal, deck exclusions, quotas) must never depend on the network call
+  // succeeding. insertSwipe upserts by event_id, so retries are idempotent.
+  await localDb.insertSwipe(toLocalSwipe(ev, localIsUndone));
+
+  if (!isSupabaseConfigured) {
+    await localDb.updateSwipe(ev.eventId, { sync_pending: false });
+    return;
+  }
   const { error } = await supabase.from('swipes').insert({
     event_id: ev.eventId,
     user_id: ev.userId,
@@ -103,11 +152,27 @@ export async function syncSwipeEvent(ev: SwipeEvent): Promise<void> {
     region: ev.region,
     filters_snapshot: ev.filtersSnapshot,
     title_snapshot: ev.titleSnapshot ?? null,
+    is_undone: localIsUndone,
   });
-  if (!error) return;
+  if (!error) {
+    // An undo can finish locally while the original insert is in flight. If
+    // its remote update ran before the insert committed, repair the inserted
+    // row after the insert succeeds.
+    if (!localIsUndone && (await isLocalSwipeUndone(ev.userId, ev.eventId))) {
+      await syncRemoteSwipeUndo(ev.eventId);
+    }
+    await localDb.updateSwipe(ev.eventId, { sync_pending: false });
+    return;
+  }
   // event_id is the idempotency key. A duplicate means a previous ambiguous
   // request succeeded and the queue can safely advance.
-  if (error.code === '23505') return;
+  if (error.code === '23505') {
+    if (await isLocalSwipeUndone(ev.userId, ev.eventId)) {
+      await syncRemoteSwipeUndo(ev.eventId);
+    }
+    await localDb.updateSwipe(ev.eventId, { sync_pending: false });
+    return;
+  }
   if (isPermanentSwipeSyncError(error)) {
     // The row can never be accepted as-is. The local copy above keeps
     // on-device personalization correct; drop the event from the queue
@@ -117,20 +182,27 @@ export async function syncSwipeEvent(ev: SwipeEvent): Promise<void> {
       message: error.message,
     });
     events.swipeSyncFailed({ reason: `permanent:${error.code}`, queued: 0 });
+    await localDb.updateSwipe(ev.eventId, { sync_pending: false });
     return;
   }
   throw error;
 }
 
 export async function syncSwipeUndo(eventId: string): Promise<void> {
+  await localDb.updateSwipe(eventId, { is_undone: true, sync_pending: true });
   if (isSupabaseConfigured) {
-    const { error } = await supabase
-      .from('swipes')
-      .update({ is_undone: true })
-      .eq('event_id', eventId);
-    if (error) throw error;
+    try {
+      await syncRemoteSwipeUndo(eventId);
+    } catch (error) {
+      // The local tombstone is the immediate source of truth. The original
+      // swipe remains in the durable queue and will carry is_undone=true on
+      // its next remote attempt, so an unavailable server must not block the
+      // user from restoring the card locally.
+      logger.warn('swipe undo remote sync deferred', {
+        message: (error as Error).message,
+      });
+    }
   }
-  await localDb.updateSwipe(eventId, { is_undone: true });
 }
 
 export const useSwipeQueue = create<QueueState>((set, get) => ({
@@ -139,23 +211,64 @@ export const useSwipeQueue = create<QueueState>((set, get) => ({
   lastError: null,
 
   hydrate: async () => {
+    const valid: SwipeEvent[] = [];
+    let rewriteQueue = false;
     try {
       const raw = await AsyncStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const arr = JSON.parse(raw);
-      const valid: SwipeEvent[] = [];
-      for (const item of arr) {
-        const parsed = SwipeEventSchema.safeParse(item);
-        if (parsed.success) valid.push(parsed.data);
+      if (raw) {
+        let arr: unknown;
+        try {
+          arr = JSON.parse(raw);
+        } catch (e) {
+          rewriteQueue = true;
+          logger.warn('swipe.queue hydrate quarantined malformed payload', {
+            message: (e as Error).message,
+          });
+          arr = [];
+        }
+        if (!Array.isArray(arr)) {
+          rewriteQueue = true;
+          logger.warn('swipe.queue hydrate quarantined non-array payload', {
+            message: 'persisted queue payload must be an array',
+          });
+          arr = [];
+        }
+        const items = Array.isArray(arr) ? arr : [];
+        for (const item of items) {
+          const parsed = SwipeEventSchema.safeParse(item);
+          if (parsed.success) valid.push(parsed.data);
+          else rewriteQueue = true;
+        }
       }
-      set({ pending: valid });
-      void get().flush();
     } catch (e) {
       logger.warn('swipe.queue hydrate failed', { message: (e as Error).message });
+      rewriteQueue = true;
     }
+
+    try {
+      const recovered = (await localDb.getPendingSwipes())
+        .map(localSwipeToEvent)
+        .filter((event): event is SwipeEvent => event !== null);
+      const seen = new Set(valid.map((event) => event.eventId));
+      for (const event of recovered) {
+        if (seen.has(event.eventId)) continue;
+        seen.add(event.eventId);
+        valid.push(event);
+        rewriteQueue = true;
+      }
+    } catch (e) {
+      logger.warn('swipe.queue local recovery failed', { message: (e as Error).message });
+    }
+
+    set({ pending: valid });
+    if (rewriteQueue) await persist(valid);
+    if (valid.length > 0) void get().flush();
   },
 
   enqueue: async (event) => {
+    // The local record is the second durable recovery path if AsyncStorage
+    // rejects the queue write or the process dies before the queue is flushed.
+    await localDb.insertSwipe(toLocalSwipe(event, false));
     const next = [...get().pending, event];
     set({ pending: next });
     await persist(next);

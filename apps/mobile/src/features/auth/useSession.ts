@@ -15,6 +15,7 @@ export type AuthSession = {
 
 const SESSION_KEY = ['auth', 'session'] as const;
 const SESSION_STORAGE_KEY = 'flixy.local_session.v2';
+const SESSION_READ_TIMEOUT_MS = 8_000;
 
 const EMPTY_SESSION: AuthSession = {
   session: null,
@@ -98,7 +99,44 @@ export async function getLocalSession(): Promise<AuthSession> {
 }
 
 export function getSessionSnapshot(): Promise<AuthSession> {
-  return isSupabaseConfigured ? getSupabaseSession() : getLocalSession();
+  if (!isSupabaseConfigured) return getLocalSession();
+
+  const sessionPromise = getSupabaseSession();
+  return new Promise((resolve) => {
+    let settled = false;
+    const timeoutId = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      currentSession = EMPTY_SESSION;
+      isSessionHydrated = true;
+      logger.warn('auth.session read timed out; continuing as guest');
+      resolve(currentSession);
+    }, SESSION_READ_TIMEOUT_MS);
+
+    void sessionPromise.then(
+      (session) => {
+        clearTimeout(timeoutId);
+        if (settled) {
+          currentSession = session;
+          notifyListeners();
+          return;
+        }
+        settled = true;
+        resolve(session);
+      },
+      (error: unknown) => {
+        clearTimeout(timeoutId);
+        if (settled) return;
+        settled = true;
+        logger.warn('auth.session read failed; continuing as guest', {
+          message: error instanceof Error ? error.message : String(error),
+        });
+        currentSession = EMPTY_SESSION;
+        isSessionHydrated = true;
+        resolve(currentSession);
+      },
+    );
+  });
 }
 
 export async function setLocalSession(session: AuthSession) {

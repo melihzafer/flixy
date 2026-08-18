@@ -1,8 +1,16 @@
 import * as Haptics from 'expo-haptics';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { Dices, MoreVertical, SlidersHorizontal, Star, X } from 'lucide-react-native';
-import { useState } from 'react';
+import {
+  Dices,
+  MoreVertical,
+  SlidersHorizontal,
+  Sparkles,
+  Star,
+  Users,
+  X,
+} from 'lucide-react-native';
+import { type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Modal, Pressable, ScrollView, View } from 'react-native';
 
@@ -86,7 +94,7 @@ export default function WatchlistScreen() {
     url: string;
     trailerUrl: string | null;
   } | null>(null);
-  const { entries, isLoading, isError, refetch } = useWatchlist(filter);
+  const { entries, counts, isLoading, isError, refetch } = useWatchlist(filter);
   const markWatched = useMarkWatched();
   const unmarkWatched = useUnmarkWatched();
   const removeFromWatchlist = useRemoveFromWatchlist();
@@ -331,12 +339,94 @@ export default function WatchlistScreen() {
                   fontFamily: fonts.bodySemi,
                 }}
               >
-                {t('watchlist.titlesCount', '{{count}} titles', { count: entries.length })}
+                {t('watchlist.titlesCount', '{{count}} titles', { count: counts.all })}
               </Text>
             </View>
           </View>
         }
       />
+
+      {counts.all > 0 && (
+        <View style={{ marginHorizontal: 16, marginTop: 4, marginBottom: 6, gap: 10 }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'flex-end',
+              justifyContent: 'space-between',
+              gap: 12,
+            }}
+          >
+            <View style={{ flex: 1, minWidth: 0, gap: 3 }}>
+              <Text
+                style={{
+                  fontFamily: fonts.display,
+                  fontSize: 25,
+                  lineHeight: 29,
+                  color: colors.text,
+                }}
+              >
+                {t('watchlist.decisionTitle', 'What are we watching?')}
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 12 }} numberOfLines={2}>
+                {t(
+                  'watchlist.decisionSubtitle',
+                  '{{count}} unwatched titles are ready for a decision.',
+                  { count: counts.unwatched },
+                )}
+              </Text>
+            </View>
+            <View
+              style={{
+                minWidth: 54,
+                minHeight: 38,
+                borderRadius: 12,
+                backgroundColor: colors.surface2,
+                borderWidth: 1,
+                borderColor: colors.border,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Text style={{ fontFamily: fonts.bodyBold, color: colors.text, fontSize: 15 }}>
+                {counts.all}
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: 9 }}>
+                {t('watchlist.savedLabel', 'saved')}
+              </Text>
+            </View>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <DecisionCard
+              icon={<Sparkles size={18} color={colors.onAccent} strokeWidth={2} />}
+              title={t('watchlist.decisionTonight', 'Tonight')}
+              subtitle={t('watchlist.decisionTonightHint', 'Pick from three')}
+              accent
+              onPress={() =>
+                router.push({ pathname: '/(app)/watchlist-planner', params: { mode: 'tonight' } })
+              }
+            />
+            <DecisionCard
+              icon={<Users size={18} color={colors.text} strokeWidth={2} />}
+              title={t('watchlist.decisionTogether', 'Together')}
+              subtitle={t('watchlist.decisionTogetherHint', '5 picks each')}
+              onPress={() =>
+                router.push({ pathname: '/(app)/watchlist-planner', params: { mode: 'together' } })
+              }
+            />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <QuickAction
+              icon={<Dices size={15} color={colors.accent} strokeWidth={2.1} />}
+              label={t('watchlist.decisionSurprise', 'Surprise me')}
+              onPress={startRoulette}
+            />
+            <QuickAction
+              label={t('watchlist.decisionTriage', 'Triage backlog')}
+              onPress={() => router.push('/(app)/watchlist-triage')}
+            />
+          </View>
+        </View>
+      )}
 
       <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 20, paddingVertical: 10 }}>
         {FILTERS.map((it) => {
@@ -350,7 +440,8 @@ export default function WatchlistScreen() {
               accessibilityState={{ selected: active }}
               onPress={() => setFilter(it.id)}
               style={{
-                minHeight: 36,
+                minHeight: 44,
+                minWidth: 44,
                 paddingHorizontal: 14,
                 borderRadius: 999,
                 alignItems: 'center',
@@ -386,7 +477,8 @@ export default function WatchlistScreen() {
               accessibilityState={{ selected: active }}
               onPress={() => setTypeFilter(it.id)}
               style={{
-                minHeight: 32,
+                minHeight: 44,
+                minWidth: 44,
                 paddingHorizontal: 12,
                 borderRadius: 999,
                 alignItems: 'center',
@@ -929,6 +1021,99 @@ export default function WatchlistScreen() {
   );
 }
 
+function DecisionCard({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  accent = false,
+}: {
+  icon: ReactNode;
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+  accent?: boolean;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${title}. ${subtitle}`}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flex: 1,
+        minHeight: 88,
+        borderRadius: 16,
+        padding: 13,
+        backgroundColor: accent ? colors.accent : colors.surface2,
+        borderWidth: 1,
+        borderColor: accent ? colors.accent : colors.border2,
+        justifyContent: 'space-between',
+        opacity: pressed ? 0.82 : 1,
+      })}
+    >
+      <View
+        style={{
+          width: 30,
+          height: 30,
+          borderRadius: 10,
+          backgroundColor: accent ? 'rgba(23,8,6,0.16)' : colors.surface3,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        {icon}
+      </View>
+      <View style={{ gap: 2, marginTop: 8 }}>
+        <Text
+          style={{
+            color: accent ? colors.onAccent : colors.text,
+            fontFamily: fonts.bodyBold,
+            fontSize: 14,
+          }}
+        >
+          {title}
+        </Text>
+        <Text style={{ color: accent ? 'rgba(23,8,6,0.68)' : colors.textMuted, fontSize: 11 }}>
+          {subtitle}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+function QuickAction({
+  icon,
+  label,
+  onPress,
+}: { icon?: ReactNode; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flex: 1,
+        minHeight: 44,
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        borderWidth: 1,
+        borderColor: colors.border,
+        backgroundColor: colors.surface,
+        alignItems: 'center',
+        justifyContent: 'center',
+        flexDirection: 'row',
+        gap: 6,
+        opacity: pressed ? 0.8 : 1,
+      })}
+    >
+      {icon}
+      <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemi, fontSize: 12 }}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 function WatchlistEmptyState({ filter }: { filter: WatchlistFilter }) {
   const { t } = useTranslation();
   const copyKey =
@@ -999,7 +1184,7 @@ function WatchlistEmptyState({ filter }: { filter: WatchlistFilter }) {
         accessibilityLabel={t('watchlist.emptyCtaLabel', 'Go to Discover to add titles')}
         onPress={() => router.push('/(app)/deck')}
         style={({ pressed }) => ({
-          minHeight: 42,
+          minHeight: 44,
           paddingHorizontal: 18,
           borderRadius: 999,
           alignItems: 'center',

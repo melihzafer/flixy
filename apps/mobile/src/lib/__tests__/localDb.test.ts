@@ -191,6 +191,30 @@ describe('localDb', () => {
       expect(aPrefs).toBeNull();
       expect(bPrefs?.selected_genres).toEqual(['drama']);
     });
+
+    it('tracks pending swipe sync records across reloads', async () => {
+      const pending = {
+        event_id: 'ev-pending',
+        user_id: 'user-pending',
+        title_id: 't-pending',
+        direction: 'right',
+        occurred_at: new Date().toISOString(),
+        session_id: 's-pending',
+        discovery_session_id: null,
+        deck_position: 0,
+        region: 'US',
+        filters_snapshot: { genres: [] },
+        sync_pending: true,
+      } as const;
+
+      await localDb.insertSwipe(pending);
+      await localDb.clearUserMemory();
+
+      await expect(localDb.getPendingSwipes()).resolves.toEqual([pending]);
+
+      await localDb.updateSwipe(pending.event_id, { sync_pending: false });
+      await expect(localDb.getPendingSwipes()).resolves.toEqual([]);
+    });
   });
 
   describe('versioned storage + migration shim', () => {
@@ -243,6 +267,22 @@ describe('localDb', () => {
       const watchlist = await localDb.getWatchlist(userId);
       expect(watchlist).toHaveLength(1);
       expect(watchlist[0]?.title_id).toBe('t-legacy');
+    });
+
+    it('quarantines null or malformed persisted containers after reload', async () => {
+      await AsyncStorage.setItem(
+        'flixy.local_db.swipes.v3',
+        JSON.stringify({ schema_version: 1, data: null }),
+      );
+      await AsyncStorage.setItem(
+        'flixy.local_db.watchlist.v3',
+        JSON.stringify({ schema_version: 1, data: [null, { unexpected: true }] }),
+      );
+
+      await localDb.clearUserMemory();
+
+      await expect(localDb.getSwipes('user-corrupt')).resolves.toEqual([]);
+      await expect(localDb.getWatchlist('user-corrupt')).resolves.toEqual([]);
     });
 
     it('persists with a schema_version envelope on write', async () => {

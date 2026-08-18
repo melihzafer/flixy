@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ScrollView, type StyleProp, View, type ViewStyle } from 'react-native';
+import { Platform, ScrollView, type StyleProp, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors } from '../theme/tokens';
@@ -25,11 +25,13 @@ export function Screen({ children, scroll = true, style }: Props) {
     paddingBottom: insets.bottom,
     flexGrow: 1,
   } as const;
+  const webContentWidth: ViewStyle | null =
+    Platform.OS === 'web' ? { alignSelf: 'center', maxWidth: 720, width: '100%' as const } : null;
 
   if (scroll) {
     return (
       <ScrollView
-        style={[{ flex: 1, backgroundColor: colors.bg }, style]}
+        style={[{ flex: 1, backgroundColor: colors.bg }, webContentWidth, style]}
         contentContainerStyle={padding}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
@@ -39,5 +41,9 @@ export function Screen({ children, scroll = true, style }: Props) {
     );
   }
 
-  return <View style={[{ flex: 1, backgroundColor: colors.bg }, padding, style]}>{children}</View>;
+  return (
+    <View style={[{ flex: 1, backgroundColor: colors.bg }, webContentWidth, padding, style]}>
+      {children}
+    </View>
+  );
 }

@@ -8,16 +8,26 @@
       name="description"
       content="Flixy helps you find what to watch tonight. Swipe through movies and shows curated for your taste, then jump straight into your streaming app."
     />
+    <meta name="robots" content="index, follow" />
     <meta property="og:title" content="Flixy — Swipe. Discover. Watch." />
     <meta
       property="og:description"
       content="Find what to watch tonight. Swipe through movies and shows curated for your taste."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://flixy.app" />
+    <meta property="og:url" content="https://flixy.app/" />
     <meta property="og:image" content="https://flixy.app/icon-1024.png" />
+    <meta property="og:image:alt" content="Flixy movie and TV discovery" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Flixy — Swipe. Discover. Watch." />
+    <meta
+      name="twitter:description"
+      content="Find what to watch tonight. Swipe through movies and shows curated for your taste."
+    />
+    <meta name="twitter:image" content="https://flixy.app/icon-1024.png" />
+    <meta name="twitter:image:alt" content="Flixy movie and TV discovery" />
     <meta name="theme-color" content="#0A0A0B" />
-    <link rel="canonical" href="https://flixy.app" />
+    <link rel="canonical" href="https://flixy.app/" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" href="/icon-192.png" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
@@ -32,6 +42,29 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/styles.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://flixy.app/#website",
+            "url": "https://flixy.app/",
+            "name": "Flixy",
+            "description": "Flixy helps you find what to watch tonight by curating movies and shows for your taste."
+          },
+          {
+            "@type": "SoftwareApplication",
+            "@id": "https://flixy.app/#application",
+            "url": "https://flixy.app/",
+            "name": "Flixy",
+            "description": "Swipe through movies and shows curated for your taste, then jump straight into your streaming app.",
+            "applicationCategory": "EntertainmentApplication",
+            "operatingSystem": "iOS, Android"
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <main class="hero">

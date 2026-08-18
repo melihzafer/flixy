@@ -1,6 +1,10 @@
 import type { DeckCard, DeckCardSource, MoodPreset, RuleTrace, VibePreset } from './schemas/deck';
 import { MOOD_PRESETS, VIBE_PRESETS } from './schemas/deck';
-import type { TasteSignal } from './schemas/swipe';
+import {
+  type PassedTitleProfile,
+  PassedTitleProfileSchema,
+  type TasteSignal,
+} from './schemas/swipe';
 import { type Title, TitleAvailabilitySchema, TitleSchema } from './schemas/title';
 
 /**
@@ -30,6 +34,8 @@ export type ComposeOptions = {
   preferredCountries?: readonly string[] | null;
   /** "For You" mode emphasises on-device taste + remote recommendations. */
   forYou?: boolean;
+  /** Metadata from passed titles; ids remain hard-excluded only via excludeIds. */
+  passedTitleProfiles?: readonly PassedTitleProfile[] | null;
 };
 
 export type ComposeResult = {
@@ -96,6 +102,18 @@ function numberRecord(value: unknown): Record<string, number> {
   );
 }
 
+function recommendationScoreRecord(value: unknown): Record<string, number> {
+  if (!isRecord(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(
+        (entry): entry is [string, number] =>
+          typeof entry[1] === 'number' && Number.isFinite(entry[1]),
+      )
+      .map(([id, score]) => [id, Math.max(0, Math.min(1, score))]),
+  );
+}
+
 function safeTasteSignal(value: unknown): TasteSignal {
   if (!isRecord(value)) {
     return {
@@ -147,6 +165,16 @@ function candidateArray(value: unknown): Title[] {
   return value.map(safeTitle).filter((title): title is Title => title !== null);
 }
 
+function passedTitleProfileArray(value: unknown): PassedTitleProfile[] {
+  if (!Array.isArray(value)) return [];
+  const profiles: PassedTitleProfile[] = [];
+  for (const item of value) {
+    const parsed = PassedTitleProfileSchema.safeParse(item);
+    if (parsed.success) profiles.push(parsed.data);
+  }
+  return profiles;
+}
+
 function popularityScore(t: Title): number {
   // Normalize popularity into roughly 0..1. The catalogue stores raw values
   // up to ~1000; clamp anything higher.
@@ -193,19 +221,65 @@ export function personalizationScore(
   return recommendationScore != null ? 0.55 * baseScore + 0.45 * recommendationScore : baseScore;
 }
 
+/**
+ * A shared genre is the strongest style signal, followed by language and kind.
+ * The maximum per-profile score makes repeated copies of the same pass
+ * deterministic and bounded; repeated passes are represented separately by
+ * the decayed taste signal and dominant-dislike eligibility rule.
+ */
+const PASS_SIMILARITY_GENRE_WEIGHT = 0.55;
+const PASS_SIMILARITY_LANGUAGE_WEIGHT = 0.3;
+const PASS_SIMILARITY_KIND_WEIGHT = 0.15;
+const PASS_SIMILARITY_PENALTY_WEIGHT = 1.25;
+
+function normalized(value: string | null | undefined): string {
+  return value?.trim().toLowerCase() ?? '';
+}
+
+function passSimilarity(t: Title, profiles: readonly PassedTitleProfile[]): number {
+  if (profiles.length === 0) return 0;
+  const titleGenres = new Set(t.genres.map(normalized).filter(Boolean));
+  const titleLanguage = normalized(t.language);
+  let strongest = 0;
+
+  for (const profile of profiles) {
+    const profileGenres = profile.genres.map(normalized).filter(Boolean);
+    const sharesGenre = profileGenres.some((genre) => titleGenres.has(genre));
+    const sharesLanguage =
+      Boolean(titleLanguage) &&
+      Boolean(normalized(profile.language)) &&
+      titleLanguage === normalized(profile.language);
+    const sharesKind = profile.kind != null && profile.kind === t.kind;
+    const similarity =
+      (sharesGenre ? PASS_SIMILARITY_GENRE_WEIGHT : 0) +
+      (sharesLanguage ? PASS_SIMILARITY_LANGUAGE_WEIGHT : 0) +
+      (sharesKind ? PASS_SIMILARITY_KIND_WEIGHT : 0);
+    strongest = Math.max(strongest, similarity);
+  }
+  return strongest;
+}
+
 const DISLIKED_SIGNAL_THRESHOLD = 2.5;
 export const DISLIKED_GENRE_MIN_NEGATIVE = DISLIKED_SIGNAL_THRESHOLD;
 export const DISLIKED_GENRE_DOMINANCE = 2;
+
+/**
+ * Exclude a candidate when a decayed negative signal reaches 2.5 and is more
+ * than 2x its positive signal. Three fresh left swipes (weight 1 each) meet
+ * the threshold; mixed-genre titles remain eligible when any genre is not
+ * dominantly disliked.
+ */
 
 function isDominantlyDisliked(
   value: string | null | undefined,
   positive: Record<string, number>,
   negative: Record<string, number>,
 ): boolean {
-  if (!value) return false;
-  const neg = negative[value] ?? 0;
-  const pos = positive[value] ?? 0;
-  return neg >= DISLIKED_SIGNAL_THRESHOLD && neg > pos * 2;
+  const key = value?.trim().toLowerCase();
+  if (!key) return false;
+  const neg = negative[key] ?? 0;
+  const pos = positive[key] ?? 0;
+  return neg >= DISLIKED_SIGNAL_THRESHOLD && neg > pos * DISLIKED_GENRE_DOMINANCE;
 }
 
 /** Genres whose decayed negative signal clearly dominates positives. */
@@ -276,7 +350,9 @@ function availabilityScore(t: Title, ownedServices: string[]): number {
 
 function freshnessScore(t: Title, now: Date): number {
   if (t.releaseYear == null) return 0;
-  const ageYears = now.getUTCFullYear() - t.releaseYear;
+  const currentYear = now.getUTCFullYear();
+  if (t.releaseYear > currentYear) return 0;
+  const ageYears = currentYear - t.releaseYear;
   if (ageYears > 1) return 0;
   // FSD says "last 90 days proportional to popularity" — without a precise
   // release-date column, approximate using current-year + popularity.
@@ -318,7 +394,7 @@ function userJitter(titleId: string, userSeed?: string | null): number {
   return (hashString(`${userSeed}:${titleId}`) / 0xffffffff) * USER_JITTER_SCALE;
 }
 
-type ScoredCandidate = { title: Title; trace: RuleTrace };
+type ScoredCandidate = { title: Title; trace: RuleTrace; passSimilarity: number };
 
 function rankedFactors(
   factors: Array<{ factor: string; contribution: number }>,
@@ -335,6 +411,7 @@ function rankedFactors(
 function tagged(item: ScoredCandidate, source: DeckCardSource): ScoredCandidate {
   return {
     title: item.title,
+    passSimilarity: item.passSimilarity,
     trace: { ...item.trace, exploration: source === 'exploration', source },
   };
 }
@@ -366,9 +443,11 @@ function mixFeed(scored: ScoredCandidate[], targetSize: number, now: Date): Scor
   // straight back in through the popularity-sorted trending pool (2 of every
   // 10 cards), and exploration sampled the BOTTOM of the score order — which
   // is exactly where disliked titles sit. Restrict all three slices to
-  // non-negative personalization; the personalized backbone still carries
-  // whatever the pool has left.
-  const tasteEligible = scored.filter((c) => c.trace.personalization >= 0);
+  // non-negative personalization and no pass-similarity penalty; the
+  // personalized backbone still carries whatever the pool has left.
+  const tasteEligible = scored.filter(
+    (c) => c.trace.personalization >= 0 && c.passSimilarity === 0,
+  );
   const byPopularity = [...tasteEligible].sort(
     (a, b) => b.title.popularity - a.title.popularity || byId(a, b),
   );
@@ -472,13 +551,14 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   const excludeIds = stringSet(opts.excludeIds);
   const targetSize = opts.targetSize ?? DEFAULT_TARGET_SIZE;
   const now = opts.now ?? new Date();
-  const recommendationScores = opts.recommendationScores ?? {};
+  const recommendationScores = recommendationScoreRecord(opts.recommendationScores);
   const userSeed = typeof opts.userSeed === 'string' ? opts.userSeed : null;
   const vibes = Array.isArray(opts.vibes) ? opts.vibes : null;
   const preferredCountries = Array.isArray(opts.preferredCountries)
     ? opts.preferredCountries
     : null;
   const forYou = opts.forYou === true;
+  const passedTitleProfiles = passedTitleProfileArray(opts.passedTitleProfiles);
 
   // Cold-start weighting: popularity dominates when signal is thin. In
   // "For You" mode we tilt even harder toward personalization + remote recos so
@@ -493,6 +573,8 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
   const wCountry = 1.0;
 
   // Hard exclude (Layer 1 residue): seen, watchlist, recent passes' hard list.
+  // Passed profiles add a soft similarity penalty below; they do not become
+  // hard exclusions unless their exact ids are also present in excludeIds.
   const exclusions: Record<string, string[]> = {};
   const eligible = candidates.filter((t) => {
     if (excludeIds.has(t.id)) {
@@ -503,26 +585,27 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
       return false;
     }
 
-    if (forYou) {
-      const everyGenreDisliked =
-        t.genres.length > 0 &&
-        t.genres.every((genre) =>
-          isDominantlyDisliked(genre, taste.positiveGenres, taste.negativeGenres),
-        );
-      const languageDisliked = isDominantlyDisliked(
-        t.language,
-        taste.positiveLanguages,
-        taste.negativeLanguages,
+    const everyGenreDisliked =
+      t.genres.length > 0 &&
+      t.genres.every((genre) =>
+        isDominantlyDisliked(genre, taste.positiveGenres, taste.negativeGenres),
       );
-      if (everyGenreDisliked || languageDisliked) {
-        exclusions[t.id] = [everyGenreDisliked ? 'disliked_genres' : 'disliked_language'];
-        return false;
-      }
+    const languageDisliked = isDominantlyDisliked(
+      t.language,
+      taste.positiveLanguages,
+      taste.negativeLanguages,
+    );
+    if (everyGenreDisliked || languageDisliked) {
+      const reasons: string[] = [];
+      if (everyGenreDisliked) reasons.push('disliked_genres');
+      if (languageDisliked) reasons.push('disliked_language');
+      exclusions[t.id] = reasons;
+      return false;
     }
     return true;
   });
 
-  const scored: Array<{ title: Title; trace: RuleTrace }> = eligible.map((t) => {
+  const scored: ScoredCandidate[] = eligible.map((t) => {
     const personalization = personalizationScore(t, taste, recommendationScores[t.id]);
     const popularity = popularityScore(t);
     const availability = availabilityScore(t, ownedServiceIds);
@@ -530,6 +613,8 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
     const cooldown = cooldownScore(t.id, passedRecently, shownLast7d);
     const vibe = vibeScore(t, vibes);
     const country = countryScore(t, preferredCountries);
+    const passSimilarityValue = passSimilarity(t, passedTitleProfiles);
+    const passSimilarityPenalty = -PASS_SIMILARITY_PENALTY_WEIGHT * passSimilarityValue;
     const forYouBoost = forYou && taste.totalSwipes > 0 ? FOR_YOU_BOOST : 0;
     const jitter = userJitter(t.id, userSeed);
     const factors = [
@@ -540,6 +625,7 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
       { factor: 'cooldown', contribution: wCooldown * cooldown },
       { factor: 'vibe', contribution: wVibes * vibe },
       { factor: 'country', contribution: wCountry * country },
+      { factor: 'pass_similarity', contribution: passSimilarityPenalty },
       { factor: 'for_you', contribution: forYouBoost },
       { factor: 'stable_jitter', contribution: jitter },
     ];
@@ -551,10 +637,12 @@ export function composeDeck(opts: ComposeOptions): ComposeResult {
       wCooldown * cooldown +
       wVibes * vibe +
       wCountry * country +
+      passSimilarityPenalty +
       forYouBoost +
       jitter;
     return {
       title: t,
+      passSimilarity: passSimilarityValue,
       trace: {
         personalization,
         popularity,

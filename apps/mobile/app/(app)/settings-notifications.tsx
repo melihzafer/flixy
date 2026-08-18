@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Switch } from 'react-native';
+import { Pressable, Switch } from 'react-native';
 
 import { SettingsRow } from '../../src/components/ListRow';
 import { SettingsPage } from '../../src/components/SettingsPage';
@@ -30,14 +30,21 @@ export default function SettingsNotifications() {
         )}
         accessibilityLabel={t('settingsPages.notifications.push', 'Push notifications')}
         trailing={
-          <Switch
-            value={pushEnabled}
-            onValueChange={(value) => update.mutate({ notifications_enabled: value })}
+          <Pressable
+            accessibilityRole="switch"
             accessibilityLabel={t('settingsPages.notifications.push', 'Push notifications')}
             accessibilityState={{ checked: pushEnabled }}
-            trackColor={{ false: colors.surface3, true: colors.accent }}
-            thumbColor={colors.text}
-          />
+            onPress={() => update.mutate({ notifications_enabled: !pushEnabled })}
+            style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+          >
+            <Switch
+              pointerEvents="none"
+              value={pushEnabled}
+              onValueChange={() => undefined}
+              trackColor={{ false: colors.surface3, true: colors.accent }}
+              thumbColor={colors.text}
+            />
+          </Pressable>
         }
       />
       {/* Coming-soon channel — clearly marked, no fake value (Nielsen #5). */}

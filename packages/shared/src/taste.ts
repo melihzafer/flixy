@@ -38,6 +38,8 @@ export type SwipeTasteEvent = {
 };
 
 export type WatchlistTasteEntry = {
+  /** Optional title id lets local events dedupe precisely against this state. */
+  itemId?: string | null;
   priority: 'top' | 'normal';
   watchedAt: string | null;
   genres: readonly string[];
@@ -134,7 +136,7 @@ export function buildTasteSignal(
 export function buildWatchlistTasteSignal(
   watchlist: readonly WatchlistTasteEntry[],
   passes: readonly SwipeTasteEvent[],
-  opts: { now?: Date } = {},
+  opts: { now?: Date; tasteEvents?: readonly LocalTasteEvent[] | null } = {},
 ): TasteSignal {
   const taste = emptyTaste();
   for (const item of watchlist) {
@@ -149,8 +151,20 @@ export function buildWatchlistTasteSignal(
   }
 
   const passOnly = passes.filter((event) => !event.isUndone && event.direction === 'left');
-  const passSignal = buildTasteSignal(passOnly, { now: opts.now });
+  const localTasteEvents = (opts.tasteEvents ?? []).filter(
+    (event) => !watchlist.some((item) => matchesWatchlistState(event, item)),
+  );
+  const passSignal = buildTasteSignal(passOnly, {
+    now: opts.now,
+    tasteEvents: localTasteEvents,
+  });
   taste.totalSwipes += passSignal.totalSwipes;
+  for (const [key, value] of Object.entries(passSignal.positiveGenres))
+    add(taste.positiveGenres, key, value);
+  for (const [key, value] of Object.entries(passSignal.positiveLanguages))
+    add(taste.positiveLanguages, key, value);
+  for (const [key, value] of Object.entries(passSignal.positiveKinds))
+    add(taste.positiveKinds, key, value);
   for (const [key, value] of Object.entries(passSignal.negativeGenres))
     add(taste.negativeGenres, key, value);
   for (const [key, value] of Object.entries(passSignal.negativeLanguages)) {
@@ -159,6 +173,24 @@ export function buildWatchlistTasteSignal(
   for (const [key, value] of Object.entries(passSignal.negativeKinds))
     add(taste.negativeKinds, key, value);
   return taste;
+}
+
+function normalizedGenreSet(genres: readonly string[]): Set<string> {
+  return new Set(genres.map((genre) => genre.trim().toLowerCase()).filter(Boolean));
+}
+
+/**
+ * Watchlist entries are commonly passed as metadata-only projections. When a
+ * title id is available, use it; otherwise compare the retained metadata so a
+ * detail/trailer event cannot add a second positive weight for active state.
+ */
+function matchesWatchlistState(event: LocalTasteEvent, item: WatchlistTasteEntry): boolean {
+  if (item.itemId) return event.itemId === item.itemId;
+  if (item.kind != null && event.itemType !== item.kind) return false;
+  const eventGenres = normalizedGenreSet(event.genres);
+  const itemGenres = normalizedGenreSet(item.genres);
+  if (eventGenres.size !== itemGenres.size) return false;
+  return [...eventGenres].every((genre) => itemGenres.has(genre));
 }
 
 /** Adds the initial selected-genre prior without mutating its input. */

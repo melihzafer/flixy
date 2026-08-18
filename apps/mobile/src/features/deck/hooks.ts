@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import type { MoodPreset, TasteSignal, Title, VibePreset } from '@flixy/shared';
+import type { MoodPreset, PassedTitleProfile, TasteSignal, Title, VibePreset } from '@flixy/shared';
 import {
   type ComposeOptions,
   type ComposeResult,
@@ -16,7 +16,7 @@ import { normalizeGenreId, normalizeServiceId } from '../../lib/fallbackCatalogu
 import { localDb } from '../../lib/localDb';
 import { logger } from '../../lib/logger';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
-import { fetchTmdbTitlesByIds } from '../../lib/tmdb';
+import { discoverTmdbTitles, fetchTmdbTitlesByIds } from '../../lib/tmdb';
 import { useSession } from '../auth/useSession';
 import {
   type CatalogueDiagnostics,
@@ -157,6 +157,25 @@ const DECK_PAGE_SIZE = 20;
  * cards. Real preference gaps still dominate the jitter magnitude.
  */
 const LAUNCH_SEED = `${Date.now().toString(36)}-${Math.floor(Math.random() * 0xffffffff).toString(36)}`;
+const TRAILER_DISCOVER_PAGE_LIMIT = 8;
+const HISTORY_READ_TIMEOUT_MS = 10_000;
+const TRAILER_FEED_TIMEOUT_MS = 15_000;
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+    void promise.then(
+      (value) => {
+        clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error: unknown) => {
+        clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
 
 /**
  * Deck queries (FSD section 3.5). Wraps the catalogue query with the on-device
@@ -186,54 +205,74 @@ type RemoteSwipeRow = {
   } | null;
 };
 
-async function fetchRemoteSwipeRows(userId: string): Promise<RemoteSwipeRow[]> {
-  if (!isSupabaseConfigured) return [];
-  try {
+const REMOTE_SWIPE_PAGE_SIZE = 500;
+
+async function fetchRemoteSwipePages<T>(userId: string, select: string): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += REMOTE_SWIPE_PAGE_SIZE) {
     const { data, error } = await supabase
       .from('swipes')
-      .select('event_id,title_id,direction,occurred_at,is_undone,title_snapshot')
+      .select(select)
       .eq('user_id', userId)
       .order('occurred_at', { ascending: false })
-      .limit(500);
-    if (error) {
-      // Existing installations can be one deploy behind the title_snapshot
-      // migration. Keep cross-device exclusions working there; only the new
-      // language/type learning is unavailable until the migration lands.
-      const legacy = await supabase
-        .from('swipes')
-        .select('event_id,title_id,direction,occurred_at,is_undone')
-        .eq('user_id', userId)
-        .order('occurred_at', { ascending: false })
-        .limit(500);
-      if (legacy.error) {
-        logger.warn('Could not load remote swipe history', { error: legacy.error });
-        return [];
-      }
-      return (legacy.data ?? []).map((row) => ({
-        ...(row as Omit<RemoteSwipeRow, 'title_snapshot'>),
-        title_snapshot: null,
-      }));
-    }
-    return (data ?? []) as RemoteSwipeRow[];
-  } catch (error) {
-    logger.warn('Could not load remote swipe history', { error: String(error) });
-    return [];
+      .range(from, from + REMOTE_SWIPE_PAGE_SIZE - 1);
+    if (error) throw error;
+    const page = (data ?? []) as T[];
+    rows.push(...page);
+    if (page.length < REMOTE_SWIPE_PAGE_SIZE) return rows;
   }
 }
 
-export function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
+async function fetchRemoteSwipeRows(userId: string): Promise<RemoteSwipeRow[]> {
+  if (!isSupabaseConfigured) return [];
+  try {
+    const data = await fetchRemoteSwipePages<RemoteSwipeRow>(
+      userId,
+      'event_id,title_id,direction,occurred_at,is_undone,title_snapshot',
+    );
+    return data;
+  } catch (error) {
+    try {
+      // Existing installations can be one deploy behind the title_snapshot
+      // migration. Keep cross-device exclusions working there; only the new
+      // language/type learning is unavailable until the migration lands.
+      const legacy = await fetchRemoteSwipePages<Omit<RemoteSwipeRow, 'title_snapshot'>>(
+        userId,
+        'event_id,title_id,direction,occurred_at,is_undone',
+      );
+      return legacy.map((row) => ({
+        ...(row as Omit<RemoteSwipeRow, 'title_snapshot'>),
+        title_snapshot: null,
+      }));
+    } catch (legacyError) {
+      logger.warn('Could not load remote swipe history', {
+        error: String(legacyError ?? error),
+      });
+      return [];
+    }
+  }
+}
+
+export function useTasteSignal(): {
+  taste: TasteSignal;
+  isLoading: boolean;
+  isReady: boolean;
+  isError: boolean;
+  refetch: () => Promise<unknown>;
+} {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
   const { data: prefs } = useUserPreferences();
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ['taste_signal', userId],
     enabled: !!userId,
     queryFn: async (): Promise<TasteSignal> => {
       if (!userId) return EMPTY_TASTE;
-      const [localSwipes, remoteSwipes, watchlist] = await Promise.all([
+      const [localSwipes, remoteSwipes, watchlist, tasteEvents] = await Promise.all([
         localDb.getSwipes(userId),
         fetchRemoteSwipeRows(userId),
         watchlistStore.getWatchlist(userId),
+        localDb.getTasteEvents(userId),
       ]);
       const swipes = new Map<
         string,
@@ -242,6 +281,7 @@ export function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
           title_id: string;
           occurred_at: string;
           is_undone?: boolean;
+          genres?: string[];
           title_snapshot?: RemoteSwipeRow['title_snapshot'];
         }
       >();
@@ -249,7 +289,13 @@ export function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
         swipes.set(row.event_id, row);
       }
       for (const row of remoteSwipes) {
-        if (!swipes.has(row.event_id)) swipes.set(row.event_id, row);
+        const local = swipes.get(row.event_id);
+        // An undo is a mutable correction to an immutable swipe event. A
+        // stale local copy must not win over a remote tombstone from another
+        // device, otherwise taste keeps learning from a swipe the user undid.
+        if (!local || (row.is_undone === true && local.is_undone !== true)) {
+          swipes.set(row.event_id, row);
+        }
       }
       const titles = await fetchTmdbTitlesByIds(watchlist.map((item) => item.title_id));
       const titleById = new Map(titles.map((title) => [title.id, title]));
@@ -259,6 +305,7 @@ export function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
           if (!title) return [];
           return [
             {
+              itemId: item.title_id,
               priority: item.priority,
               watchedAt: item.watched_at,
               genres: title.genres,
@@ -270,12 +317,13 @@ export function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
         Array.from(swipes.values()).map((row) => ({
           direction: row.direction,
           itemId: row.title_id,
-          genres: row.title_snapshot?.genres ?? [],
+          genres: row.title_snapshot?.genres ?? row.genres ?? [],
           language: row.title_snapshot?.language,
           kind: row.title_snapshot?.kind,
           occurredAt: row.occurred_at,
           isUndone: row.is_undone,
         })),
+        { tasteEvents },
       );
     },
   });
@@ -291,7 +339,13 @@ export function useTasteSignal(): { taste: TasteSignal; isLoading: boolean } {
     () => withColdStartPrior(data ?? EMPTY_TASTE, coldStartGenres),
     [data, coldStartGenres],
   );
-  return { taste, isLoading: !!userId && isLoading };
+  return {
+    taste,
+    isLoading: !!userId && isLoading,
+    isReady: !userId || (data != null && !isError),
+    isError,
+    refetch,
+  };
 }
 
 export function useDeckExclusions() {
@@ -306,6 +360,7 @@ export function useDeckExclusions() {
           excludeIds: new Set<string>(),
           passedRecently: new Set<string>(),
           shownLast7d: new Set<string>(),
+          passedTitleProfiles: [] as PassedTitleProfile[],
         };
       }
 
@@ -326,16 +381,22 @@ export function useDeckExclusions() {
           direction: string;
           occurred_at: string;
           is_undone?: boolean;
+          genres?: string[];
+          title_snapshot?: RemoteSwipeRow['title_snapshot'];
         }
       >();
       for (const row of localSwipes) swipes.set(row.event_id, row);
       for (const row of remoteSwipes) {
-        if (!swipes.has(row.event_id)) swipes.set(row.event_id, row);
+        const local = swipes.get(row.event_id);
+        if (!local || (row.is_undone === true && local.is_undone !== true)) {
+          swipes.set(row.event_id, row);
+        }
       }
 
       const excludeIds = new Set<string>();
       const passedRecently = new Set<string>();
       const shownLast7d = new Set<string>();
+      const passedTitleProfiles = new Map<string, PassedTitleProfile>();
 
       const addSwipe = (titleId: string, direction: string, occurredAt: string) => {
         // Add to exclusions unconditionally to never repeat swiped titles
@@ -350,6 +411,14 @@ export function useDeckExclusions() {
       for (const row of swipes.values()) {
         if (row.is_undone) continue;
         addSwipe(String(row.title_id), row.direction, row.occurred_at);
+        if (row.direction === 'left') {
+          passedTitleProfiles.set(String(row.title_id), {
+            id: String(row.title_id),
+            genres: row.title_snapshot?.genres ?? row.genres ?? [],
+            language: row.title_snapshot?.language ?? null,
+            kind: row.title_snapshot?.kind ?? null,
+          });
+        }
       }
       for (const row of watchlist) {
         excludeIds.add(String(row.title_id));
@@ -361,7 +430,12 @@ export function useDeckExclusions() {
         shownLast7d.add(titleId);
       }
 
-      return { excludeIds, passedRecently, shownLast7d };
+      return {
+        excludeIds,
+        passedRecently,
+        shownLast7d,
+        passedTitleProfiles: Array.from(passedTitleProfiles.values()),
+      };
     },
   });
 
@@ -370,10 +444,142 @@ export function useDeckExclusions() {
       excludeIds: new Set<string>(),
       passedRecently: new Set<string>(),
       shownLast7d: new Set<string>(),
+      passedTitleProfiles: [],
     },
     /** True only when exclusions actually resolved — never compose without them. */
     isReady: !userId || data != null,
     isLoading: !!userId && isLoading,
+    isError,
+    refetch,
+  };
+}
+
+export type UseTrailerRecommendationsOptions = {
+  region: string;
+  sessionExcludedIds?: ReadonlySet<string> | null;
+};
+
+/**
+ * Trailer candidates use the same history, taste, exclusion, and composer
+ * pipeline as the deck, but keep only titles that have a playable trailer.
+ */
+export function useTrailerRecommendations({
+  region,
+  sessionExcludedIds,
+}: UseTrailerRecommendationsOptions) {
+  const { data: session, isLoading: isSessionLoading } = useSession();
+  const { data: prefs } = useUserPreferences();
+  const {
+    taste,
+    isLoading: isTasteLoading,
+    isReady: isTasteReady,
+    isError: isTasteError,
+    refetch: refetchTaste,
+  } = useTasteSignal();
+  const {
+    exclusions,
+    isReady: areExclusionsReady,
+    isLoading: isExclusionsLoading,
+    isError: isExclusionsError,
+    refetch: refetchExclusions,
+  } = useDeckExclusions();
+  const historyReady = !isSessionLoading && isTasteReady && areExclusionsReady && !isTasteError;
+  const [historyTimedOut, setHistoryTimedOut] = useState(false);
+  const historyWaitStartedAtRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (historyReady) {
+      historyWaitStartedAtRef.current = null;
+      setHistoryTimedOut(false);
+      return;
+    }
+    if (historyTimedOut) return;
+    historyWaitStartedAtRef.current ??= Date.now();
+    const remainingMs = Math.max(
+      0,
+      HISTORY_READ_TIMEOUT_MS - (Date.now() - historyWaitStartedAtRef.current),
+    );
+    const timeoutId = setTimeout(() => setHistoryTimedOut(true), remainingMs);
+    return () => clearTimeout(timeoutId);
+  }, [historyReady, historyTimedOut]);
+
+  const query = useQuery({
+    queryKey: ['trailers_feed', region],
+    enabled: historyReady && !historyTimedOut,
+    queryFn: () =>
+      withTimeout(
+        (async () => {
+          // Trailer keys are only present on title details, so this is inherently
+          // a two-step feed. Keep the first batch bounded and parallel so the
+          // screen gets a usable result quickly without the old 80-request burst.
+          const [page1, page2] = await Promise.all([
+            discoverTmdbTitles({
+              region,
+              kinds: ['movie', 'tv'],
+              limit: TRAILER_DISCOVER_PAGE_LIMIT,
+              page: 1,
+            }),
+            discoverTmdbTitles({
+              region,
+              kinds: ['movie', 'tv'],
+              limit: TRAILER_DISCOVER_PAGE_LIMIT,
+              page: 2,
+            }),
+          ]);
+          const discoverResults = [...page1, ...page2];
+          const fullTitles = await fetchTmdbTitlesByIds(discoverResults.map((title) => title.id));
+          return fullTitles.filter((title) => Boolean(title.trailerKey));
+        })(),
+        TRAILER_FEED_TIMEOUT_MS,
+        'Trailer feed request timed out.',
+      ),
+    staleTime: 1000 * 60 * 30,
+  });
+
+  const composed = useMemo(() => {
+    if (!historyReady || historyTimedOut || !query.data) return null;
+    const excludeIds = new Set(exclusions.excludeIds);
+    for (const titleId of sessionExcludedIds ?? []) excludeIds.add(titleId);
+    return composeDeck({
+      candidates: query.data,
+      taste,
+      ownedServiceIds: prefs?.selected_services.map(normalizeServiceId) ?? [],
+      passedRecently: exclusions.passedRecently,
+      shownLast7d: exclusions.shownLast7d,
+      excludeIds,
+      passedTitleProfiles: exclusions.passedTitleProfiles,
+      targetSize: 50,
+      userSeed: session?.user?.id ? `${session.user.id}:trailers:${LAUNCH_SEED}` : null,
+      forYou: true,
+    });
+  }, [
+    exclusions,
+    historyReady,
+    historyTimedOut,
+    prefs?.selected_services,
+    query.data,
+    session?.user?.id,
+    sessionExcludedIds,
+    taste,
+  ]);
+
+  const refetch = useCallback(async () => {
+    historyWaitStartedAtRef.current = Date.now();
+    setHistoryTimedOut(false);
+    await Promise.all([query.refetch(), refetchTaste(), refetchExclusions()]);
+  }, [query, refetchExclusions, refetchTaste]);
+
+  const isError = historyTimedOut || isTasteError || isExclusionsError || query.isError;
+
+  return {
+    titles: composed?.cards.map((card) => card.title) ?? null,
+    isLoading:
+      !isError &&
+      (isSessionLoading ||
+        isTasteLoading ||
+        isExclusionsLoading ||
+        query.isLoading ||
+        (!historyReady && !isTasteError && !isExclusionsError)),
     isError,
     refetch,
   };
@@ -490,7 +696,13 @@ export function useDeck(options: UseDeckOptions = {}) {
   const userId = session?.user?.id ?? null;
   const { data: prefs, isLoading: isPrefsLoading } = useUserPreferences();
   const { data: profile, isLoading: isProfileLoading } = useProfile();
-  const { taste, isLoading: isTasteLoading } = useTasteSignal();
+  const {
+    taste,
+    isLoading: isTasteLoading,
+    isReady: isTasteReady,
+    isError: isTasteError,
+    refetch: refetchTaste,
+  } = useTasteSignal();
   const {
     exclusions,
     isReady: areExclusionsReady,
@@ -652,6 +864,7 @@ export function useDeck(options: UseDeckOptions = {}) {
       passedRecently: exclusions.passedRecently,
       shownLast7d: exclusions.shownLast7d,
       excludeIds: exclusions.excludeIds,
+      passedTitleProfiles: exclusions.passedTitleProfiles,
       targetSize: 50,
       recommendationScores,
       userSeed: userId ? `${userId}:${LAUNCH_SEED}` : null,
@@ -675,7 +888,7 @@ export function useDeck(options: UseDeckOptions = {}) {
   // with empty exclusion sets leaks watchlist + already-swiped titles into the
   // screen's append-only card queue, where no later recomposition can remove
   // them. (This was the main "my watchlist keeps showing up" path.)
-  const canCompose = areExclusionsReady && !isTasteLoading;
+  const canCompose = areExclusionsReady && isTasteReady;
 
   const primaryDeck = useMemo(() => {
     if (!canCompose) return null;
@@ -888,9 +1101,10 @@ export function useDeck(options: UseDeckOptions = {}) {
     await Promise.all([
       candidatesQuery.refetch(),
       relaxedCandidatesQuery.refetch(),
+      refetchTaste(),
       refetchExclusions(),
     ]);
-  }, [candidatesQuery, relaxedCandidatesQuery, refetchExclusions]);
+  }, [candidatesQuery, refetchExclusions, refetchTaste, relaxedCandidatesQuery]);
 
   const hardExcludedIds = useMemo(
     () => new Set(Object.keys(deck?.diagnostics.exclusions ?? {})),
@@ -926,7 +1140,7 @@ export function useDeck(options: UseDeckOptions = {}) {
         relaxedCandidatesQuery.isLoading),
     // A failed exclusions read is a deck-level error: composing without it
     // would show the user their own watchlist and repeats.
-    isError: candidatesQuery.isError || isExclusionsError,
+    isError: candidatesQuery.isError || isExclusionsError || isTasteError,
     error: candidatesQuery.error,
     refetch,
   };

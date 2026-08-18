@@ -236,6 +236,76 @@ describe('buildWatchlistTasteSignal', () => {
     expect(taste.negativeGenres.animation).toBeCloseTo(3);
     expect(taste.negativeLanguages.hi).toBeCloseTo(3);
   });
+
+  it('incorporates local detail and trailer events with their existing weights', () => {
+    const taste = buildWatchlistTasteSignal([], [], {
+      now: NOW,
+      tasteEvents: [
+        {
+          eventId: 'details',
+          itemId: 'details-title',
+          itemType: 'movie',
+          genres: ['drama'],
+          occurredAt: daysAgo(0),
+          eventType: 'open_details',
+        },
+        {
+          eventId: 'trailer',
+          itemId: 'trailer-title',
+          itemType: 'tv',
+          genres: ['sci_fi'],
+          occurredAt: daysAgo(0),
+          eventType: 'watch_trailer',
+        },
+      ],
+    });
+
+    expect(taste.positiveGenres.drama).toBeCloseTo(1);
+    expect(taste.positiveGenres.sci_fi).toBeCloseTo(2);
+    expect(taste.positiveKinds.movie).toBeCloseTo(1);
+    expect(taste.positiveKinds.tv).toBeCloseTo(2);
+  });
+
+  it('does not double-count local events for active watchlist state or undone passes', () => {
+    const taste = buildWatchlistTasteSignal(
+      [
+        {
+          itemId: 'saved-title',
+          genres: ['drama'],
+          language: 'en',
+          kind: 'movie',
+          priority: 'normal',
+          watchedAt: null,
+        },
+      ],
+      [
+        {
+          direction: 'left',
+          itemId: 'undone-title',
+          genres: ['horror'],
+          occurredAt: daysAgo(0),
+          isUndone: true,
+        },
+      ],
+      {
+        now: NOW,
+        tasteEvents: [
+          {
+            eventId: 'saved-trailer',
+            itemId: 'saved-title',
+            itemType: 'movie',
+            genres: ['drama'],
+            occurredAt: daysAgo(0),
+            eventType: 'watch_trailer',
+          },
+        ],
+      },
+    );
+
+    expect(taste.positiveGenres.drama).toBeCloseTo(2);
+    expect(taste.negativeGenres.horror).toBeUndefined();
+    expect(taste.totalSwipes).toBe(1);
+  });
 });
 
 describe('withColdStartPrior', () => {

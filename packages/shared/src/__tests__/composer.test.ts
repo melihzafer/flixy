@@ -65,6 +65,14 @@ describe('composeDeck', () => {
       passedRecently: new Set(),
       shownLast7d: new Set(),
       excludeIds: new Set(['00000000-0000-0000-0000-000000000001']),
+      passedTitleProfiles: [
+        {
+          id: '00000000-0000-0000-0000-000000000001',
+          genres: ['drama'],
+          language: 'en',
+          kind: 'movie',
+        },
+      ],
     });
     expect(
       cards.find((c) => c.title.id === '00000000-0000-0000-0000-000000000001'),
@@ -260,6 +268,75 @@ describe('composeDeck', () => {
       },
     });
     expect(deckWith.cards[0]?.title.id).toBe('00000000-0000-0000-0000-000000000002');
+  });
+
+  it('drops non-finite and clamps out-of-range recommendation scores', () => {
+    const candidates = [
+      mkTitle({ id: '00000000-0000-0000-0000-000000000001', popularity: 500 }),
+      mkTitle({ id: '00000000-0000-0000-0000-000000000002', popularity: 500 }),
+      mkTitle({ id: '00000000-0000-0000-0000-000000000003', popularity: 500 }),
+      mkTitle({ id: '00000000-0000-0000-0000-000000000004', popularity: 500 }),
+    ];
+    const { cards } = composeDeck({
+      candidates,
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 4,
+      now: new Date('2026-07-06T00:00:00Z'),
+      recommendationScores: {
+        [candidates[0]?.id ?? '']: Number.NaN,
+        [candidates[1]?.id ?? '']: Number.POSITIVE_INFINITY,
+        [candidates[2]?.id ?? '']: -0.5,
+        [candidates[3]?.id ?? '']: 2,
+      },
+    });
+
+    const traceById = new Map(cards.map((card) => [card.title.id, card.trace]));
+    expect(traceById.get(candidates[0]?.id ?? '')?.personalization).toBe(0);
+    expect(traceById.get(candidates[1]?.id ?? '')?.personalization).toBe(0);
+    expect(traceById.get(candidates[2]?.id ?? '')?.personalization).toBe(0);
+    expect(traceById.get(candidates[3]?.id ?? '')?.personalization).toBeCloseTo(0.45);
+
+    for (const card of cards) {
+      expect(Number.isFinite(card.trace.finalScore)).toBe(true);
+      expect(
+        card.trace.positiveFactors.every(({ contribution }) => Number.isFinite(contribution)),
+      ).toBe(true);
+      expect(
+        card.trace.negativeFactors.every(({ contribution }) => Number.isFinite(contribution)),
+      ).toBe(true);
+    }
+  });
+
+  it('does not apply freshness boost to future release years', () => {
+    const now = new Date('2026-07-06T00:00:00Z');
+    const current = mkTitle({
+      id: '00000000-0000-0000-0000-000000000001',
+      releaseYear: 2026,
+      popularity: 500,
+    });
+    const future = mkTitle({
+      id: '00000000-0000-0000-0000-000000000002',
+      releaseYear: 2027,
+      popularity: 500,
+    });
+    const { cards } = composeDeck({
+      candidates: [current, future],
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+      now,
+    });
+
+    const traceById = new Map(cards.map((card) => [card.title.id, card.trace]));
+    expect(traceById.get(current.id)?.freshness).toBeGreaterThan(0);
+    expect(traceById.get(future.id)?.freshness).toBe(0);
   });
 
   it('uses userSeed to vary otherwise tied card order', () => {
@@ -542,6 +619,87 @@ describe('composeDeck', () => {
     });
 
     expect(cards.map((card) => card.title.id)).toEqual([english.id]);
+  });
+
+  it('suppresses dominant genres and languages outside For You while keeping mixed genres eligible', () => {
+    const disliked = mkTitle({
+      id: '00000000-0000-0000-0000-000000000073',
+      genres: ['horror'],
+      language: 'hi',
+    });
+    const mixed = mkTitle({
+      id: '00000000-0000-0000-0000-000000000074',
+      genres: ['horror', 'drama'],
+      language: 'en',
+    });
+    const drama = mkTitle({
+      id: '00000000-0000-0000-0000-000000000075',
+      genres: ['drama'],
+      language: 'en',
+    });
+
+    const { cards, diagnostics } = composeDeck({
+      candidates: [disliked, mixed, drama],
+      taste: {
+        ...noTaste,
+        negativeGenres: { horror: 3 },
+        negativeLanguages: { hi: 3 },
+        totalSwipes: 6,
+      },
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 3,
+    });
+
+    expect(cards).toHaveLength(2);
+    expect(cards.map((card) => card.title.id)).toEqual(
+      expect.arrayContaining([mixed.id, drama.id]),
+    );
+    expect(diagnostics.exclusions[disliked.id]).toEqual(['disliked_genres', 'disliked_language']);
+  });
+
+  it('penalizes candidates similar to passed profiles and exposes pass_similarity', () => {
+    const similar = mkTitle({
+      id: '00000000-0000-0000-0000-000000000076',
+      genres: ['horror'],
+      language: 'en',
+      kind: 'movie',
+      popularity: 500,
+    });
+    const dissimilar = mkTitle({
+      id: '00000000-0000-0000-0000-000000000077',
+      genres: ['drama'],
+      language: 'ko',
+      kind: 'tv',
+      popularity: 500,
+    });
+
+    const { cards } = composeDeck({
+      candidates: [similar, dissimilar],
+      taste: noTaste,
+      ownedServiceIds: [],
+      passedRecently: new Set(),
+      shownLast7d: new Set(),
+      excludeIds: new Set(),
+      targetSize: 2,
+      passedTitleProfiles: [
+        {
+          id: '00000000-0000-0000-0000-000000000078',
+          genres: ['horror'],
+          language: 'en',
+          kind: 'movie',
+        },
+      ],
+    });
+
+    expect(cards[0]?.title.id).toBe(dissimilar.id);
+    expect(cards[1]?.trace.negativeFactors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ factor: 'pass_similarity', contribution: expect.any(Number) }),
+      ]),
+    );
   });
 
   it('keeps at least 30% movies and 30% series when both are available', () => {

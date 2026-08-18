@@ -7,6 +7,13 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
+// The web export is emitted as a classic script by Expo Router. Metro's
+// package-exports resolver can select Zustand's ESM condition in that bundle,
+// leaving `import.meta.env` in a non-module script and aborting hydration
+// before any Pressable receives an event. Use each package's CommonJS `main`
+// entry for the web bundle; native resolution keeps Expo's defaults.
+config.resolver.unstable_enablePackageExports = false;
+
 // pnpm symlinks: react-native-youtube-iframe's .web.js variant requires
 // react-native-web-webview as an optional peer dependency. Keep Expo's default
 // monorepo watch/resolution settings and map only this optional web shim.

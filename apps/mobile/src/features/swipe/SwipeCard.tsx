@@ -1,7 +1,7 @@
 import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Info } from 'lucide-react-native';
+import { Info, Sparkles } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
@@ -45,6 +45,8 @@ export type SwipeCardProps = {
   allowUp?: boolean;
   /** Override the full-card overlay label per direction (triage semantics differ from the deck's). */
   overlayLabels?: Partial<Record<SwipeDirection, string>>;
+  /** A short, user-facing explanation derived from the composer trace. */
+  recommendationReason?: string;
 };
 
 export function SwipeCard({
@@ -57,6 +59,7 @@ export function SwipeCard({
   disabled = false,
   allowUp = false,
   overlayLabels,
+  recommendationReason,
 }: SwipeCardProps) {
   const { t } = useTranslation();
   const tx = useSharedValue(0);
@@ -122,6 +125,13 @@ export function SwipeCard({
       }
     })
     .onEnd((e) => {
+      if (isCommitting.value) {
+        // A previous commit's fly-out is still running; snap back to rest so
+        // a stray second flick can't double-commit the same card.
+        tx.value = withSpring(0, { damping: 18, stiffness: 220 });
+        ty.value = withSpring(0, { damping: 18, stiffness: 220 });
+        return;
+      }
       const lockedAxis = axis.value;
       axis.value = 0;
       const absX = Math.abs(e.translationX);
@@ -289,6 +299,39 @@ export function SwipeCard({
             backgroundColor: 'rgba(255,77,28,0.035)',
           }}
         />
+
+        {recommendationReason && !blindDate ? (
+          <View
+            style={{
+              position: 'absolute',
+              top: 14,
+              left: 14,
+              maxWidth: '72%',
+              minHeight: 30,
+              paddingHorizontal: 9,
+              borderRadius: 999,
+              backgroundColor: 'rgba(10,10,11,0.58)',
+              borderWidth: 1,
+              borderColor: 'rgba(255,77,28,0.28)',
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 5,
+              zIndex: 5,
+            }}
+          >
+            <Sparkles size={12} color={colors.accent} strokeWidth={2.2} />
+            <Text
+              numberOfLines={1}
+              style={{
+                color: 'rgba(245,245,240,0.82)',
+                fontFamily: fonts.bodySemi,
+                fontSize: 10,
+              }}
+            >
+              {recommendationReason}
+            </Text>
+          </View>
+        ) : null}
 
         {/* Info button */}
         {!disabled && (

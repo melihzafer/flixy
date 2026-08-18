@@ -42,6 +42,7 @@ export type DiscoverySessionResult =
       cards_limit: number | null;
       remaining_sessions: number | null;
       period_end: string;
+      offline?: boolean;
     })
   | (EntitlementSnapshot & {
       allowed: false;
@@ -49,6 +50,7 @@ export type DiscoverySessionResult =
       cards_limit: number | null;
       remaining_sessions: 0;
       period_end: string;
+      offline?: boolean;
     });
 
 export type PromoRedemptionReason =

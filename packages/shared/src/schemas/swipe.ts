@@ -18,6 +18,15 @@ export const SwipeTitleSnapshotSchema = z.object({
 export type SwipeTitleSnapshot = z.infer<typeof SwipeTitleSnapshotSchema>;
 
 /**
+ * Small metadata retained for passed titles so the composer can suppress
+ * recurring styles even after their ids leave the hard-exclusion window.
+ */
+export const PassedTitleProfileSchema = SwipeTitleSnapshotSchema.extend({
+  id: z.string().min(1),
+});
+export type PassedTitleProfile = z.infer<typeof PassedTitleProfileSchema>;
+
+/**
  * Client-emitted swipe event. The `eventId` is a client UUID used for
  * idempotency (FSD section 3.6.3): re-delivery of the same id is a no-op.
  */

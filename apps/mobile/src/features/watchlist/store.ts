@@ -3,7 +3,9 @@ import { z } from 'zod';
 import type { WatchlistItem } from '@flixy/shared';
 
 import { type LocalWatchlistItem, localDb } from '../../lib/localDb';
+import { logger } from '../../lib/logger';
 import { isSupabaseConfigured, supabase } from '../../lib/supabase';
+import { createWatchlistQueueOperation, syncWatchlistOperation, watchlistQueue } from './queue';
 
 const WATCHLIST_SELECT = 'id,user_id,title_id,priority,position,added_at,watched_at,removed_at';
 
@@ -54,39 +56,71 @@ function throwIfSupabaseError(error: unknown): asserts error is null {
   throw new Error(String(error));
 }
 
+async function enqueueAfterRemoteFailure(
+  operation: ReturnType<typeof createWatchlistQueueOperation>,
+) {
+  try {
+    await watchlistQueue.enqueue(operation);
+  } catch (error) {
+    // The local projection is already committed. If storage itself is
+    // unavailable, keep the user-facing mutation successful and leave the
+    // local copy available for the next retry/read cycle.
+    logger.warn('watchlist outbox persistence failed', {
+      message: (error as Error).message,
+    });
+  }
+}
+
 export const watchlistStore = {
   async getWatchlist(userId: string): Promise<LocalWatchlistItem[]> {
     if (!isSupabaseConfigured) return localDb.getWatchlist(userId);
 
-    const { data, error } = await supabase
-      .from('watchlist_items')
-      .select(WATCHLIST_SELECT)
-      .eq('user_id', userId)
-      .is('removed_at', null);
-    throwIfSupabaseError(error);
-    return z.array(RowSchema).parse(data ?? []);
+    // Give durable local mutations a chance to reach the server before a
+    // remote read can return an older projection of the same watchlist.
+    await watchlistQueue.hydrate();
+    await watchlistQueue.flush();
+
+    try {
+      const { data, error } = await supabase
+        .from('watchlist_items')
+        .select(WATCHLIST_SELECT)
+        .eq('user_id', userId)
+        .is('removed_at', null);
+      throwIfSupabaseError(error);
+      return z.array(RowSchema).parse(data ?? []);
+    } catch {
+      // localDb is the authoritative read source while the network is down;
+      // it includes mutations that may still be waiting in the outbox.
+      return localDb.getWatchlist(userId);
+    }
   },
 
   async upsertWatchlistItem(item: Omit<LocalWatchlistItem, 'id'>): Promise<LocalWatchlistItem> {
-    if (!isSupabaseConfigured) return localDb.upsertWatchlistItem(item);
+    const local = await localDb.upsertWatchlistItem(item);
+    if (!isSupabaseConfigured) return local;
 
-    const { data, error } = await supabase
-      .from('watchlist_items')
-      .upsert(item, { onConflict: 'user_id,title_id' })
-      .select(WATCHLIST_SELECT)
-      .single();
-    throwIfSupabaseError(error);
-    return RowSchema.parse(data);
+    const operation = createWatchlistQueueOperation({ type: 'upsert', item });
+    await watchlistQueue.flush();
+    try {
+      const data = await syncWatchlistOperation(operation);
+      return RowSchema.parse(data);
+    } catch {
+      await enqueueAfterRemoteFailure(operation);
+      return local;
+    }
   },
 
   async updateWatchlistItem(id: string, updates: Partial<LocalWatchlistItem>): Promise<void> {
-    if (!isSupabaseConfigured) {
-      await localDb.updateWatchlistItem(id, updates);
-      return;
-    }
+    await localDb.updateWatchlistItem(id, updates);
+    if (!isSupabaseConfigured) return;
 
-    const { error } = await supabase.from('watchlist_items').update(updates).eq('id', id);
-    throwIfSupabaseError(error);
+    const operation = createWatchlistQueueOperation({ type: 'update', itemId: id, updates });
+    await watchlistQueue.flush();
+    try {
+      await syncWatchlistOperation(operation);
+    } catch {
+      await enqueueAfterRemoteFailure(operation);
+    }
   },
 
   async updateWatchlistItemByTitle(
@@ -94,17 +128,21 @@ export const watchlistStore = {
     titleId: string,
     updates: Partial<LocalWatchlistItem>,
   ): Promise<void> {
-    if (!isSupabaseConfigured) {
-      await localDb.updateWatchlistItemByTitle(userId, titleId, updates);
-      return;
-    }
+    await localDb.updateWatchlistItemByTitle(userId, titleId, updates);
+    if (!isSupabaseConfigured) return;
 
-    const { error } = await supabase
-      .from('watchlist_items')
-      .update(updates)
-      .eq('user_id', userId)
-      .eq('title_id', titleId);
-    throwIfSupabaseError(error);
+    const operation = createWatchlistQueueOperation({
+      type: 'updateByTitle',
+      userId,
+      titleId,
+      updates,
+    });
+    await watchlistQueue.flush();
+    try {
+      await syncWatchlistOperation(operation);
+    } catch {
+      await enqueueAfterRemoteFailure(operation);
+    }
   },
 };
 

@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
   },
   backButton: {
     alignSelf: 'flex-start',
-    minHeight: 40,
+    minHeight: 44,
     borderRadius: radii.full,
     borderWidth: 1,
     borderColor: colors.border,
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing[2],
   },
   backInner: {
-    minHeight: 40,
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[1],

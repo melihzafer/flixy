@@ -37,6 +37,7 @@ pnpm-debug.log*
 # Test / coverage
 coverage/
 .nyc_output/
+test-results/
 
 # EAS
 .easignore

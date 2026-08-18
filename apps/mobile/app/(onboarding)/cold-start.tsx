@@ -18,7 +18,7 @@ import { colors, fonts } from '../../src/theme/tokens';
 
 export default function ColdStartStep() {
   const { width, height } = useWindowDimensions();
-  const cardWidth = width - 32;
+  const cardWidth = Math.min(width - 32, 688);
   const cardHeight = Math.min(height * 0.55, 480);
 
   const {
@@ -309,6 +309,7 @@ function ColdStartShell({
               accessibilityLabel="Skip taste round"
               hitSlop={8}
               onPress={onSkip}
+              style={{ minHeight: 44, paddingHorizontal: 10, justifyContent: 'center' }}
             >
               <Text
                 style={{

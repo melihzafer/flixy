@@ -26,8 +26,10 @@ jest.mock('../../../lib/supabase', () => ({
   supabase: { from: jest.fn() },
 }));
 
+import { localDb } from '../../../lib/localDb';
 import { supabase } from '../../../lib/supabase';
 import { __schemas } from '../hooks';
+import { useWatchlistQueue } from '../queue';
 import { watchlistStore } from '../store';
 
 const fromMock = supabase.from as jest.Mock;
@@ -43,8 +45,10 @@ const row = {
   removed_at: null,
 } as const;
 
-beforeEach(() => {
+beforeEach(async () => {
   jest.clearAllMocks();
+  await localDb.clearUserMemory();
+  useWatchlistQueue.setState({ pending: [], inFlight: false, lastError: null });
 });
 
 describe('watchlist schemas', () => {
@@ -99,5 +103,56 @@ describe('watchlist schemas', () => {
     await expect(watchlistStore.upsertWatchlistItem(input)).resolves.toEqual(row);
 
     expect(upsertMock).toHaveBeenCalledWith(input, { onConflict: 'user_id,title_id' });
+  });
+
+  it('keeps an offline upsert locally and queues it for replay', async () => {
+    const upsertMock = jest.fn(() => {
+      throw new Error('offline');
+    });
+    fromMock.mockReturnValue({ upsert: upsertMock });
+    const input = {
+      user_id: row.user_id,
+      title_id: row.title_id,
+      priority: row.priority,
+      position: row.position,
+      added_at: row.added_at,
+      watched_at: row.watched_at,
+      removed_at: row.removed_at,
+    };
+
+    await expect(watchlistStore.upsertWatchlistItem(input)).resolves.toMatchObject({
+      title_id: row.title_id,
+    });
+
+    await expect(localDb.getWatchlist(row.user_id)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ title_id: row.title_id })]),
+    );
+    expect(useWatchlistQueue.getState().pending).toHaveLength(1);
+    expect(useWatchlistQueue.getState().pending[0]).toMatchObject({
+      type: 'upsert',
+      item: input,
+    });
+  });
+
+  it('falls back to the local projection when the watchlist read is offline', async () => {
+    const input = {
+      user_id: row.user_id,
+      title_id: row.title_id,
+      priority: row.priority,
+      position: row.position,
+      added_at: row.added_at,
+      watched_at: row.watched_at,
+      removed_at: row.removed_at,
+    };
+    await localDb.upsertWatchlistItem(input);
+
+    const isMock = jest.fn(async () => ({ data: null, error: new Error('offline') }));
+    const eqMock = jest.fn(() => ({ is: isMock }));
+    const selectMock = jest.fn(() => ({ eq: eqMock }));
+    fromMock.mockReturnValue({ select: selectMock });
+
+    await expect(watchlistStore.getWatchlist(row.user_id)).resolves.toEqual(
+      expect.arrayContaining([expect.objectContaining({ title_id: row.title_id })]),
+    );
   });
 });

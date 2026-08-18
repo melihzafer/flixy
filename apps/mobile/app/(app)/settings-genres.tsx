@@ -95,7 +95,7 @@ export default function EditGenresScreen() {
           accessibilityState={{ selected: mode === 'allow' }}
           onPress={() => setMode('allow')}
           style={{
-            minHeight: 38,
+            minHeight: 44,
             paddingHorizontal: 13,
             borderRadius: 12,
             borderWidth: 1,
@@ -118,7 +118,7 @@ export default function EditGenresScreen() {
           accessibilityState={{ selected: mode === 'block' }}
           onPress={() => setMode('block')}
           style={{
-            minHeight: 38,
+            minHeight: 44,
             paddingHorizontal: 13,
             borderRadius: 12,
             borderWidth: 1,
@@ -151,7 +151,7 @@ export default function EditGenresScreen() {
               accessibilityLabel={`${label}${active ? ', selected' : ''}`}
               onPress={() => toggle(genre.id)}
               style={{
-                minHeight: 36,
+                minHeight: 44,
                 paddingHorizontal: 12,
                 borderRadius: 12,
                 borderWidth: 1,

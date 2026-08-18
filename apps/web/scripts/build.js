@@ -9,6 +9,161 @@ const mobileDir = path.resolve(webDir, '../mobile');
 const distDir = path.resolve(webDir, 'dist');
 const publicDir = path.resolve(webDir, 'public');
 const MAX_PRECACHE_BYTES = 10 * 1024 * 1024;
+const SITE_URL = 'https://flixy.app';
+const SOCIAL_IMAGE_URL = `${SITE_URL}/icon-1024.png`;
+
+const ROUTE_METADATA = {
+  '/': {
+    title: 'Flixy — Swipe. Discover. Watch.',
+    description:
+      'Find what to watch tonight. Swipe through movies and shows curated for your taste, then jump straight into your streaming app.',
+  },
+  '/privacy': {
+    title: 'Privacy Policy — Flixy',
+    description:
+      'Learn what information Flixy collects, how it is used, and the choices you have over your account and recommendations.',
+  },
+  '/terms': {
+    title: 'Terms of Service — Flixy',
+    description: 'Review the terms for using Flixy, the movie and TV recommendation app.',
+  },
+  '/welcome': {
+    title: 'Welcome to Flixy',
+    description: 'Start discovering movies and TV shows with Flixy, or sign in to continue.',
+  },
+  '/sign-in': {
+    title: 'Sign in — Flixy',
+    description:
+      'Sign in to Flixy to keep your movie and TV recommendations, swipes, and watchlist in sync.',
+  },
+  '/sign-up': {
+    title: 'Create your Flixy account',
+    description:
+      'Create a Flixy account to save preferences, build a watchlist, and get movie and TV recommendations.',
+  },
+  '/reset-password': {
+    title: 'Reset your Flixy password',
+    description: 'Set a new Flixy password and get back to discovering movies and TV shows.',
+  },
+  '/change-password': {
+    title: 'Change your Flixy password',
+    description: 'Update the password for your Flixy account.',
+  },
+  '/auth/callback': {
+    title: 'Finishing sign-in — Flixy',
+    description:
+      'Flixy is completing your sign-in and preparing your movie and TV recommendations.',
+  },
+  '/cold-start': {
+    title: 'Choose your taste — Flixy',
+    description: 'Tell Flixy what you like so your recommendations feel more personal.',
+  },
+  '/genres': {
+    title: 'Choose genres — Flixy',
+    description: 'Select the genres you enjoy to tune your Flixy recommendations.',
+  },
+  '/notifications': {
+    title: 'Notifications — Flixy',
+    description:
+      'Choose whether Flixy can send notifications about your watchlist and recommendations.',
+  },
+  '/region': {
+    title: 'Choose your region — Flixy',
+    description: 'Set your region so Flixy can show relevant streaming availability.',
+  },
+  '/services': {
+    title: 'Choose streaming services — Flixy',
+    description: 'Select the streaming services you use to refine your Flixy recommendations.',
+  },
+  '/deck': {
+    title: 'Discover movies and shows — Flixy',
+    description:
+      'Swipe through personalized movie and TV recommendations and save what you want to watch.',
+  },
+  '/search': {
+    title: 'Search movies and shows — Flixy',
+    description: 'Search Flixy for movies and TV shows and find where to watch them.',
+  },
+  '/watchlist': {
+    title: 'Your watchlist — Flixy',
+    description: 'Keep the movies and TV shows you want to watch in one place with Flixy.',
+  },
+  '/watchlist-triage': {
+    title: 'Triage your watchlist — Flixy',
+    description: 'Quickly sort the movies and TV shows saved to your Flixy watchlist.',
+  },
+  '/trailers': {
+    title: 'Movie and TV trailers — Flixy',
+    description: 'Browse movie and TV trailers before deciding what to watch next.',
+  },
+  '/profile': {
+    title: 'Your profile — Flixy',
+    description: 'View your Flixy profile and recommendation preferences.',
+  },
+  '/edit-profile': {
+    title: 'Edit your profile — Flixy',
+    description: 'Update your profile details in Flixy.',
+  },
+  '/paywall': {
+    title: 'Flixy Premium',
+    description:
+      'Review Flixy Premium features and choose the plan that fits your discovery habits.',
+  },
+  '/settings': {
+    title: 'Settings — Flixy',
+    description: 'Manage your Flixy account, preferences, notifications, and streaming services.',
+  },
+  '/settings-account': {
+    title: 'Account settings — Flixy',
+    description: 'Manage your Flixy account details and sign-in settings.',
+  },
+  '/settings-genres': {
+    title: 'Genre preferences — Flixy',
+    description: 'Manage the genres that shape your Flixy recommendations.',
+  },
+  '/settings-help': {
+    title: 'Help — Flixy',
+    description: 'Find help with your Flixy account and movie discovery experience.',
+  },
+  '/settings-language': {
+    title: 'Language settings — Flixy',
+    description: 'Choose the language used in your Flixy experience.',
+  },
+  '/settings-notifications': {
+    title: 'Notification settings — Flixy',
+    description: 'Manage notification preferences for your Flixy account.',
+  },
+  '/settings-privacy': {
+    title: 'Privacy settings — Flixy',
+    description: 'Review privacy options for your Flixy account and app data.',
+  },
+  '/settings-promo': {
+    title: 'Promo settings — Flixy',
+    description: 'Manage promotional settings for your Flixy account.',
+  },
+  '/settings-region': {
+    title: 'Region settings — Flixy',
+    description: 'Manage your region for relevant Flixy streaming availability.',
+  },
+  '/settings-services': {
+    title: 'Streaming service settings — Flixy',
+    description: 'Manage the streaming services used to refine your Flixy recommendations.',
+  },
+  '/title/[id]': {
+    title: 'Movie or TV show details — Flixy',
+    description: 'Explore movie and TV show details, availability, and more with Flixy.',
+  },
+  '/+not-found': {
+    title: 'Page not found — Flixy',
+    description: 'The Flixy page you requested could not be found.',
+  },
+  '/_sitemap': {
+    title: 'Flixy route map',
+    description: 'A route map for the Flixy web app.',
+  },
+};
+
+const INDEXABLE_ROUTES = new Set(['/', '/privacy', '/terms']);
 
 function cleanDir(dir) {
   if (fs.existsSync(dir)) {
@@ -46,6 +201,113 @@ function getAllFiles(dir, fileList = []) {
   return fileList;
 }
 
+function copyExpoFontAssets() {
+  const expoAssetRoot = path.resolve(distDir, 'assets', '__node_modules');
+  if (!fs.existsSync(expoAssetRoot)) return new Map();
+
+  const fontDir = path.resolve(distDir, 'fonts');
+  fs.mkdirSync(fontDir, { recursive: true });
+  const fontAssets = new Map();
+  const fontFiles = getAllFiles(expoAssetRoot).filter((file) =>
+    /\.(?:ttf|otf|woff2?)$/i.test(file),
+  );
+
+  for (const sourceFile of fontFiles) {
+    const fileName = path.basename(sourceFile);
+    const targetFile = path.join(fontDir, fileName);
+    const sourceUrl = `/assets/${path.relative(path.resolve(distDir, 'assets'), sourceFile).replace(/\\/g, '/')}`;
+    fs.copyFileSync(sourceFile, targetFile);
+    fontAssets.set(sourceUrl, `/fonts/${fileName}`);
+  }
+
+  return fontAssets;
+}
+
+function rewriteExpoFontUrls(content, fontAssets) {
+  let rewrittenContent = content;
+  for (const [sourceUrl, targetUrl] of fontAssets) {
+    rewrittenContent = rewrittenContent.replaceAll(sourceUrl, targetUrl);
+  }
+  return rewrittenContent;
+}
+
+function routeFromHtmlFile(htmlFile) {
+  const relativePath = path.relative(distDir, htmlFile).replace(/\\/g, '/');
+  const segments = relativePath.split('/');
+  const fileName = segments.pop() || '';
+  const routeSegments = segments.filter((segment) => !/^\([^/]+\)$/.test(segment));
+  const routeFileName = fileName.replace(/\.html$/i, '');
+
+  if (routeFileName === 'index') {
+    return routeSegments.length > 0 ? `/${routeSegments.join('/')}` : '/';
+  }
+
+  return `/${[...routeSegments, routeFileName].join('/')}`;
+}
+
+function escapeHtml(value) {
+  return value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character],
+  );
+}
+
+function routeMetadata(route) {
+  if (ROUTE_METADATA[route]) return ROUTE_METADATA[route];
+
+  const label = route
+    .replace(/^\/+/, '')
+    .replace(/\[id\]/g, 'title details')
+    .replace(/[\/_-]+/g, ' ')
+    .replace(/\b\w/g, (character) => character.toUpperCase())
+    .trim();
+
+  return {
+    title: `${label || 'Flixy'} — Flixy`,
+    description: `Explore ${label || 'Flixy'} in the Flixy movie and TV discovery app.`,
+  };
+}
+
+function injectSeoMetadata(content, htmlFile) {
+  const route = routeFromHtmlFile(htmlFile);
+  const metadata = routeMetadata(route);
+  const canonicalUrl = `${SITE_URL}${route === '/' ? '/' : route}`;
+  const robots = INDEXABLE_ROUTES.has(route) ? 'index, follow' : 'noindex, follow';
+
+  const normalizedContent = content
+    .replace(/<title\b[^>]*>[\s\S]*?<\/title>\s*/gi, '')
+    .replace(
+      /<meta\b[^>]*(?:\b(?:name|property)\s*=\s*["'](?:description|robots|og:[^"']+|twitter:[^"']+)["'])[^>]*\/?>\s*/gi,
+      '',
+    )
+    .replace(/<link\b[^>]*\brel\s*=\s*["']canonical["'][^>]*\/?>\s*/gi, '');
+
+  const seoTags = [
+    `    <title>${escapeHtml(metadata.title)}</title>`,
+    `    <meta name="description" content="${escapeHtml(metadata.description)}" />`,
+    `    <meta name="robots" content="${robots}" />`,
+    `    <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />`,
+    `    <meta property="og:title" content="${escapeHtml(metadata.title)}" />`,
+    `    <meta property="og:description" content="${escapeHtml(metadata.description)}" />`,
+    '    <meta property="og:type" content="website" />',
+    `    <meta property="og:url" content="${escapeHtml(canonicalUrl)}" />`,
+    `    <meta property="og:image" content="${SOCIAL_IMAGE_URL}" />`,
+    '    <meta property="og:image:alt" content="Flixy movie and TV discovery" />',
+    '    <meta name="twitter:card" content="summary_large_image" />',
+    `    <meta name="twitter:title" content="${escapeHtml(metadata.title)}" />`,
+    `    <meta name="twitter:description" content="${escapeHtml(metadata.description)}" />`,
+    `    <meta name="twitter:image" content="${SOCIAL_IMAGE_URL}" />`,
+    '    <meta name="twitter:image:alt" content="Flixy movie and TV discovery" />',
+  ].join('\n');
+
+  if (normalizedContent.includes('</head>')) {
+    return normalizedContent.replace('</head>', `${seoTags}\n  </head>`);
+  }
+
+  return `${seoTags}\n${normalizedContent}`;
+}
+
 function build() {
   log('--- Starting Flixy PWA Build Process ---');
 
@@ -72,6 +334,11 @@ function build() {
   fs.copyFileSync(path.resolve(webDir, 'privacy.html'), path.resolve(distDir, 'privacy.html'));
   fs.copyFileSync(path.resolve(webDir, 'terms.html'), path.resolve(distDir, 'terms.html'));
   fs.copyFileSync(path.resolve(webDir, 'styles.css'), path.resolve(distDir, 'styles.css'));
+
+  // Expo's web export references fonts below a `.pnpm` path. Those files are
+  // present in the bundle but dot-directories are not reliably served by web
+  // hosts, so expose a clean public URL for every generated font asset.
+  const fontAssets = copyExpoFontAssets();
 
   // 6. Gather all files in dist to generate precache list
   log('Generating service worker precache list...');
@@ -244,6 +511,13 @@ self.addEventListener('fetch', (event) => {
 
   for (const htmlFile of htmlFiles) {
     let content = fs.readFileSync(htmlFile, 'utf8');
+
+    content = rewriteExpoFontUrls(content, fontAssets);
+
+    // Add route-aware SEO metadata after Expo export, which leaves the title
+    // empty in the static shell. Route groups are normalized so duplicate
+    // exports share one clean canonical URL.
+    content = injectSeoMetadata(content, htmlFile);
 
     // Inject manifest/theme tags into head
     if (content.includes('</head>') && !content.includes('manifest.json')) {

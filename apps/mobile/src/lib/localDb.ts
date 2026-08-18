@@ -20,10 +20,13 @@ export type LocalSwipe = {
   direction: string;
   occurred_at: string;
   session_id: string;
+  discovery_session_id?: string | null;
   deck_position: number;
   region: string;
   filters_snapshot: Record<string, unknown>;
   is_undone?: boolean;
+  /** True until the immutable event is acknowledged by the remote store. */
+  sync_pending?: boolean;
   /** Legacy queue field retained so pre-snapshot passes still influence taste. */
   genres?: string[];
   title_snapshot?: {
@@ -104,14 +107,33 @@ function parseVersionedData<T>(rawJson: string, defaultValue: T): T {
     const parsed = JSON.parse(rawJson);
     if (parsed && typeof parsed === 'object' && 'schema_version' in parsed) {
       // Versioned format: run migrators if schema_version < SCHEMA_VERSION
-      return parsed.data as T;
+      return parsed.data == null ? defaultValue : (parsed.data as T);
     }
     // Legacy unversioned format
-    return parsed as T;
+    return parsed == null ? defaultValue : (parsed as T);
   } catch (e) {
     console.error('Failed to parse versioned data', e);
     return defaultValue;
   }
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function parseObjectArray<T>(rawJson: string, defaultValue: T[]): T[] {
+  const parsed = parseVersionedData<unknown>(rawJson, null);
+  if (!Array.isArray(parsed)) return defaultValue;
+  // A malformed element must not make a later accessor crash after reload.
+  return parsed.filter(isObjectRecord) as T[];
+}
+
+function parseObjectMap<T>(rawJson: string, defaultValue: Record<string, T>): Record<string, T> {
+  const parsed = parseVersionedData<unknown>(rawJson, null);
+  if (!isObjectRecord(parsed)) return defaultValue;
+  return Object.fromEntries(
+    Object.entries(parsed).filter(([, value]) => isObjectRecord(value)),
+  ) as Record<string, T>;
 }
 
 function wrapVersionedData<T>(data: T) {
@@ -125,25 +147,25 @@ async function hydrateDb() {
   if (dbHydrated) return;
   try {
     const wl = await AsyncStorage.getItem(WATCHLIST_KEY);
-    if (wl) watchlistCache = parseVersionedData<LocalWatchlistItem[]>(wl, []);
+    if (wl) watchlistCache = parseObjectArray<LocalWatchlistItem>(wl, []);
 
     const sw = await AsyncStorage.getItem(SWIPES_KEY);
-    if (sw) swipesCache = parseVersionedData<LocalSwipe[]>(sw, []);
+    if (sw) swipesCache = parseObjectArray<LocalSwipe>(sw, []);
 
     const pr = await AsyncStorage.getItem(PREFS_KEY);
-    if (pr) prefsCache = parseVersionedData<Record<string, LocalPreferences>>(pr, {});
+    if (pr) prefsCache = parseObjectMap<LocalPreferences>(pr, {});
 
     const pf = await AsyncStorage.getItem(PROFILE_KEY);
-    if (pf) profileCache = parseVersionedData<Record<string, LocalProfile>>(pf, {});
+    if (pf) profileCache = parseObjectMap<LocalProfile>(pf, {});
 
     const cr = await AsyncStorage.getItem(CREDENTIALS_KEY);
-    if (cr) credentialsCache = parseVersionedData<Record<string, LocalCredential>>(cr, {});
+    if (cr) credentialsCache = parseObjectMap<LocalCredential>(cr, {});
 
     const te = await AsyncStorage.getItem(TASTE_EVENTS_KEY);
-    if (te) tasteEventsCache = parseVersionedData<LocalTasteEvent[]>(te, []);
+    if (te) tasteEventsCache = parseObjectArray<LocalTasteEvent>(te, []);
 
     const im = await AsyncStorage.getItem(IMPRESSIONS_KEY);
-    if (im) impressionsCache = parseVersionedData<LocalImpression[]>(im, []);
+    if (im) impressionsCache = parseObjectArray<LocalImpression>(im, []);
 
     dbHydrated = true;
   } catch (e) {
@@ -290,6 +312,11 @@ export const localDb = {
   async getSwipes(userId: string): Promise<LocalSwipe[]> {
     await hydrateDb();
     return swipesCache.filter((s) => s.user_id === userId);
+  },
+
+  async getPendingSwipes(): Promise<LocalSwipe[]> {
+    await hydrateDb();
+    return swipesCache.filter((swipe) => swipe.sync_pending === true);
   },
 
   async getTasteEvents(userId: string): Promise<LocalTasteEvent[]> {

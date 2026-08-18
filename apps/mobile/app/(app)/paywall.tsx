@@ -30,8 +30,16 @@ export default function PaywallScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Close upgrade plans"
-            onPress={() => router.back()}
+            // router.back() is a no-op when there is no history (e.g. opened
+            // from a deep link); fall back so Close never strands the user.
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
             hitSlop={12}
+            style={{
+              minHeight: 44,
+              minWidth: 44,
+              justifyContent: 'center',
+              alignItems: 'flex-end',
+            }}
           >
             <Text style={{ color: colors.textMuted, fontFamily: fonts.bodySemi }}>Close</Text>
           </Pressable>

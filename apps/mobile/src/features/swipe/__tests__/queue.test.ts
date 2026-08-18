@@ -4,6 +4,18 @@ const update = jest.fn(() => ({ eq: updateEq }));
 const from = jest.fn(() => ({ insert, update }));
 const insertSwipe = jest.fn();
 const updateSwipe = jest.fn();
+const getSwipes = jest.fn();
+const getPendingSwipes = jest.fn();
+const mockAsyncStorageGetItem = jest.fn();
+const mockAsyncStorageSetItem = jest.fn();
+
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  __esModule: true,
+  default: {
+    getItem: mockAsyncStorageGetItem,
+    setItem: mockAsyncStorageSetItem,
+  },
+}));
 
 jest.mock('../../../lib/supabase', () => ({
   isSupabaseConfigured: true,
@@ -11,7 +23,7 @@ jest.mock('../../../lib/supabase', () => ({
 }));
 
 jest.mock('../../../lib/localDb', () => ({
-  localDb: { insertSwipe, updateSwipe },
+  localDb: { getPendingSwipes, getSwipes, insertSwipe, updateSwipe },
 }));
 
 jest.mock('../../../lib/logger', () => ({
@@ -24,7 +36,7 @@ jest.mock('../../telemetry/events', () => ({
 
 import { SwipeEventSchema } from '@flixy/shared';
 
-import { isPermanentSwipeSyncError, syncSwipeEvent, syncSwipeUndo } from '../queue';
+import { isPermanentSwipeSyncError, syncSwipeEvent, syncSwipeUndo, useSwipeQueue } from '../queue';
 
 const swipe = {
   eventId: '00000000-0000-4000-a000-000000000001',
@@ -46,8 +58,13 @@ describe('remote swipe synchronization', () => {
     jest.clearAllMocks();
     insert.mockResolvedValue({ error: null });
     updateEq.mockResolvedValue({ error: null });
+    getSwipes.mockResolvedValue([]);
+    getPendingSwipes.mockResolvedValue([]);
     insertSwipe.mockResolvedValue(undefined);
     updateSwipe.mockResolvedValue(undefined);
+    mockAsyncStorageGetItem.mockResolvedValue(null);
+    mockAsyncStorageSetItem.mockResolvedValue(undefined);
+    useSwipeQueue.setState({ pending: [], inFlight: false, lastError: null });
   });
 
   it('records the local projection before it synchronizes remotely', async () => {
@@ -68,6 +85,7 @@ describe('remote swipe synchronization', () => {
       expect.objectContaining({
         session_id: swipe.discoverySessionId,
         title_snapshot: swipe.titleSnapshot,
+        is_undone: false,
       }),
     );
     const localOrder = insertSwipe.mock.invocationCallOrder[0];
@@ -104,6 +122,52 @@ describe('remote swipe synchronization', () => {
 
     await expect(syncSwipeEvent(swipe)).resolves.toBeUndefined();
     expect(insertSwipe).toHaveBeenCalledTimes(1);
+  });
+
+  it('sends a queued local undo with the original remote insert', async () => {
+    getSwipes.mockResolvedValue([
+      {
+        event_id: swipe.eventId,
+        user_id: swipe.userId,
+        is_undone: true,
+      },
+    ]);
+
+    await syncSwipeEvent(swipe);
+
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ is_undone: true }));
+    expect(insertSwipe).toHaveBeenCalledWith(expect.objectContaining({ is_undone: true }));
+  });
+
+  it('repairs an undone local swipe when the original insert is a remote duplicate', async () => {
+    insert.mockResolvedValue({ error: { code: '23505', message: 'duplicate' } });
+    getSwipes.mockResolvedValue([
+      {
+        event_id: swipe.eventId,
+        user_id: swipe.userId,
+        is_undone: true,
+      },
+    ]);
+
+    await syncSwipeEvent(swipe);
+
+    expect(update).toHaveBeenCalledWith({ is_undone: true });
+    expect(updateEq).toHaveBeenCalledWith('event_id', swipe.eventId);
+  });
+
+  it('repairs an undo that races the original remote insert', async () => {
+    getSwipes.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        event_id: swipe.eventId,
+        user_id: swipe.userId,
+        is_undone: true,
+      },
+    ]);
+
+    await syncSwipeEvent(swipe);
+
+    expect(update).toHaveBeenCalledWith({ is_undone: true });
+    expect(updateEq).toHaveBeenCalledWith('event_id', swipe.eventId);
   });
 
   it('keeps the local record and resolves on permanently rejected rows (no queue wedge)', async () => {
@@ -148,6 +212,84 @@ describe('remote swipe synchronization', () => {
 
     expect(update).toHaveBeenCalledWith({ is_undone: true });
     expect(updateEq).toHaveBeenCalledWith('event_id', swipe.eventId);
-    expect(updateSwipe).toHaveBeenCalledWith(swipe.eventId, { is_undone: true });
+    expect(updateSwipe).toHaveBeenCalledWith(
+      swipe.eventId,
+      expect.objectContaining({ is_undone: true, sync_pending: true }),
+    );
+  });
+
+  it('keeps the local undo when the remote undo fails', async () => {
+    updateEq.mockRejectedValue({ code: '503', message: 'offline' });
+
+    await expect(syncSwipeUndo(swipe.eventId)).resolves.toBeUndefined();
+
+    expect(updateSwipe).toHaveBeenCalledWith(
+      swipe.eventId,
+      expect.objectContaining({ is_undone: true, sync_pending: true }),
+    );
+    const localOrder = updateSwipe.mock.invocationCallOrder[0];
+    const remoteOrder = update.mock.invocationCallOrder[0];
+    expect(localOrder).toBeDefined();
+    expect(remoteOrder).toBeDefined();
+    expect(localOrder ?? Number.POSITIVE_INFINITY).toBeLessThan(
+      remoteOrder ?? Number.NEGATIVE_INFINITY,
+    );
+  });
+
+  it('quarantines malformed persisted queue payloads to an empty queue', async () => {
+    mockAsyncStorageGetItem.mockResolvedValue(JSON.stringify({ unexpected: true }));
+    useSwipeQueue.setState({ pending: [swipe], inFlight: false, lastError: null });
+
+    await useSwipeQueue.getState().hydrate();
+
+    expect(useSwipeQueue.getState().pending).toEqual([]);
+    expect(mockAsyncStorageSetItem).toHaveBeenCalledWith('flixy.swipe_queue.v2', '[]');
+  });
+
+  it('preserves valid queued events while dropping malformed entries', async () => {
+    mockAsyncStorageGetItem.mockResolvedValue(JSON.stringify([swipe, { unexpected: true }]));
+
+    await useSwipeQueue.getState().hydrate();
+
+    expect(useSwipeQueue.getState().pending).toEqual([swipe]);
+    expect(mockAsyncStorageSetItem).toHaveBeenCalledWith(
+      'flixy.swipe_queue.v2',
+      JSON.stringify([swipe]),
+    );
+  });
+
+  it('recovers a queue event from the local durable swipe record', async () => {
+    mockAsyncStorageGetItem.mockResolvedValue(null);
+    getPendingSwipes.mockResolvedValue([
+      {
+        event_id: swipe.eventId,
+        user_id: swipe.userId,
+        title_id: swipe.titleId,
+        direction: swipe.direction,
+        occurred_at: swipe.occurredAt,
+        session_id: swipe.sessionId,
+        discovery_session_id: swipe.discoverySessionId,
+        deck_position: swipe.deckPosition,
+        region: swipe.region,
+        filters_snapshot: swipe.filtersSnapshot,
+        genres: swipe.genres,
+        title_snapshot: swipe.titleSnapshot,
+        sync_pending: true,
+      },
+    ]);
+
+    await useSwipeQueue.getState().hydrate();
+
+    expect(useSwipeQueue.getState().pending).toEqual([swipe]);
+  });
+
+  it('writes the local recovery record before a queue storage failure', async () => {
+    mockAsyncStorageSetItem.mockRejectedValue(new Error('storage full'));
+
+    await expect(useSwipeQueue.getState().enqueue(swipe)).resolves.toBeUndefined();
+
+    expect(insertSwipe).toHaveBeenCalledWith(
+      expect.objectContaining({ event_id: swipe.eventId, sync_pending: true }),
+    );
   });
 });

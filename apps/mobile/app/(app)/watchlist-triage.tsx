@@ -135,7 +135,10 @@ export default function WatchlistTriageScreen() {
             onPress={() => refetch()}
             style={{
               paddingHorizontal: 20,
-              paddingVertical: 10,
+              minHeight: 44,
+              minWidth: 44,
+              alignItems: 'center',
+              justifyContent: 'center',
               backgroundColor: colors.accent,
               borderRadius: 12,
             }}
@@ -168,6 +171,8 @@ export default function WatchlistTriageScreen() {
           hitSlop={12}
           onPress={goBack}
           style={({ pressed }) => ({
+            minHeight: 44,
+            minWidth: 44,
             flexDirection: 'row',
             alignItems: 'center',
             opacity: pressed ? 0.7 : 1,

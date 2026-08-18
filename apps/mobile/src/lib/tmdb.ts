@@ -345,9 +345,12 @@ export function mapTmdbToTitle(
   // Find trailer key
   let trailerKey: string | null = null;
   if (tmdbData.videos && Array.isArray(tmdbData.videos.results)) {
-    const trailer = tmdbData.videos.results.find(
-      (v: TmdbVideo) => v.type === 'Trailer' && v.site === 'YouTube',
+    const youtubeVideos = tmdbData.videos.results.filter(
+      (v: TmdbVideo) => v.site === 'YouTube' && Boolean(v.key),
     );
+    const trailer =
+      youtubeVideos.find((v: TmdbVideo) => v.type === 'Trailer') ??
+      youtubeVideos.find((v: TmdbVideo) => v.type === 'Teaser');
     if (trailer) {
       trailerKey = trailer.key;
     }

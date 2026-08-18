@@ -9,10 +9,9 @@ import { rowToItem, watchlistSchemas, watchlistStore } from './store';
 
 /**
  * Watchlist read/write APIs (FSD section 3.7). Reads come from
- * `watchlist_items` joined client-side with `titles`. Writes are direct
- * Supabase mutations (not queued — watchlist actions happen on screens that
- * tolerate a brief network round-trip; the offline path stays in the swipe
- * queue).
+ * `watchlist_items` joined client-side with `titles`. Writes are local-first
+ * with a durable Supabase outbox, so watchlist actions remain recoverable when
+ * the user is offline or the app is terminated during a retry.
  */
 
 export const __schemas = watchlistSchemas;
@@ -20,6 +19,13 @@ export const __schemas = watchlistSchemas;
 export type WatchlistFilter = 'all' | 'top' | 'watched';
 
 export type WatchlistEntry = { item: WatchlistItem; title: Title | undefined };
+
+export type WatchlistCounts = {
+  all: number;
+  top: number;
+  watched: number;
+  unwatched: number;
+};
 
 export function useWatchlist(filter: WatchlistFilter = 'all') {
   const { data: session } = useSession();
@@ -45,24 +51,31 @@ export function useWatchlist(filter: WatchlistFilter = 'all') {
   });
 
   const allItems = itemsQuery.data ?? [];
-  const filteredItems = allItems.filter((item) => {
-    if (filter === 'top') return item.priority === 'top';
-    if (filter === 'watched') return !!item.watchedAt;
-    return true;
-  });
   const titleIds = allItems.map((i) => i.titleId);
   const titlesQuery = useTitlesByIds(titleIds);
 
   const titlesById = new Map<string, Title>();
   for (const t of titlesQuery.data ?? []) titlesById.set(t.id, t);
 
-  const entries: WatchlistEntry[] = filteredItems.map((item) => ({
+  const allEntries: WatchlistEntry[] = allItems.map((item) => ({
     item,
     title: titlesById.get(item.titleId),
   }));
+  const entries = allEntries.filter(({ item }) => {
+    if (filter === 'top') return item.priority === 'top';
+    if (filter === 'watched') return !!item.watchedAt;
+    return true;
+  });
 
   return {
     entries,
+    allEntries,
+    counts: {
+      all: allEntries.length,
+      top: allEntries.filter(({ item }) => item.priority === 'top').length,
+      watched: allEntries.filter(({ item }) => !!item.watchedAt).length,
+      unwatched: allEntries.filter(({ item }) => !item.watchedAt).length,
+    } satisfies WatchlistCounts,
     isLoading: itemsQuery.isLoading || (titleIds.length > 0 && titlesQuery.isLoading),
     isError: itemsQuery.isError || titlesQuery.isError,
     refetch: itemsQuery.refetch,

@@ -13,6 +13,7 @@ import { Newsreader_700Bold_Italic } from '@expo-google-fonts/newsreader/700Bold
 import { Newsreader_800ExtraBold_Italic } from '@expo-google-fonts/newsreader/800ExtraBold_Italic';
 import { PlayfairDisplay_900Black_Italic } from '@expo-google-fonts/playfair-display/900Black_Italic';
 import { defaultShouldDehydrateQuery } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -93,56 +94,71 @@ export default function RootLayout() {
     DMSans_700Bold,
   });
 
-  if (!fontsLoaded && !fontError) {
+  // Native splash timing is part of the mobile launch contract. On web,
+  // keeping the entire router tree out of the DOM while a bundled font is
+  // resolving makes the statically-rendered PWA look frozen and removes all
+  // interaction from otherwise valid routes. The generated @font-face rules
+  // provide a fallback while the web font finishes loading.
+  if (Platform.OS !== 'web' && !fontsLoaded && !fontError) {
     return null;
   }
+
+  const appTree = (
+    <>
+      <AppSideEffects />
+      <SplashGate />
+      <StatusBar style="light" />
+      {Platform.OS === 'web' ? <PwaInstallModal /> : null}
+      <ErrorBoundary>
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.bg },
+          }}
+        />
+      </ErrorBoundary>
+    </>
+  );
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
-        <PersistQueryClientProvider
-          client={queryClient}
-          persistOptions={{
-            persister: queryPersister,
-            maxAge: 1000 * 60 * 60 * 24 * 7,
-            dehydrateOptions: {
-              // Never persist:
-              // - 'auth': a stale cached session would flash the wrong screen
-              //   (auth ⇄ home) on launch before the live session resolves.
-              // - 'deck_exclusions': its data holds Sets, which JSON-serialize
-              //   to {} — a restored entry silently loses every exclusion AND
-              //   skips the loading gate, so the deck composes with already
-              //   swiped titles and visibly swaps them out seconds later.
-              // - 'taste_signal' / 'swipes': derived from fast local storage
-              //   reads (and time-bucketed quotas); persisting them only
-              //   resurrects stale values that trigger a deck recompose.
-              // - ['titles','query']: deck discover pages. Restoring them
-              //   replays the exact same candidate window (and therefore the
-              //   exact same deck) on every cold open until the 1h staleTime
-              //   lapses. Cold opens should always pull fresh candidates; the
-              //   offline path falls back to the bundled catalogue. Detail
-              //   ('title') and byIds caches stay persisted — reusing those is
-              //   pure win.
-              shouldDehydrateQuery: (query) =>
-                !NEVER_PERSIST_QUERY_ROOTS.has(String(query.queryKey[0])) &&
-                !(query.queryKey[0] === 'titles' && query.queryKey[1] === 'query') &&
-                defaultShouldDehydrateQuery(query),
-            },
-          }}
-        >
-          <AppSideEffects />
-          <SplashGate />
-          <StatusBar style="light" />
-          {Platform.OS === 'web' ? <PwaInstallModal /> : null}
-          <ErrorBoundary>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.bg },
-              }}
-            />
-          </ErrorBoundary>
-        </PersistQueryClientProvider>
+        {Platform.OS === 'web' ? (
+          <QueryClientProvider client={queryClient}>{appTree}</QueryClientProvider>
+        ) : (
+          <PersistQueryClientProvider
+            client={queryClient}
+            persistOptions={{
+              persister: queryPersister,
+              maxAge: 1000 * 60 * 60 * 24 * 7,
+              dehydrateOptions: {
+                // Never persist:
+                // - 'auth': a stale cached session would flash the wrong screen
+                //   (auth ⇄ home) on launch before the live session resolves.
+                // - 'deck_exclusions': its data holds Sets, which JSON-serialize
+                //   to {} — a restored entry silently loses every exclusion AND
+                //   skips the loading gate, so the deck composes with already
+                //   swiped titles and visibly swaps them out seconds later.
+                // - 'taste_signal' / 'swipes': derived from fast local storage
+                //   reads (and time-bucketed quotas); persisting them only
+                //   resurrects stale values that trigger a deck recompose.
+                // - ['titles','query']: deck discover pages. Restoring them
+                //   replays the exact same candidate window (and therefore the
+                //   exact same deck) on every cold open until the 1h staleTime
+                //   lapses. Cold opens should always pull fresh candidates; the
+                //   offline path falls back to the bundled catalogue. Detail
+                //   ('title') and byIds caches stay persisted — reusing those is
+                //   pure win.
+                shouldDehydrateQuery: (query) =>
+                  !NEVER_PERSIST_QUERY_ROOTS.has(String(query.queryKey[0])) &&
+                  !(query.queryKey[0] === 'titles' && query.queryKey[1] === 'query') &&
+                  defaultShouldDehydrateQuery(query),
+              },
+            }}
+          >
+            {appTree}
+          </PersistQueryClientProvider>
+        )}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

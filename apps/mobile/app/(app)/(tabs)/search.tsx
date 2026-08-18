@@ -100,6 +100,7 @@ export default function SearchScreen() {
             returnKeyType="search"
             style={{
               flex: 1,
+              minHeight: 44,
               color: colors.text,
               fontFamily: fonts.body,
               fontSize: 14,
@@ -114,9 +115,9 @@ export default function SearchScreen() {
               onPress={() => setQ('')}
               hitSlop={8}
               style={{
-                width: 36,
-                height: 36,
-                borderRadius: 18,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
                 alignItems: 'center',
                 justifyContent: 'center',
               }}

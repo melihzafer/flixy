@@ -40,6 +40,7 @@ import { useUserPreferences } from '../../../src/features/onboarding/hooks';
 import { SwipeCard } from '../../../src/features/swipe/SwipeCard';
 import {
   useFlushOnReconnect,
+  useNetworkOnline,
   useRecordSwipe,
   useSwipeQueueBoot,
   useSwipeStats,
@@ -106,21 +107,31 @@ export default function DeckScreen() {
   const [discoverySession, setDiscoverySession] = useState<DiscoverySessionResult | null>(null);
   const [sessionSwipeCount, setSessionSwipeCount] = useState(0);
   const sessionKeyRef = useRef<string | null>(null);
+  const discoveryRequestRef = useRef(0);
+  const swipeInFlightRef = useRef(false);
+  const undoInFlightRef = useRef<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const isOnline = useNetworkOnline();
 
   useSwipeQueueBoot();
-  useFlushOnReconnect(true);
+  useFlushOnReconnect(isOnline);
 
   useEffect(() => {
     if (sessionKeyRef.current === filterKey) return;
     sessionKeyRef.current = filterKey;
     setDiscoverySession(null);
     setSessionSwipeCount(0);
+    const requestId = ++discoveryRequestRef.current;
     void startDiscoverySession
       .mutateAsync({ mode: blindDate ? 'blind_date' : 'main_deck', requestedCards: 12 })
-      .then(setDiscoverySession)
+      .then((result) => {
+        if (requestId !== discoveryRequestRef.current || sessionKeyRef.current !== filterKey) {
+          return;
+        }
+        setDiscoverySession(result);
+      })
       .catch(() => {
-        sessionKeyRef.current = null;
+        if (requestId === discoveryRequestRef.current) sessionKeyRef.current = null;
       });
   }, [blindDate, filterKey, startDiscoverySession.mutateAsync]);
 
@@ -234,47 +245,93 @@ export default function DeckScreen() {
     void localDb.recordImpression(impressionUserId, topCardId).catch(() => undefined);
   }, [topCardId, impressionUserId]);
 
+  const recommendationReason = useCallback(
+    (card: DeckCard) => {
+      if (blindDate) return undefined;
+      const factor = card.trace.positiveFactors.find(({ factor }) => factor !== 'stable_jitter');
+      switch (factor?.factor) {
+        case 'availability':
+          return t('deck.whyAvailable', 'On your streaming services');
+        case 'freshness':
+          return t('deck.whyFresh', 'Fresh release');
+        case 'vibe':
+          return t('deck.whyVibe', 'Fits your vibe');
+        case 'country':
+          return t('deck.whyCountry', 'From a favorite market');
+        case 'popularity':
+          return card.trace.source === 'trending'
+            ? t('deck.whyTrending', 'Trending now')
+            : t('deck.whyPopular', 'Popular with viewers');
+        case 'for_you':
+        case 'personalization':
+          return t('deck.whyTaste', 'Matches your taste');
+        default:
+          switch (card.trace.source) {
+            case 'fresh':
+              return t('deck.whyFresh', 'Fresh release');
+            case 'trending':
+              return t('deck.whyTrending', 'Trending now');
+            case 'exploration':
+              return t('deck.whyWildcard', 'A wildcard for you');
+            default:
+              return undefined;
+          }
+      }
+    },
+    [blindDate, t],
+  );
+
   const handleCommit = useCallback(
     async (dir: SwipeDirection) => {
+      // Re-entrancy lock: rapid double taps on the action buttons or a second
+      // flick while the card is still animating out would otherwise commit the
+      // same card twice — duplicate swipe events, double session-quota burn,
+      // and contradictory directions (pass + like) on one title.
+      if (swipeInFlightRef.current) return;
       const card = remaining[0];
       if (!card || sessionRemaining <= 0 || !discoverySession?.allowed) return;
-      const swipeIndex = swipedIds.length;
-      touchedIdsRef.current.add(card.title.id);
+      swipeInFlightRef.current = true;
       try {
-        const ev = await recordSwipe.mutateAsync({
-          titleId: card.title.id,
-          direction: dir,
-          deckPosition: swipeIndex,
-          titleSnapshot: {
-            genres: card.title.genres,
-            language: card.title.language,
-            kind: card.title.kind,
-          },
-          discoverySessionId: discoverySession.session_id,
-        });
-        lastEventRef.current = ev;
-      } catch {
-        /* queue absorbs failures; advance regardless */
-      }
-      const nextPos = swipeIndex + 1;
-      setSwipedIds((prev) => [...prev, card.title.id]);
-      setSessionSwipeCount((count) => count + 1);
+        const swipeIndex = swipedIds.length;
+        touchedIdsRef.current.add(card.title.id);
+        try {
+          const ev = await recordSwipe.mutateAsync({
+            titleId: card.title.id,
+            direction: dir,
+            deckPosition: swipeIndex,
+            titleSnapshot: {
+              genres: card.title.genres,
+              language: card.title.language,
+              kind: card.title.kind,
+            },
+            discoverySessionId: discoverySession.offline ? null : discoverySession.session_id,
+          });
+          lastEventRef.current = ev;
+        } catch {
+          /* queue absorbs failures; advance regardless */
+        }
+        const nextPos = swipeIndex + 1;
+        setSwipedIds((prev) => [...prev, card.title.id]);
+        setSessionSwipeCount((count) => count + 1);
 
-      if (isPreviewUser && !nudgeFired.current) {
-        if (authState?.isAnonymous) {
-          bumpAnonSwipe();
+        if (isPreviewUser && !nudgeFired.current) {
+          if (authState?.isAnonymous) {
+            bumpAnonSwipe();
+          }
+          const shouldPrompt =
+            authState?.isAnonymous && shouldPromptAnonUpgrade()
+              ? true
+              : !authState?.user && nextPos >= ANON_UPGRADE_THRESHOLD;
+          if (shouldPrompt) {
+            nudgeFired.current = true;
+            setTimeout(() => {
+              events.anonymousUpgradeShown({ surface: 'deck', swipeCount: nextPos });
+              setShowNudge(true);
+            }, 400);
+          }
         }
-        const shouldPrompt =
-          authState?.isAnonymous && shouldPromptAnonUpgrade()
-            ? true
-            : !authState?.user && nextPos >= ANON_UPGRADE_THRESHOLD;
-        if (shouldPrompt) {
-          nudgeFired.current = true;
-          setTimeout(() => {
-            events.anonymousUpgradeShown({ surface: 'deck', swipeCount: nextPos });
-            setShowNudge(true);
-          }, 400);
-        }
+      } finally {
+        swipeInFlightRef.current = false;
       }
     },
     [
@@ -293,10 +350,19 @@ export default function DeckScreen() {
   const handleUndo = useCallback(async () => {
     const last = lastEventRef.current;
     if (!last || swipedIds.length === 0) return;
-    await undoSwipe.mutateAsync(last);
-    lastEventRef.current = null;
-    setSwipedIds((prev) => prev.slice(0, -1));
-    setSessionSwipeCount((count) => Math.max(0, count - 1));
+    if (undoInFlightRef.current === last.eventId) return;
+    undoInFlightRef.current = last.eventId;
+    try {
+      await undoSwipe.mutateAsync(last);
+      // A newer swipe may have completed while the remote/local undo settled.
+      // Never remove that newer card or decrement its session quota.
+      if (lastEventRef.current?.eventId !== last.eventId) return;
+      lastEventRef.current = null;
+      setSwipedIds((prev) => prev.slice(0, -1));
+      setSessionSwipeCount((count) => Math.max(0, count - 1));
+    } finally {
+      if (undoInFlightRef.current === last.eventId) undoInFlightRef.current = null;
+    }
   }, [swipedIds.length, undoSwipe]);
 
   if (
@@ -461,7 +527,10 @@ export default function DeckScreen() {
                 requestedCards: 12,
               })
               .then((result) => {
+                lastEventRef.current = null;
+                setSwipedIds([]);
                 setSessionSwipeCount(0);
+                touchedIdsRef.current.clear();
                 setDiscoverySession(result);
               })
               .catch(() => undefined);
@@ -676,7 +745,7 @@ export default function DeckScreen() {
                   borderWidth: 1,
                   borderColor: 'rgba(255,77,28,0.3)',
                   paddingHorizontal: 10,
-                  paddingVertical: 4,
+                  minHeight: 44,
                   borderRadius: 20,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -708,7 +777,7 @@ export default function DeckScreen() {
                   borderWidth: 1,
                   borderColor: 'rgba(255,77,28,0.3)',
                   paddingHorizontal: 10,
-                  paddingVertical: 4,
+                  minHeight: 44,
                   borderRadius: 20,
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -740,8 +809,8 @@ export default function DeckScreen() {
               accessibilityRole="button"
               accessibilityLabel={t('deck.toggleBlindDate', 'Toggle blind date mode')}
               style={{
-                width: 36,
-                height: 36,
+                width: 44,
+                height: 44,
                 borderRadius: 18,
                 backgroundColor: blindDate ? 'rgba(255,77,28,0.15)' : 'rgba(255,255,255,0.06)',
                 borderWidth: 1,
@@ -763,8 +832,8 @@ export default function DeckScreen() {
               accessibilityRole="button"
               accessibilityLabel={t('deck.openTrailers', 'Open trailers')}
               style={{
-                width: 36,
-                height: 36,
+                width: 44,
+                height: 44,
                 borderRadius: 18,
                 backgroundColor: 'rgba(255,255,255,0.06)',
                 borderWidth: 1,
@@ -782,8 +851,8 @@ export default function DeckScreen() {
               accessibilityRole="button"
               accessibilityLabel={t('deck.openFilters', 'Open filters')}
               style={{
-                width: 36,
-                height: 36,
+                width: 44,
+                height: 44,
                 borderRadius: 18,
                 backgroundColor: 'rgba(255,255,255,0.06)',
                 borderWidth: 1,
@@ -833,6 +902,7 @@ export default function DeckScreen() {
               >
                 <SwipeCard
                   title={card.title}
+                  recommendationReason={recommendationReason(card)}
                   cardWidth={cardWidth}
                   cardHeight={cardHeight}
                   onCommit={handleCommit}

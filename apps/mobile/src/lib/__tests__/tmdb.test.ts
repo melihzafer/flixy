@@ -6,7 +6,7 @@ jest.mock('expo-constants', () => ({
   },
 }));
 
-import { fetchTmdbTitle } from '../tmdb';
+import { fetchTmdbTitle, mapTmdbToTitle } from '../tmdb';
 
 describe('TMDB request reliability', () => {
   afterEach(() => {
@@ -27,5 +27,21 @@ describe('TMDB request reliability', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('uses a YouTube teaser when a title has no official trailer', () => {
+    const title = mapTmdbToTitle(
+      {
+        id: 456,
+        title: 'Teaser title',
+        genres: [],
+        videos: {
+          results: [{ type: 'Teaser', site: 'YouTube', key: 'teaser-key' }],
+        },
+      },
+      'movie',
+    );
+
+    expect(title.trailerKey).toBe('teaser-key');
   });
 });

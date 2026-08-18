@@ -172,6 +172,19 @@ export default function Welcome() {
             </Text>
           </Pressable>
         </View>
+        {anon.isError ? (
+          <Text
+            testID="anonymous-preview-error"
+            style={{
+              fontSize: 12,
+              color: colors.left,
+              textAlign: 'center',
+              fontFamily: fonts.body,
+            }}
+          >
+            {t('auth.errors.anonymousPreview')}
+          </Text>
+        ) : null}
       </View>
     </Screen>
   );
